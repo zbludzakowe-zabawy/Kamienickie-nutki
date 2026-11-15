@@ -1,0 +1,148 @@
+// Składanie jednego PDF-a ze śpiewnikiem: spis treści + nuty w kolejności spisu.
+window.PdfBuild = (() => {
+  'use strict';
+  const A4 = [595.28, 841.89];
+  const MARGIN = 18;
+  let libP = null;
+
+  // pdf-lib wczytujemy dopiero, gdy jest potrzebny (tylko u administratora)
+  function lib() {
+    if (window.PDFLib) return Promise.resolve(window.PDFLib);
+    if (!libP) {
+      libP = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'js/vendor/pdf-lib.min.js';
+        s.onload = () => resolve(window.PDFLib);
+        s.onerror = () => { libP = null; reject(new Error('Nie udało się wczytać modułu PDF.')); };
+        document.head.appendChild(s);
+      });
+    }
+    return libP;
+  }
+
+  const sniff = (u8) => {
+    if (u8[0] === 0x25 && u8[1] === 0x50 && u8[2] === 0x44 && u8[3] === 0x46) return 'pdf';
+    if (u8[0] === 0xff && u8[1] === 0xd8) return 'jpg';
+    if (u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4e && u8[3] === 0x47) return 'png';
+    return 'other';
+  };
+
+  // obrazy w innych formatach (webp, gif, bmp…) zamieniamy na JPEG przez canvas
+  async function toJpeg(u8) {
+    const bmp = await createImageBitmap(new Blob([u8]));
+    const c = document.createElement('canvas');
+    c.width = bmp.width;
+    c.height = bmp.height;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(bmp, 0, 0);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  function addImagePage(doc, img) {
+    const landscape = img.width > img.height * 1.15;
+    const [pw, ph] = landscape ? [A4[1], A4[0]] : A4;
+    const scale = Math.min((pw - 2 * MARGIN) / img.width, (ph - 2 * MARGIN) / img.height);
+    const w = img.width * scale;
+    const h = img.height * scale;
+    doc.addPage([pw, ph]).drawImage(img, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
+  }
+
+  // Strony spisu treści rysujemy na canvasie (polskie znaki bez dodatkowych czcionek).
+  const TOC_LINES = 34;
+  function tocPages(title, rows) {
+    const W = 1240;
+    const H = 1754;
+    const pages = [];
+    for (let start = 0, n = 0; start < rows.length || n === 0; start += TOC_LINES, n++) {
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, W, H);
+      g.fillStyle = '#222';
+      let y = 150;
+      if (n === 0) {
+        g.font = 'bold 56px Georgia, "Times New Roman", serif';
+        g.fillText(title, 110, y, W - 220);
+        y += 50;
+        g.font = '26px Georgia, "Times New Roman", serif';
+        g.fillStyle = '#777';
+        g.fillText(`Spis treści · ${new Date().toLocaleDateString('pl-PL')}`, 110, y);
+        y += 60;
+      } else {
+        y = 110;
+      }
+      for (const r of rows.slice(start, start + TOC_LINES)) {
+        g.font = '30px Georgia, "Times New Roman", serif';
+        g.fillStyle = r.page ? '#222' : '#aaa';
+        g.textAlign = 'right';
+        g.fillText(r.no || '', 170, y);
+        g.textAlign = 'left';
+        g.fillText(r.title, 195, y, 800);
+        g.textAlign = 'right';
+        g.fillText(r.page ? String(r.page) : 'brak nut', W - 110, y);
+        g.textAlign = 'left';
+        y += 44;
+      }
+      pages.push(c);
+      if (start + TOC_LINES >= rows.length) break;
+    }
+    return pages;
+  }
+
+  // book – spis; getBytes(fileId) → Uint8Array; zwraca { bytes, missing: [opisy], pages }
+  async function build(book, getBytes, onProgress) {
+    const { PDFDocument } = await lib();
+    const doc = await PDFDocument.create();
+    doc.setTitle(book.name);
+    doc.setCreator('Kamienickie Nutki');
+    const rows = [];
+    const problems = [];
+    const withNotes = book.items.filter((it) => (it.state === 'ok' || it.state === 'auto') && it.files.length);
+    let done = 0;
+    for (const it of book.items) {
+      const row = { no: it.no, title: it.title, page: 0 };
+      rows.push(row);
+      if (!withNotes.includes(it)) continue;
+      const first = doc.getPageCount();
+      for (const fid of it.files) {
+        try {
+          let u8 = await getBytes(fid);
+          const kind = sniff(u8);
+          if (kind === 'pdf') {
+            const src = await PDFDocument.load(u8, { ignoreEncryption: true });
+            const pages = await doc.copyPages(src, src.getPageIndices());
+            pages.forEach((p) => doc.addPage(p));
+          } else {
+            if (kind === 'other') u8 = await toJpeg(u8);
+            const img = kind === 'png' ? await doc.embedPng(u8) : await doc.embedJpg(u8);
+            addImagePage(doc, img);
+          }
+        } catch (e) {
+          console.warn(e);
+          problems.push(`${it.no ? it.no + '. ' : ''}${it.title}`);
+        }
+      }
+      if (doc.getPageCount() > first) row.page = first + 1; // bez spisu treści – poprawiamy niżej
+      done++;
+      onProgress && onProgress(done, withNotes.length);
+    }
+    // spis treści na początku
+    const toc = tocPages(book.name, rows);
+    rows.forEach((r) => { if (r.page) r.page += toc.length; });
+    const tocFinal = tocPages(book.name, rows);
+    for (let i = 0; i < tocFinal.length; i++) {
+      const blob = await new Promise((r) => tocFinal[i].toBlob(r, 'image/png'));
+      const img = await doc.embedPng(new Uint8Array(await blob.arrayBuffer()));
+      const page = doc.insertPage(i, A4);
+      page.drawImage(img, { x: 0, y: 0, width: A4[0], height: A4[1] });
+    }
+    return { bytes: await doc.save(), problems: [...new Set(problems)], pages: doc.getPageCount() };
+  }
+
+  return { build };
+})();

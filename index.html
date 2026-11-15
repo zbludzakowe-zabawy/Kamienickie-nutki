@@ -15,6 +15,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
+  <script src="js/config.js"></script>
+  <script src="js/mode.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -22,7 +24,7 @@
       <img src="icons/icon-192.png" alt="" width="32" height="32">
       <span>Kamienickie Nutki</span>
     </div>
-    <div class="top-right">
+    <div class="top-right admin-only">
       <span id="sync" class="sync" hidden></span>
       <button class="btn light" id="btn-connect">Połącz z Dyskiem</button>
       <div class="account" id="account" hidden>
@@ -32,12 +34,13 @@
     </div>
   </header>
 
-  <nav class="tabs" role="tablist">
+  <nav class="tabs admin-only" role="tablist">
     <button role="tab" data-tab="files">Nuty na Dysku</button>
     <button role="tab" data-tab="songs">Spisy pieśni</button>
+    <button role="tab" data-tab="choir">Dla chórzystów</button>
   </nav>
 
-  <main>
+  <main class="admin-only">
    <div data-panel="files" class="panel">
     <section class="card" id="welcome" hidden>
       <h2>Witaj!</h2>
@@ -119,7 +122,62 @@
       <div class="songs" id="sb-list"></div>
     </section>
    </div>
+   <div data-panel="choir" class="panel" hidden>
+    <section class="card">
+      <div class="card-head"><h2>Dla chórzystów</h2></div>
+      <p>Chórzyści otwierają aplikację na telefonie <b>bez logowania</b>. Po wpisaniu PIN-u widzą wszystkie spisy pieśni,
+        otwierają nuty na cały ekran i mogą pobrać PDF z całym śpiewnikiem.</p>
+      <p class="muted small">Publikacja kopiuje potrzebne nuty do folderu „Kamienickie Nutki / Dla chórzystów” na Twoim Dysku (dostęp dla każdego, kto ma link).
+        Lista pieśni jest zaszyfrowana PIN-em. Twoje oryginalne pliki pozostają prywatne. Chórzyści widzą tylko pozycje „Są nuty”.</p>
+      <div class="pin-row">
+        <label for="pub-pin">PIN dla chórzystów</label>
+        <input id="pub-pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
+        <button class="btn" id="pub-pin-save">Zapisz PIN</button>
+      </div>
+      <label class="check"><input type="checkbox" id="pub-pdf"> Twórz PDF z całym śpiewnikiem (spis treści + nuty w kolejności spisu)</label>
+      <h3 class="sub">Śpiewniki</h3>
+      <ul class="pub-books" id="pub-books"></ul>
+      <div class="actions">
+        <button class="btn primary" id="pub-go">Opublikuj dla chórzystów</button>
+        <button class="btn" id="pub-preview" hidden>Podgląd jako chórzysta</button>
+      </div>
+      <div class="pub-progress" id="pub-progress" hidden>
+        <div class="bar"><span id="pub-bar"></span></div>
+        <p class="muted small" id="pub-status" aria-live="polite"></p>
+      </div>
+      <div class="pub-problems" id="pub-problems" hidden></div>
+    </section>
+    <section class="card" id="pub-link-card" hidden>
+      <h2>Link dla chórzystów</h2>
+      <p class="muted small">Wyślij go chórzystom (SMS, grupa). Po otwarciu wpisują PIN i mogą zainstalować aplikację na telefonie.</p>
+      <div class="link-row"><input id="pub-link" readonly aria-label="Link dla chórzystów"><button class="btn" id="pub-copy">Kopiuj</button></div>
+      <p class="muted small" id="pub-info"></p>
+    </section>
+   </div>
   </main>
+
+  <div id="guest" class="guest" hidden>
+    <div id="g-view"></div>
+    <p class="g-foot"><button type="button" class="linklike" id="g-admin">Tryb administratora</button></p>
+  </div>
+
+  <div id="g-viewer" class="g-viewer" hidden>
+    <div class="g-vbar">
+      <button type="button" class="g-icon" id="g-close" aria-label="Zamknij nuty">✕</button>
+      <button type="button" class="g-icon" id="g-sprev" aria-label="Poprzednia pieśń" title="Poprzednia pieśń">⏮</button>
+      <div class="g-vtitle"><span id="g-vno"></span> <strong id="g-vname"></strong></div>
+      <button type="button" class="g-icon" id="g-snext" aria-label="Następna pieśń" title="Następna pieśń">⏭</button>
+      <div class="g-vnav" id="g-vnav" hidden>
+        <button type="button" class="g-icon" id="g-prev" aria-label="Poprzednia strona">‹</button>
+        <span id="g-vpos"></span>
+        <button type="button" class="g-icon" id="g-next" aria-label="Następna strona">›</button>
+      </div>
+      <a class="g-icon" id="g-open" target="_blank" rel="noopener" aria-label="Otwórz w Dysku Google" title="Otwórz w Dysku Google">↗</a>
+      <button type="button" class="g-icon" id="g-full" aria-label="Pełny ekran" title="Pełny ekran">⛶</button>
+    </div>
+    <p class="g-offline" id="g-offline" hidden>Brak internetu – nuty otworzą się po połączeniu.</p>
+    <iframe id="g-frame" title="Nuty" allow="fullscreen"></iframe>
+  </div>
 
   <dialog id="chooser" aria-labelledby="chooser-title">
     <div class="picker">
@@ -168,7 +226,6 @@
     <button class="btn" id="btn-update-later">Później</button>
   </div>
 
-  <script src="js/config.js"></script>
   <script src="js/store.js"></script>
   <script src="js/drive.js"></script>
   <script src="js/catalog.js"></script>
@@ -177,6 +234,10 @@
   <script src="js/matcher.js"></script>
   <script src="js/app.js"></script>
   <script src="js/songs.js"></script>
+  <script src="js/crypto.js"></script>
+  <script src="js/pdfbuild.js"></script>
+  <script src="js/publish.js"></script>
+  <script src="js/guest.js"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>

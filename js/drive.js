@@ -230,25 +230,91 @@ window.Drive = (() => {
 
   // Jedyny folder, w którym aplikacja zapisuje (plik z danymi, a później PDF-y i nuty dla gości).
   // Rozpoznajemy go po znaczniku widocznym tylko dla tej aplikacji, więc zmiana nazwy mu nie szkodzi.
-  let appFolderId = null;
-  async function ensureAppFolder() {
-    if (appFolderId) return appFolderId;
+  // Foldery aplikacji rozpoznajemy po znaczniku widocznym tylko dla niej (kn=app, kn=public),
+  // więc zmiana nazwy czy przeniesienie im nie szkodzi.
+  const tagged = {};
+  async function ensureTaggedFolder(tag, name, parentId, description) {
+    if (tagged[tag]) return tagged[tag];
     const found = await listAll({
-      q: `appProperties has { key='kn' and value='app' } and mimeType='${FOLDER}' and trashed=false`,
+      q: `appProperties has { key='kn' and value='${tag}' } and mimeType='${FOLDER}' and trashed=false`,
       corpora: 'user',
     }, 'id,name');
-    if (found[0]) return (appFolderId = found[0].id);
+    if (found[0]) return (tagged[tag] = found[0].id);
     const r = await (await api(`${API}/files?fields=id`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json; charset=UTF-8' },
-      body: JSON.stringify({
-        name: cfg.appFolderName || 'Kamienickie Nutki',
-        mimeType: FOLDER,
-        appProperties: { kn: 'app' },
-        description: 'Folder aplikacji Kamienickie Nutki – tu zapisuje ona swoje pliki. Twoich nut aplikacja nie zmienia.',
-      }),
+      body: JSON.stringify({ name, mimeType: FOLDER, appProperties: { kn: tag }, description, ...(parentId ? { parents: [parentId] } : {}) }),
     })).json();
-    return (appFolderId = r.id);
+    return (tagged[tag] = r.id);
+  }
+
+  // Jedyny folder, w którym aplikacja zapisuje (plik z danymi, folder dla chórzystów).
+  const ensureAppFolder = () => ensureTaggedFolder('app', cfg.appFolderName || 'Kamienickie Nutki', null,
+    'Folder aplikacji Kamienickie Nutki – tu zapisuje ona swoje pliki. Twoich nut aplikacja nie zmienia.');
+
+  // Folder z kopiami nut dla chórzystów – dostępny dla każdego, kto ma link.
+  async function ensurePublicFolder() {
+    const app = await ensureAppFolder();
+    return ensureTaggedFolder('public', 'Dla chórzystów', app,
+      'Kopie nut udostępnione chórzystom przez aplikację Kamienickie Nutki. Zawartość zmienia aplikacja przy publikacji.');
+  }
+
+  async function makePublic(id) {
+    return (await api(`${API}/files/${encodeURIComponent(id)}/permissions?supportsAllDrives=true&fields=id`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' }),
+    })).json();
+  }
+
+  async function copyFile(id, name, parentId) {
+    return (await api(`${API}/files/${encodeURIComponent(id)}/copy?supportsAllDrives=true&fields=id`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify({ name, parents: [parentId] }),
+    })).json();
+  }
+
+  // Wgrywa plik (np. PDF śpiewnika); z existingId podmienia treść istniejącego pliku.
+  async function uploadFile(name, mime, data, parentId, existingId) {
+    if (existingId) {
+      try {
+        return await (await api(`${UPLOAD}/files/${encodeURIComponent(existingId)}?uploadType=media&fields=id,size`, {
+          method: 'PATCH', headers: { 'Content-Type': mime }, body: data,
+        })).json();
+      } catch (e) {
+        if (e.status !== 404) throw e;
+      }
+    }
+    const boundary = 'kn' + Math.random().toString(36).slice(2);
+    const meta = JSON.stringify({ name, mimeType: mime, parents: [parentId] });
+    const body = new Blob([
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`,
+      data,
+      `\r\n--${boundary}--`,
+    ]);
+    return (await api(`${UPLOAD}/files?uploadType=multipart&fields=id,size`, {
+      method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body,
+    })).json();
+  }
+
+  async function deleteFile(id) {
+    try {
+      await api(`${API}/files/${encodeURIComponent(id)}?supportsAllDrives=true`, { method: 'DELETE' });
+    } catch (e) {
+      if (e.status !== 404) throw e;
+    }
+  }
+
+  // Odczyt pliku udostępnionego publicznie – bez logowania, kluczem API (tryb chórzysty).
+  async function publicText(id) {
+    const r = await fetch(`${API}/files/${encodeURIComponent(id)}?alt=media&key=${encodeURIComponent(cfg.apiKey)}`, { cache: 'no-store' });
+    if (!r.ok) {
+      const err = new Error(r.status === 404 ? 'Nie znaleziono śpiewnika – poproś o nowy link.' : `Błąd pobierania (${r.status}).`);
+      err.status = r.status;
+      throw err;
+    }
+    return r.text();
   }
 
   // Przenosi plik utworzony przez aplikację do jej folderu (np. plik z danymi z wcześniejszej wersji).
@@ -293,5 +359,6 @@ window.Drive = (() => {
     init, connect, disconnect, isConnected, onChange, rememberEmail,
     about, listChildren, listFolders, listFoldersAndDocs, listSharedDrives, download, exportText,
     findDataFile, readJson, createJson, updateJson, ensureAppFolder, moveInto,
+    ensurePublicFolder, makePublic, copyFile, uploadFile, deleteFile, publicText,
   };
 })();
