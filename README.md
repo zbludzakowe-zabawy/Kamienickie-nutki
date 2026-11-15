@@ -4,7 +4,9 @@ Aplikacja do porządkowania nut trzymanych na Dysku Google.
 
 Strona: https://zbludzakowe-zabawy.github.io/kamienickie-nutki/
 
-## Co już działa (etap 1)
+## Co już działa
+
+### Nuty na Dysku
 
 - **Połączenie z Dyskiem Google**: logowanie kontem Google, bez hasła w aplikacji.
 - **Wybór folderów z nutami**: Mój dysk, „Udostępnione dla mnie” i dyski współdzielone.
@@ -15,11 +17,23 @@ Strona: https://zbludzakowe-zabawy.github.io/kamienickie-nutki/
 - **Zapis**: dane trzymane są w urządzeniu i w pliku `KamienickieNutki.json` na Dysku, więc działa to samo na komputerze i telefonie.
   Tego pliku nie usuwaj ani nie przenoś do kosza.
 
+### Spisy pieśni
+- **Wczytanie spisu** z Dysku albo z komputera: `.odt`, `.docx`, `.txt` i Dokumenty Google.
+  Każda pozycja w osobnej linijce, najlepiej z numerem („12<tab>Tytuł”, „12. Tytuł” albo „Tytuł ..... 12”).
+  Powtórzenia, np. druga strona spisu ułożona alfabetycznie, są pomijane.
+- **Automatyczne dopasowanie** do plików po nazwie, bez względu na polskie znaki, z odpornością na literówki i odmianę.
+  Uwzględnia nazwy nadane w aplikacji, a także foldery, w których jedna pieśń ma kilka stron jako osobne obrazy.
+  Dopisek w nawiasie, np. kompozytor, rozróżnia wersje tej samej pieśni.
+- **Trzy grupy**: ✓ są nuty, ? do sprawdzenia, ✕ brak. Pozycje o tym samym tytule zawsze trafiają do sprawdzenia.
+- **Zatwierdzanie**: „Zgadza się”, „To nie to” (ta propozycja nie wróci), „Wybierz plik…” (wyszukiwarka, można zaznaczyć kilka plików),
+  „Nie mamy” oraz „Zatwierdź pewne” dla wszystkich dopasowań automatycznych naraz.
+  Plik bez własnej nazwy dostaje po zatwierdzeniu tytuł ze spisu.
+- Po każdym skanowaniu Dysku niezatwierdzone pozycje są dopasowywane od nowa.
+
 ## Następne etapy
 
-1. Wczytanie spisu pieśni i automatyczne dopasowanie do plików (jest / do potwierdzenia / brak).
+1. Tryb przeglądania bez logowania dla gości (telefon, PIN, folder publiczny + klucz API).
 2. Tworzenie jednego PDF-a z wybranych nut.
-3. Tryb przeglądania bez logowania dla innych osób (folder publiczny + klucz API).
 
 ## Aplikacja na telefon
 
@@ -58,6 +72,9 @@ Potem otwórz http://localhost:8000.
 - `js/drive.js` – logowanie i wywołania Dysku Google
 - `js/catalog.js` – skanowanie folderów, drzewo, wyszukiwanie
 - `js/store.js` – zapis w urządzeniu (IndexedDB)
+- `js/zip.js`, `js/songlist.js` – odczyt spisu z .odt / .docx / .txt
+- `js/matcher.js` – dopasowanie pozycji spisu do plików
+- `js/songs.js` – ekran spisów pieśni
 - `js/app.js` – interfejs
 - `js/pwa.js`, `sw.js`, `manifest.webmanifest`, `icons/` – aplikacja na telefon (instalacja, praca offline, aktualizacje)
 - `design/ikona.svg` – źródło ikony

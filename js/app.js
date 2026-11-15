@@ -17,7 +17,7 @@
   const stripExt = (name) => String(name).replace(/\.[a-z0-9]{2,5}$/i, '');
 
   // ---------- stan ----------
-  const emptyData = () => ({ app: 'KamienickieNutki', v: 1, roots: [], nodes: {}, meta: {}, scannedAt: null, updatedAt: 0 });
+  const emptyData = () => ({ app: 'KamienickieNutki', v: 1, roots: [], nodes: {}, meta: {}, songbooks: [], scannedAt: null, updatedAt: 0 });
   const normalize = (d) => {
     const e = emptyData();
     if (!d || typeof d !== 'object') return e;
@@ -27,6 +27,7 @@
       roots: Array.isArray(d.roots) ? d.roots : [],
       nodes: d.nodes && typeof d.nodes === 'object' ? d.nodes : {},
       meta: d.meta && typeof d.meta === 'object' ? d.meta : {},
+      songbooks: Array.isArray(d.songbooks) ? d.songbooks : [],
     };
   };
 
@@ -231,6 +232,7 @@
       data.nodes = res.nodes;
       data.scannedAt = res.scannedAt;
       rebuild();
+      if (window.Songs) Songs.rematchAll(true);
       changed();
       toast(`Gotowe: ${res.files} ${plural(res.files, 'plik', 'pliki', 'plików')} z nutami.`);
     } catch (e) {
@@ -254,9 +256,15 @@
 
   // ---------- wybór folderu ----------
   let pickStack = [];
-  async function openPicker() {
+  let pickMode = 'folder'; // 'folder' – folder z nutami, 'doc' – plik ze spisem pieśni
+  let pickDoc = null;
+  async function openPicker(mode = 'folder', onDoc = null) {
     if (!(await ensureConnected())) return;
+    pickMode = mode === 'doc' ? 'doc' : 'folder';
+    pickDoc = onDoc;
     pickStack = [{ id: 'top', name: 'Dysk Google' }];
+    $('picker-title').textContent = pickMode === 'doc' ? 'Wybierz plik ze spisem pieśni' : 'Wybierz folder z nutami';
+    $('btn-pick').hidden = pickMode === 'doc';
     $('picker').showModal();
     loadPicker();
   }
@@ -274,6 +282,9 @@
       if (cur.id === 'top') {
         const drives = await Drive.listSharedDrives();
         items = [{ id: 'root', name: 'Mój dysk' }, { id: 'shared', name: 'Udostępnione dla mnie' }, ...drives.map((d) => ({ id: d.id, name: d.name }))];
+      } else if (pickMode === 'doc') {
+        const r = await Drive.listFoldersAndDocs(cur.id);
+        items = [...r.folders, ...r.docs.map((d) => ({ ...d, doc: true }))];
       } else {
         items = await Drive.listFolders(cur.id);
       }
@@ -284,8 +295,10 @@
     }
     if (pickStack[pickStack.length - 1] !== cur) return; // użytkownik przeszedł gdzie indziej
     list.innerHTML = items.length
-      ? items.map((f) => `<li><button type="button" class="pick-item" data-id="${esc(f.id)}" data-name="${esc(f.name)}"><span class="fico" aria-hidden="true"></span><span>${esc(f.name)}</span><span class="chev">›</span></button></li>`).join('')
-      : '<li class="muted">Brak podfolderów.</li>';
+      ? items.map((f) => (f.doc
+        ? `<li><button type="button" class="pick-item pick-doc" data-id="${esc(f.id)}" data-name="${esc(f.name)}" data-mime="${esc(f.mimeType)}"><span class="badge doc">DOC</span><span>${esc(f.name)}</span><span class="chev">Wybierz</span></button></li>`
+        : `<li><button type="button" class="pick-item" data-id="${esc(f.id)}" data-name="${esc(f.name)}"><span class="fico" aria-hidden="true"></span><span>${esc(f.name)}</span><span class="chev">›</span></button></li>`)).join('')
+      : `<li class="muted">${pickMode === 'doc' ? 'Brak podfolderów i plików spisu (.odt, .docx, .txt, Dokument Google).' : 'Brak podfolderów.'}</li>`;
   }
 
   function pickCurrent() {
@@ -413,7 +426,29 @@
     renderSync();
     renderFolders();
     renderTree();
+    if (window.Songs) Songs.render();
   }
+
+  // ---------- zakładki ----------
+  const TAB_KEY = 'kn-tab';
+  function showTab(name) {
+    document.querySelectorAll('[data-tab]').forEach((b) => {
+      const on = b.dataset.tab === name;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+    document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== name; });
+    try { localStorage.setItem(TAB_KEY, name); } catch (e) { /* trudno */ }
+  }
+  document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  try { showTab(localStorage.getItem(TAB_KEY) === 'songs' ? 'songs' : 'files'); } catch (e) { showTab('files'); }
+
+  // wspólne funkcje dla pozostałych modułów (spisy pieśni)
+  window.App = {
+    get data() { return data; },
+    get idx() { return idx; },
+    changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt,
+  };
 
   // ---------- zdarzenia ----------
   $('btn-connect').addEventListener('click', () => { ensureConnected(); });
@@ -423,9 +458,9 @@
     renderAll();
     toast('Rozłączono z Dyskiem. Dane zostają w tym urządzeniu.');
   });
-  $('btn-add-folder').addEventListener('click', openPicker);
+  $('btn-add-folder').addEventListener('click', () => openPicker('folder'));
   $('btn-scan').addEventListener('click', doScan);
-  $('btn-welcome-start').addEventListener('click', openPicker);
+  $('btn-welcome-start').addEventListener('click', () => openPicker('folder'));
   $('root-list').addEventListener('click', (e) => {
     const b = e.target.closest('[data-rm]');
     if (b) removeRoot(b.dataset.rm);
@@ -434,6 +469,11 @@
   $('picker-list').addEventListener('click', (e) => {
     const b = e.target.closest('.pick-item');
     if (!b) return;
+    if (b.classList.contains('pick-doc')) {
+      $('picker').close();
+      if (pickDoc) pickDoc({ id: b.dataset.id, name: b.dataset.name, mimeType: b.dataset.mime });
+      return;
+    }
     pickStack.push({ id: b.dataset.id, name: b.dataset.name });
     loadPicker();
   });

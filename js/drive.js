@@ -178,6 +178,33 @@ window.Drive = (() => {
       .sort((a, b) => a.name.localeCompare(b.name, 'pl', { numeric: true, sensitivity: 'base' }));
   }
 
+  // podfoldery i pliki spisów (.odt, .docx, .txt, Dokumenty Google) – do wyboru pliku spisu
+  async function listFoldersAndDocs(parentId) {
+    const q = parentId === 'shared'
+      ? `sharedWithMe and trashed=false`
+      : `'${esc(parentId)}' in parents and trashed=false`;
+    const items = await listAll(parentId === 'shared' ? { q } : { q, corpora: 'allDrives' }, ITEM);
+    const folders = [];
+    const docs = [];
+    for (const f of items) {
+      let mime = f.mimeType;
+      let id = f.id;
+      if (mime === SHORTCUT && f.shortcutDetails) { mime = f.shortcutDetails.targetMimeType; id = f.shortcutDetails.targetId; }
+      if (mime === FOLDER) folders.push({ id, name: f.name });
+      else if (mime === 'application/vnd.google-apps.document' || /\.(odt|docx|txt)$/i.test(f.name)) docs.push({ id, name: f.name, mimeType: mime });
+    }
+    const by = (a, b) => a.name.localeCompare(b.name, 'pl', { numeric: true, sensitivity: 'base' });
+    return { folders: folders.sort(by), docs: docs.sort(by) };
+  }
+
+  async function download(id) {
+    return (await api(`${API}/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`)).arrayBuffer();
+  }
+
+  async function exportText(id) {
+    return (await api(`${API}/files/${encodeURIComponent(id)}/export?mimeType=text/plain`)).text();
+  }
+
   async function listSharedDrives() {
     try {
       const r = await (await api(`${API}/drives?${qs({ pageSize: 100, fields: 'drives(id,name)' })}`)).json();
@@ -229,7 +256,7 @@ window.Drive = (() => {
   return {
     FOLDER, SHORTCUT, AuthError,
     init, connect, disconnect, isConnected, onChange, rememberEmail,
-    about, listChildren, listFolders, listSharedDrives,
+    about, listChildren, listFolders, listFoldersAndDocs, listSharedDrives, download, exportText,
     findDataFile, readJson, createJson, updateJson,
   };
 })();
