@@ -2,7 +2,7 @@
 
 Aplikacja do porządkowania nut trzymanych na Dysku Google.
 
-Strona: https://zbludzakowe-zabawy.github.io/kamienickie-nutki/
+Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
 
 ## Co już działa
 
