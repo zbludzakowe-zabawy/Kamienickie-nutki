@@ -92,6 +92,34 @@ window.Catalog = (() => {
     return { nodes, scannedAt: now, files };
   }
 
+  // Odświeża jeden folder (z podfolderami) – reszta listy zostaje bez zmian.
+  async function rescanFolder(nodes, folder, onProgress) {
+    const idx = buildIndex(nodes);
+    const old = new Set();
+    const collect = (id) => {
+      for (const ch of idx.children[id] || []) {
+        old.add(ch.id);
+        if (ch.folder) collect(ch.id);
+      }
+    };
+    collect(folder.id);
+    const res = await scan([{ id: folder.id, name: folder.name }], nodes, onProgress);
+    const out = {};
+    for (const [k, v] of Object.entries(nodes)) if (!old.has(k)) out[k] = v;
+    let added = 0;
+    let files = 0;
+    for (const [k, v] of Object.entries(res.nodes)) {
+      if (k === folder.id || out[k]) continue; // sam folder i pliki leżące też gdzie indziej zostają po staremu
+      out[k] = v;
+      if (!v.folder) {
+        files++;
+        if (v.added === res.scannedAt) added++;
+      }
+    }
+    const removed = [...old].filter((k) => !out[k] && nodes[k] && !nodes[k].folder).length;
+    return { nodes: out, files, added, removed, at: res.scannedAt };
+  }
+
   // Dzieci każdego folderu (posortowane) i liczba nut w poddrzewie.
   function buildIndex(nodes) {
     const children = {};
@@ -143,5 +171,5 @@ window.Catalog = (() => {
     return out;
   }
 
-  return { scan, buildIndex, pathOf, keepUnder, norm };
+  return { scan, rescanFolder, buildIndex, pathOf, keepUnder, norm };
 })();

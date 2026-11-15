@@ -12,10 +12,14 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
 - **Wybór folderów z nutami**: Mój dysk, „Udostępnione dla mnie” i dyski współdzielone.
 - **Skanowanie**: wszystkie PDF-y i obrazy (jpg, png, gif, webp, tiff, heic) z wybranych folderów i podfolderów,
   w takim układzie jak na Dysku. Foldery bez nut są pomijane, skróty do plików i folderów są obsługiwane.
+- **Odświeżanie jednego folderu** (↻ przy folderze): gdy dodasz nuty do konkretnego katalogu na Dysku,
+  aplikacja sprawdza tylko ten katalog z podfolderami, a nie cały Dysk. Nowe pliki są oznaczone „nowy”.
 - **Własne nazwy**: stuknij nazwę pliku i wpisz swoją. Plik na Dysku zostaje nietknięty.
 - **Wyszukiwanie** bez względu na polskie znaki i wielkość liter, oraz filtry: bez nazwy, z nazwą, nowe od ostatniego skanu.
 - **Zapis**: dane trzymane są w urządzeniu i w pliku `KamienickieNutki.json` na Dysku, więc działa to samo na komputerze i telefonie.
   Tego pliku nie usuwaj ani nie przenoś do kosza.
+- **Zapis tylko w jednym folderze**: wszystko, co aplikacja tworzy, trafia do folderu „Kamienickie Nutki” na Dysku.
+  Google pozwala jej zmieniać wyłącznie pliki, które sama utworzyła, więc Twoich nut nie może zmienić ani usunąć.
 
 ### Spisy pieśni
 - **Wczytanie spisu** z Dysku albo z komputera: `.odt`, `.docx`, `.txt` i Dokumenty Google.
@@ -29,6 +33,8 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
   „Nie mamy” oraz „Zatwierdź pewne” dla wszystkich dopasowań automatycznych naraz.
   Plik bez własnej nazwy dostaje po zatwierdzeniu tytuł ze spisu.
 - Po każdym skanowaniu Dysku niezatwierdzone pozycje są dopasowywane od nowa.
+- **„Dopasuj ponownie”** nie łączy się z Dyskiem: dopasowuje jeszcze raz pozycje niezatwierdzone do plików z ostatniego skanowania.
+  Nowe pliki z Dysku trzeba najpierw wczytać („Skanuj Dysk” albo ↻ przy folderze).
 
 ## Następne etapy
 
