@@ -51,6 +51,9 @@
     try { localStorage.setItem(EXP_KEY, JSON.stringify([...ui.expanded])); } catch (e) { /* trudno */ }
   }
 
+  // „nowe” = dodane podczas ostatniego skanowania lub odświeżania folderu
+  const isNewNode = (n) => !!n.added && n.added === (data.newAt || data.scannedAt);
+
   const rebuild = () => {
     idx = Catalog.buildIndex(data.nodes);
     // na nowym urządzeniu foldery główne są od razu rozwinięte
@@ -99,7 +102,7 @@
         }
       }
       if (!saved) {
-        const f = await Drive.createJson(cfg.dataFileName, text);
+        const f = await Drive.createJson(cfg.dataFileName, text, await Drive.ensureAppFolder());
         sync.fileId = f.id;
       }
       if (data.updatedAt === snapshot) sync.dirty = false;
@@ -125,6 +128,10 @@
       if (f) {
         const remote = normalize(await Drive.readJson(f.id));
         sync.fileId = f.id;
+        // plik z danymi zawsze w folderze aplikacji (starsze wersje zapisywały go w „Mój dysk”)
+        Drive.ensureAppFolder()
+          .then((fid) => ((f.parents || []).includes(fid) ? null : Drive.moveInto(f.id, fid, f.parents)))
+          .catch((e) => console.warn('Nie udało się przenieść pliku z danymi', e));
         if ((remote.updatedAt || 0) > (data.updatedAt || 0)) {
           data = remote;
           sync.dirty = false;
@@ -204,13 +211,14 @@
     const list = $('root-list');
     list.innerHTML = data.roots.length
       ? data.roots.map((r) => `<li><span class="fico" aria-hidden="true"></span><span class="root-name">${esc(r.name)}</span>
+          <button class="icon-btn" data-refresh="${esc(r.id)}" title="Odśwież tylko ten folder" aria-label="Odśwież folder ${esc(r.name)}"${ui.scanning || !data.scannedAt ? ' disabled' : ''}>↻</button>
           <button class="icon-btn" data-rm="${esc(r.id)}" title="Usuń z listy" aria-label="Usuń folder ${esc(r.name)} z listy"${ui.scanning ? ' disabled' : ''}>✕</button></li>`).join('')
       : '<li class="muted">Nie wybrano jeszcze żadnego folderu.</li>';
     $('btn-scan').disabled = ui.scanning || !data.roots.length;
     $('btn-add-folder').disabled = ui.scanning;
     if (!ui.scanning) {
       const total = Object.values(data.nodes).filter((n) => !n.folder).length;
-      const fresh = data.scannedAt ? Object.values(data.nodes).filter((n) => !n.folder && n.added === data.scannedAt).length : 0;
+      const fresh = data.scannedAt ? Object.values(data.nodes).filter((n) => !n.folder && isNewNode(n)).length : 0;
       $('scan-info').textContent = data.scannedAt
         ? `Ostatnie skanowanie: ${fmtDate(data.scannedAt)} · ${total} ${plural(total, 'plik', 'pliki', 'plików')} z nutami` +
           (fresh ? ` · ${fresh} ${plural(fresh, 'nowy', 'nowe', 'nowych')}` : '')
@@ -231,6 +239,7 @@
       });
       data.nodes = res.nodes;
       data.scannedAt = res.scannedAt;
+      data.newAt = res.scannedAt;
       rebuild();
       if (window.Songs) Songs.rematchAll(true);
       changed();
@@ -239,6 +248,39 @@
       handleError(e);
     } finally {
       ui.scanning = false;
+      renderAll();
+    }
+  }
+
+  // Odświeża jeden folder (np. po dodaniu nut na Dysku) bez skanowania wszystkiego.
+  async function refreshFolder(id) {
+    if (ui.scanning) return;
+    const r = data.roots.find((x) => x.id === id);
+    const node = data.nodes[id] || (r && { id, name: r.name, folder: true, parent: null });
+    if (!node || !node.folder) return;
+    if (!(await ensureConnected())) return;
+    ui.scanning = true;
+    ui.refreshing = id;
+    renderFolders();
+    renderTree();
+    $('scan-info').textContent = `Odświeżanie „${node.name}”…`;
+    try {
+      const res = await Catalog.rescanFolder(data.nodes, node, (p) => {
+        $('scan-info').textContent = `Odświeżanie „${node.name}”… ${p.files} ${plural(p.files, 'plik', 'pliki', 'plików')} z nutami`;
+      });
+      data.nodes = res.nodes;
+      if (!data.nodes[id] && r) data.nodes[id] = { id, name: r.name, folder: true, parent: null };
+      data.newAt = res.at;
+      rebuild();
+      if (window.Songs) Songs.rematchAll(true);
+      changed();
+      toast(`Odświeżono „${node.name}”: ${res.files} ${plural(res.files, 'plik', 'pliki', 'plików')} z nutami` +
+        `, nowe: ${res.added}` + (res.removed ? `, usunięte z Dysku: ${res.removed}` : '') + '.');
+    } catch (e) {
+      handleError(e);
+    } finally {
+      ui.scanning = false;
+      ui.refreshing = null;
       renderAll();
     }
   }
@@ -323,7 +365,7 @@
     const words = Catalog.norm(ui.query).split(' ').filter(Boolean);
     const f = ui.filter;
     const filtering = words.length > 0 || f !== 'all';
-    const isNew = (n) => !!n.added && n.added === data.scannedAt;
+    const isNew = isNewNode;
     const match = (n) => {
       const m = data.meta[n.id];
       const title = m && m.title;
@@ -370,7 +412,8 @@
       const open = filtering || ui.expanded.has(n.id);
       const cnt = filtering ? visible[n.id] : idx.counts[n.id] || 0;
       let s = `<div class="row folder${open ? ' open' : ''}" data-id="${esc(n.id)}" style="--d:${d}" role="button" tabindex="0" aria-expanded="${open}">
-        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span><span class="cnt">${cnt}</span></div>`;
+        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span><span class="cnt">${cnt}</span>
+        <button class="act refresh${ui.refreshing === n.id ? ' spin' : ''}" data-refresh="${esc(n.id)}" title="Odśwież tylko ten folder" aria-label="Odśwież folder ${esc(n.name)}"${ui.scanning ? ' disabled' : ''}>↻</button></div>`;
       if (open) s += (idx.children[n.id] || []).map((ch) => node(ch, d + 1)).join('');
       return s;
     };
@@ -462,6 +505,8 @@
   $('btn-scan').addEventListener('click', doScan);
   $('btn-welcome-start').addEventListener('click', () => openPicker('folder'));
   $('root-list').addEventListener('click', (e) => {
+    const rf = e.target.closest('[data-refresh]');
+    if (rf) return refreshFolder(rf.dataset.refresh);
     const b = e.target.closest('[data-rm]');
     if (b) removeRoot(b.dataset.rm);
   });
@@ -513,6 +558,8 @@
     renderTree();
   };
   tree.addEventListener('click', (e) => {
+    const rf = e.target.closest('[data-refresh]');
+    if (rf) return refreshFolder(rf.dataset.refresh);
     const row = e.target.closest('.row');
     if (!row) return;
     if (row.classList.contains('folder')) return toggleFolder(row);
@@ -536,6 +583,7 @@
       return;
     }
     const row = e.target.closest('.row.folder');
+    if (e.target.closest('[data-refresh]')) return;
     if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleFolder(row); }
   });
   tree.addEventListener('focusout', (e) => {

@@ -7,4 +7,6 @@ window.KN_CONFIG = {
   apiKey: 'AIzaSyCPSiq9JD1hQdtl0rVqR9WTOvukz0BAiXE',
   // Plik z danymi aplikacji na Dysku administratora
   dataFileName: 'KamienickieNutki.json',
+  // Jedyny folder na Dysku, w którym aplikacja zapisuje swoje pliki
+  appFolderName: 'Kamienickie Nutki',
 };

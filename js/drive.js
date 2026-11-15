@@ -224,19 +224,54 @@ window.Drive = (() => {
       q: `name='${esc(cfg.dataFileName)}' and 'me' in owners and trashed=false`,
       orderBy: 'modifiedTime desc',
       corpora: 'user',
-    }, 'id,name,modifiedTime');
+    }, 'id,name,modifiedTime,parents');
     return files[0] || null;
+  }
+
+  // Jedyny folder, w którym aplikacja zapisuje (plik z danymi, a później PDF-y i nuty dla gości).
+  // Rozpoznajemy go po znaczniku widocznym tylko dla tej aplikacji, więc zmiana nazwy mu nie szkodzi.
+  let appFolderId = null;
+  async function ensureAppFolder() {
+    if (appFolderId) return appFolderId;
+    const found = await listAll({
+      q: `appProperties has { key='kn' and value='app' } and mimeType='${FOLDER}' and trashed=false`,
+      corpora: 'user',
+    }, 'id,name');
+    if (found[0]) return (appFolderId = found[0].id);
+    const r = await (await api(`${API}/files?fields=id`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify({
+        name: cfg.appFolderName || 'Kamienickie Nutki',
+        mimeType: FOLDER,
+        appProperties: { kn: 'app' },
+        description: 'Folder aplikacji Kamienickie Nutki – tu zapisuje ona swoje pliki. Twoich nut aplikacja nie zmienia.',
+      }),
+    })).json();
+    return (appFolderId = r.id);
+  }
+
+  // Przenosi plik utworzony przez aplikację do jej folderu (np. plik z danymi z wcześniejszej wersji).
+  async function moveInto(id, folderId, parents) {
+    const p = { addParents: folderId, fields: 'id,parents' };
+    const old = (parents || []).filter((x) => x !== folderId);
+    if (old.length) p.removeParents = old.join(',');
+    return (await api(`${API}/files/${encodeURIComponent(id)}?${qs(p)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })).json();
   }
 
   async function readJson(id) {
     return (await api(`${API}/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`)).json();
   }
 
-  async function createJson(name, text) {
+  async function createJson(name, text, parentId) {
     const boundary = 'kn' + Math.random().toString(36).slice(2);
     const body =
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
-      JSON.stringify({ name, mimeType: 'application/json', description: 'Dane aplikacji Kamienickie Nutki – nie usuwaj.' }) +
+      JSON.stringify({ name, mimeType: 'application/json', description: 'Dane aplikacji Kamienickie Nutki – nie usuwaj.', ...(parentId ? { parents: [parentId] } : {}) }) +
       `\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${text}\r\n--${boundary}--`;
     return (await api(`${UPLOAD}/files?uploadType=multipart&fields=id,modifiedTime`, {
       method: 'POST',
@@ -257,6 +292,6 @@ window.Drive = (() => {
     FOLDER, SHORTCUT, AuthError,
     init, connect, disconnect, isConnected, onChange, rememberEmail,
     about, listChildren, listFolders, listFoldersAndDocs, listSharedDrives, download, exportText,
-    findDataFile, readJson, createJson, updateJson,
+    findDataFile, readJson, createJson, updateJson, ensureAppFolder, moveInto,
   };
 })();
