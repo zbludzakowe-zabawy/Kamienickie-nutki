@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Porządkowanie nut z Dysku Google: lista plików, własne nazwy, dopasowanie do spisu pieśni.">
+  <meta name="theme-color" content="#8c2f39">
+  <title>Kamienickie Nutki</title>
+  <meta name="application-name" content="Kamienickie Nutki">
+  <meta name="apple-mobile-web-app-title" content="Nutki">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon-192.png" alt="" width="32" height="32">
+      <span>Kamienickie Nutki</span>
+    </div>
+    <div class="top-right">
+      <span id="sync" class="sync" hidden></span>
+      <button class="btn light" id="btn-connect">Połącz z Dyskiem</button>
+      <div class="account" id="account" hidden>
+        <span class="who" id="who"></span>
+        <button class="btn ghost" id="btn-disconnect" title="Rozłącz z Dyskiem Google">Rozłącz</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card" id="welcome" hidden>
+      <h2>Witaj!</h2>
+      <p>Aplikacja pomoże uporządkować nuty z Twojego Dysku Google. Pliki na Dysku pozostają nietknięte. Nazwy nadane tutaj służą tylko do pracy w aplikacji.</p>
+      <ol>
+        <li><b>Połącz z Dyskiem</b> i zgódź się na dostęp. Przy pierwszym razie Google ostrzeże, że aplikacja jest niezweryfikowana. Kliknij <i>Zaawansowane → Przejdź do KamienickieNutki</i>.</li>
+        <li><b>Dodaj folder</b>, w którym trzymasz nuty. Może ich być kilka.</li>
+        <li>Aplikacja <b>przeskanuje</b> folder i pokaże wszystkie PDF-y i obrazy w takim układzie jak na Dysku.</li>
+      </ol>
+      <button class="btn primary" id="btn-welcome-start">Wybierz folder z nutami</button>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Foldery z nutami</h2></div>
+      <ul class="root-list" id="root-list"></ul>
+      <p class="muted" id="scan-info" aria-live="polite"></p>
+      <div class="actions">
+        <button class="btn" id="btn-add-folder">+ Dodaj folder</button>
+        <button class="btn primary" id="btn-scan">Skanuj Dysk</button>
+      </div>
+    </section>
+
+    <section class="card" id="files-card" hidden>
+      <div class="card-head"><h2>Nuty</h2><span class="muted" id="files-summary"></span></div>
+      <div class="toolbar">
+        <input type="search" id="q" placeholder="Szukaj po nazwie…" autocomplete="off" aria-label="Szukaj nut">
+        <select id="filter" aria-label="Pokaż">
+          <option value="all">Wszystkie</option>
+          <option value="unnamed">Bez własnej nazwy</option>
+          <option value="named">Z własną nazwą</option>
+          <option value="new">Nowe od ostatniego skanu</option>
+        </select>
+        <div class="toolbar-btns">
+          <button class="btn small" id="btn-expand">Rozwiń wszystko</button>
+          <button class="btn small" id="btn-collapse">Zwiń</button>
+        </div>
+      </div>
+      <p class="hint muted">Stuknij nazwę pliku, żeby nadać mu własną nazwę. ↗ otwiera plik na Dysku.</p>
+      <div class="tree" id="tree"></div>
+    </section>
+  </main>
+
+  <dialog id="picker" aria-labelledby="picker-title">
+    <div class="picker">
+      <h2 id="picker-title">Wybierz folder z nutami</h2>
+      <nav class="crumbs" id="crumbs" aria-label="Ścieżka"></nav>
+      <ul class="picker-list" id="picker-list"></ul>
+      <div class="dialog-actions">
+        <button class="btn" type="button" id="btn-pick-cancel">Anuluj</button>
+        <button class="btn primary" type="button" id="btn-pick">Dodaj ten folder</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <div class="app-banner" id="install-banner" hidden>
+    <img src="icons/icon-192.png" alt="" width="40" height="40">
+    <div class="app-banner-text">
+      <strong>Zainstaluj Kamienickie Nutki</strong>
+      <span class="only-prompt">Aplikacja na ekranie głównym, otwiera się jednym stuknięciem.</span>
+      <span class="only-ios">Stuknij <b>Udostępnij</b> <svg class="share-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>, potem <b>Do ekranu początkowego</b>.</span>
+    </div>
+    <button class="btn primary only-prompt" id="btn-install">Zainstaluj</button>
+    <button class="banner-close" id="btn-install-close" aria-label="Nie pokazuj więcej">✕</button>
+  </div>
+  <div class="app-banner" id="update-banner" role="alert" hidden>
+    <div class="app-banner-text">
+      <strong>Dostępna nowa wersja</strong>
+      <span>Twoja praca zostanie zachowana.</span>
+    </div>
+    <button class="btn primary" id="btn-update">Odśwież</button>
+    <button class="btn" id="btn-update-later">Później</button>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/catalog.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>
