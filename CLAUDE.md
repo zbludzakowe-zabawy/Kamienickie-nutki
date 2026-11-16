@@ -45,6 +45,9 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 - `js/songs.js` – zakładka „Spisy pieśni” (`window.Songs`)
 - `js/crypto.js` – AES-GCM + PBKDF2 z PIN-u (`KnCrypto.encrypt/decrypt`)
 - `js/pdfbuild.js` – PDF śpiewnika (pdf-lib z `js/vendor/`, spis treści rysowany na canvasie – polskie znaki bez fontów)
+  + klikalny spis treści (`addLinks`: niewidoczne adnotacje Link nad wierszami, pozycje z `canvas.links`) i zakładki PDF
+  (`addOutline`: „Spis treści” + pieśni, w programach pogrupowane wg części; `PageMode=UseOutlines`). Sprawdzanie: `pypdf` (jest w środowisku).
+  **Po zmianie sposobu składania PDF podbij `PDF_FORMAT` w publish.js** (jest w podpisie) – inaczej istniejące PDF-y się nie przebudują.
 - `js/programs.js` – zakładka „Uroczystości” (`window.Programs`): programy mszy, części, wybór pieśni (`#song-picker`), `forPublish()`
 - `js/publish.js` – zakładka „Dla chórzystów” (`window.Publish`)
 - `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu `#/`, `#/s/<bookId>[/<i>]` (śpiewnik), `#/p/<programId>[/<i>]` (program; `i` = indeks w spłaszczonej liście pieśni)
