@@ -43,6 +43,8 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
   (filtry drzewa: wszystkie / bez nazwy / z nazwą / nowe / **nieprzypisane do żadnego śpiewnika** = brak w `ok`/`auto` spisów, programy się nie liczą;
   „⬇ Pobierz listę” = CSV z widoczną listą: Lp.;Nazwa w aplikacji;Nazwa pliku;Folder;Rodzaj, UTF-8 z BOM, separator `;`)
 - `js/songs.js` – zakładka „Spisy pieśni” (`window.Songs`)
+- `js/dups.js` – porządkowanie Dysku (`window.Dups`): „Szukaj duplikatów” (karta `#dups-card` w „Nutach na Dysku”) i lista
+  „Pozostałe nuty” (`othersItems()`); szczegóły w sekcji „Porządkowanie” niżej
 - `js/crypto.js` – AES-GCM + PBKDF2 z PIN-u (`KnCrypto.encrypt/decrypt`)
 - `js/pdfbuild.js` – PDF śpiewnika (pdf-lib z `js/vendor/`, spis treści rysowany na canvasie – polskie znaki bez fontów)
   + klikalny spis treści (`addLinks`: niewidoczne adnotacje Link nad wierszami, pozycje z `canvas.links`) i zakładki PDF
@@ -64,13 +66,14 @@ przy połączeniu wygrywa nowszy `updatedAt`):
 ```
 { app, v, updatedAt, scannedAt, newAt,
   roots: [{id, name}],                      // wybrane foldery
-  nodes: {id: {id, name, parent, folder?, kind:'pdf'|'img', size, modified, added}},  // klucz = id pliku (dla skrótów – id celu)
+  nodes: {id: {id, name, parent, folder?, kind:'pdf'|'img', size, modified, md5, added}},  // klucz = id pliku (dla skrótów – id celu)
   meta:  {fileId: {title, rot}},            // własne nazwy; rot = obrót 90/180/270° (tylko w aplikacji)
   songbooks: [{id, name, source, importedAt,
                items: [{no, title, state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
   programs: [{id, name, date:'YYYY-MM-DD', createdAt,
               parts: [{id, name, items: [{title, note, files:[fileId], src?:{book, bookName, no}}]}]}],
   publish: {pin, pdf, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt},
+  dups: {at, hasMd5, groups: {gid: {type:'same'|'name'|'book', title, files:[id], entries?:[{book,i}], status:'open'|'kept'|'resolved', keep:[id], note, decidedAt}}},
   owner }
 ```
 
@@ -88,6 +91,21 @@ Pieśń ze spisu ma `src` → przy publikacji bierzemy **aktualne** dopasowanie 
 albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty” przy pieśni (`openPicker(pi, ii)`) podmienia tylko
 `files`/`src` – tytuł i uwaga zostają. `src.i` = indeks pozycji w spisie (pewniejsze niż sam numer, zwłaszcza w spisach bez numerów). Program z datą w przeszłości = archiwum (u administratora i chórzysty), nadal widoczny, dopóki nie usunięty.
 „Kopiuj” tworzy kopię bez daty. Puste części są ukryte u chórzystów i w PDF. PDF programu = pseudo-śpiewnik z wierszami `section`.
+
+## Porządkowanie: duplikaty i „Pozostałe nuty”
+
+- **Szukaj duplikatów** (przycisk obok „Skanuj Dysk”, tylko po skanowaniu) – grupy: `m:<md5>` identyczna treść (md5 z Dysku, pobierane
+  od tej wersji przy skanowaniu – starsze skany go nie mają), `n:<klucz nazwy>` ta sama nazwa (Twoja albo pliku, bez numerów stron i „kopia”)
+  w **różnych** folderach (w jednym folderze to strony jednej pieśni), `b:<tytuł>` ta sama pieśń w różnych spisach z różnymi plikami.
+- Decyzje (`status`, `keep`) zapisane w `data.dups` – przy ponownym szukaniu zostają; grupa wraca do „do przejrzenia”, gdy doszły nowe pliki;
+  znika, gdy po skanowaniu nie jest już duplikatem (np. użytkownik usunął plik). Po każdym skanowaniu szukanie odpala się samo (`detect(true)`).
+- „Zostaw tylko zaznaczone” → reszta „do usunięcia” (`Dups.toRemove()`; tag w drzewie, filtr „Duplikaty do usunięcia” + CSV); przy jednym
+  zachowanym pliku przepinamy śpiewniki i programy na niego (`repoint`). Aplikacja **nie usuwa** plików – daje linki do pliku i folderu.
+  „Nadaj nazwę” = wspólna własna nazwa dla zaznaczonych. Konflikt w spisach: „Użyj tych wszędzie” / „Zostaw różne wersje”.
+- **Pozostałe nuty** (decyzja użytkownika): pliki nieprzypisane do żadnego spisu (`ok`/`auto`) i nie „do usunięcia”, strony z jednego folderu
+  i o tej samej nazwie = jedna pozycja, alfabetycznie. U administratora zawsze aktualne; chórzyści widzą **migawkę** (`publish.others.snapshot`)
+  z ostatniego kliknięcia „Aktualizuj „Pozostałe nuty”” (zwykłe „Aktualizuj” jej nie zmienia); **PDF tylko przyciskiem „Utwórz PDF”**
+  (`publish.others.pdf`, z datą „stan na”). Przełącznik „widoczny dla chórzystów”. W katalogu to śpiewnik `id:'others'`, `auto:true`.
 
 ## Publikacja dla chórzystów
 

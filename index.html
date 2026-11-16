@@ -72,7 +72,23 @@
       <div class="actions">
         <button class="btn" id="btn-add-folder">+ Dodaj folder</button>
         <button class="btn primary" id="btn-scan">Skanuj Dysk</button>
+        <button class="btn" id="btn-dups" title="Szukaj powtórzonych nut na podstawie ostatniego skanowania i Twoich nazw" disabled>Szukaj duplikatów</button>
       </div>
+    </section>
+
+    <section class="card" id="dups-card" hidden>
+      <div class="card-head"><h2>Porządkowanie: duplikaty</h2>
+        <span class="ev-tools"><button class="btn small" id="dups-again" title="Szukaj ponownie – Twoje decyzje zostaną zachowane">↻ Szukaj ponownie</button><button class="btn small" id="dups-hide">Zwiń</button></span></div>
+      <p class="muted small">Aplikacja nie usuwa plików. Przy każdym pliku jest link do jego folderu (📁) i do pliku (↗). Usuń albo przenieś niepotrzebne pliki na Dysku,
+        a potem kliknij „Skanuj Dysk” – załatwione grupy znikną. Decyzje są zapamiętane, więc możesz wracać do tej pracy w dowolnym momencie.</p>
+      <p class="muted small" id="dups-info"></p>
+      <div class="filters" id="dups-filters" role="group" aria-label="Pokaż">
+        <button class="fchip check" data-v="open">Do przejrzenia <b>0</b></button>
+        <button class="fchip have" data-v="done">Rozstrzygnięte <b>0</b></button>
+        <button class="fchip" data-v="all">Wszystkie <b>0</b></button>
+      </div>
+      <input type="search" id="dups-q" class="sb-q" placeholder="Szukaj w duplikatach…" autocomplete="off" aria-label="Szukaj w duplikatach">
+      <div id="dups-list" class="dups"></div>
     </section>
 
     <section class="card" id="files-card" hidden>
@@ -85,6 +101,7 @@
           <option value="named">Z własną nazwą</option>
           <option value="new">Nowe od ostatniego skanu</option>
           <option value="unassigned">Nieprzypisane do żadnego śpiewnika</option>
+          <option value="remove">Duplikaty do usunięcia</option>
         </select>
         <div class="toolbar-btns">
           <button class="btn small" id="btn-expand">Rozwiń wszystko</button>
@@ -309,6 +326,7 @@
   <script src="js/matcher.js"></script>
   <script src="js/app.js"></script>
   <script src="js/songs.js"></script>
+  <script src="js/dups.js"></script>
   <script src="js/crypto.js"></script>
   <script src="js/pdfbuild.js"></script>
   <script src="js/programs.js"></script>

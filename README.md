@@ -22,6 +22,22 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
 - **Zapis tylko w jednym folderze**: wszystko, co aplikacja tworzy, trafia do folderu „Kamienickie Nutki” na Dysku.
   Google pozwala jej zmieniać wyłącznie pliki, które sama utworzyła, więc Twoich nut nie może zmienić ani usunąć.
 
+### Porządkowanie Dysku
+- **Szukaj duplikatów** (obok „Skanuj Dysk”): identyczne pliki, pliki o tej samej nazwie w różnych folderach oraz ta sama pieśń
+  przypisana w różnych śpiewnikach do różnych plików.
+- Przy każdym pliku są linki do pliku i do jego folderu na Dysku oraz informacja, gdzie jest używany. Decyzje to:
+  - „Zostaw tylko zaznaczone” (reszta zostanie oznaczona „do usunięcia”, a śpiewniki przepną się na zachowany plik),
+  - „Zostaw wszystkie”,
+  - „To różne utwory”,
+  - „Nadaj nazwę” zaznaczonym,
+  - „Użyj tych wszędzie” przy konflikcie w śpiewnikach.
+- Aplikacja niczego nie usuwa. Usuwasz na Dysku sam, a po „Skanuj Dysk” załatwione grupy znikają. Decyzje są zapamiętane.
+- Filtr **„Duplikaty do usunięcia”** + **⬇ Pobierz listę** = gotowa lista plików do usunięcia.
+
+### Śpiewnik „Pozostałe nuty”
+- Tworzy się sam z nut nieprzypisanych do żadnego spisu, alfabetycznie.
+- Chórzyści dostają nową wersję dopiero po kliknięciu **„Aktualizuj „Pozostałe nuty””** w zakładce „Dla chórzystów”. PDF powstaje tylko po kliknięciu **„Utwórz PDF”**.
+
 ### Spisy pieśni
 - **Wczytanie spisu** z Dysku albo z komputera: `.odt`, `.docx`, `.txt` i Dokumenty Google.
   Każda pozycja w osobnej linijce, najlepiej z numerem („12<tab>Tytuł”, „12. Tytuł” albo „Tytuł ..... 12”).
