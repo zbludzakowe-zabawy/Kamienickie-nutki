@@ -203,8 +203,9 @@ window.Guest = (() => {
     $('g-view').dataset.book = b.id;
     $('g-view').innerHTML = `<div class="g-bar"><a class="btn small" href="#/">‹ Śpiewniki</a></div>
       <h2 class="g-h">${esc(b.name)}</h2>
-      <p class="muted small">${b.items.length} pieśni · z nutami: ${have}</p>
-      ${b.pdf ? `<a class="btn primary g-pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(b.pdf)}" target="_blank" rel="noopener">⬇ Pobierz PDF ze śpiewnikiem${mb}</a>` : ''}
+      <p class="muted small">${b.items.length} pieśni · z nutami: ${have}${b.auto && b.at ? ` · lista z dnia ${new Date(b.at).toLocaleDateString('pl-PL')}` : ''}</p>
+      ${b.auto ? '<p class="muted small">Nuty, których nie ma w pozostałych śpiewnikach, ułożone alfabetycznie.</p>' : ''}
+      ${b.pdf ? `<a class="btn primary g-pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(b.pdf)}" target="_blank" rel="noopener">⬇ Pobierz PDF ze śpiewnikiem${mb}${b.pdfAt ? ` – stan na ${new Date(b.pdfAt).toLocaleDateString('pl-PL')}` : ''}</a>` : ''}
       <div class="g-tools">
         <input type="search" id="g-q" placeholder="Szukaj (tytuł lub numer)…" value="${esc(query)}" autocomplete="off" aria-label="Szukaj pieśni">
         <label class="g-only"><input type="checkbox" id="g-only"${onlyWithNotes ? ' checked' : ''}> tylko z nutami</label>

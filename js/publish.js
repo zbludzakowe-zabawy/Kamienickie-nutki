@@ -25,8 +25,23 @@ window.Publish = (() => {
   function neededIds() {
     const ids = new Set();
     for (const b of allBooks()) for (const it of b.items) if (usable(it)) it.files.forEach((f) => { if (A.data.nodes[f]) ids.add(f); });
+    const o = P().others;
+    if (o && o.enabled !== false && o.snapshot) o.snapshot.forEach((it) => it.files.forEach((f) => { if (A.data.nodes[f]) ids.add(f); }));
     return ids;
   }
+
+  // ---------- śpiewnik „Pozostałe nuty” ----------
+  // U administratora zawsze aktualny (Dups.othersItems). Chórzyści widzą „migawkę” zrobioną przyciskiem
+  // „Aktualizuj Pozostałe nuty”; PDF tylko na wyraźne żądanie („Utwórz PDF”).
+  const OTHERS_ID = 'others';
+  const OTHERS_NAME = 'Pozostałe nuty';
+  const othersNow = () => (window.Dups ? Dups.othersItems() : []);
+  const othersSig = (items) => JSON.stringify(items.map((it) => [it.title, it.files]));
+  const O = () => {
+    const p = P();
+    if (!p.others) p.others = { enabled: true };
+    return p.others;
+  };
 
   // Programy uroczystości jako „śpiewniki” do PDF: nagłówki części + pieśni (z uwagą w nawiasie).
   const programs = () => (window.Programs ? Programs.forPublish() : []);
@@ -52,6 +67,39 @@ window.Publish = (() => {
     ? [it.no, it.title, it.files.map((f) => [f, A.data.nodes[f] && A.data.nodes[f].modified, rotOf(f)])]
     : [it.no, it.title]))]));
 
+  function othersCatalog() {
+    const p = P();
+    const o = O();
+    if (o.enabled === false || !o.snapshot || !o.snapshot.length) return [];
+    return [{
+      id: OTHERS_ID,
+      name: OTHERS_NAME,
+      auto: true,
+      at: o.at,
+      pdf: o.pdf ? o.pdf.id : null,
+      pdfSize: o.pdf ? o.pdf.size : 0,
+      pdfAt: o.pdf ? o.pdf.at : null,
+      items: o.snapshot.map((it) => ({ no: '', title: it.title, files: it.files.map((f) => p.copies[f] && p.copies[f].id).filter(Boolean) })),
+    }];
+  }
+
+  function othersRow() {
+    const o = O();
+    const now = othersNow();
+    const fresh = o.snapshot && othersSig(o.snapshot) === othersSig(now);
+    const state = !o.snapshot ? '<span class="pub-state new">● jeszcze nie udostępniony</span>'
+      : fresh ? '<span class="pub-state ok">✓ chórzyści mają aktualną listę</span>' : '<span class="pub-state changed">● lista się zmieniła – zaktualizuj osobno</span>';
+    const d = (iso) => new Date(iso).toLocaleDateString('pl-PL');
+    return `<li class="pub-others"><span class="pub-row"><strong><span class="badge doc">AUTO</span> ${OTHERS_NAME}</strong>${state}</span>
+      <span class="muted small">Nuty nieprzypisane do żadnego spisu, alfabetycznie: teraz ${now.length} ${A.plural(now.length, 'utwór', 'utwory', 'utworów')}${
+        o.snapshot ? ` · u chórzystów: ${o.snapshot.length} (stan na ${d(o.at)})` : ''} · PDF: ${o.pdf ? `${o.pdf.pages} str. (stan na ${d(o.pdf.at)})` : 'brak'}</span>
+      <span class="pub-others-acts">
+        <label class="check small"><input type="checkbox" data-o="enabled"${o.enabled === false ? '' : ' checked'}> widoczny dla chórzystów</label>
+        <button class="btn small" data-o="update"${busy || o.enabled === false ? ' disabled' : ''}>Aktualizuj „Pozostałe nuty”</button>
+        <button class="btn small" data-o="pdf"${busy || o.enabled === false || (!o.snapshot && !now.length) ? ' disabled' : ''}>Utwórz PDF</button>
+      </span></li>`;
+  }
+
   function catalog() {
     const p = P();
     return {
@@ -70,7 +118,7 @@ window.Publish = (() => {
             files: usable(it) ? it.files.map((f) => p.copies[f] && p.copies[f].id).filter(Boolean) : [],
           })),
         };
-      }),
+      }).concat(othersCatalog()),
       programs: programs().map((pr) => {
         const pdf = p.pdf && p.pdfs[pr.id];
         return {
@@ -151,9 +199,9 @@ window.Publish = (() => {
     if (frac != null) $('pub-bar').style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
   }
 
-  async function publish() {
+  async function publish(opts = {}) {
     if (busy) return;
-    if (!allBooks().length) return A.toast('Najpierw wczytaj spis pieśni albo utwórz program uroczystości.', true);
+    if (!allBooks().length && !opts.others) return A.toast('Najpierw wczytaj spis pieśni albo utwórz program uroczystości.', true);
     if (!(await A.ensureConnected())) return;
     busy = true;
     problems = [];
@@ -250,17 +298,36 @@ window.Publish = (() => {
         delete p.pdfs[id];
       }
 
+      // 2b. PDF „Pozostałych nut” – tylko na żądanie
+      if (opts.othersPdf && O().snapshot && O().snapshot.length) {
+        step('PDF „Pozostałe nuty”: pobieranie nut…', 0.85);
+        const bytesOf = async (fid) => {
+          let u8 = new Uint8Array(await Drive.download(fid));
+          if (rotOf(fid)) u8 = await PdfBuild.rotate(u8, rotOf(fid)).then((r) => r.bytes).catch(() => u8);
+          return u8;
+        };
+        const ob = { id: OTHERS_ID, name: OTHERS_NAME, subtitle: `Stan na ${new Date(O().at).toLocaleDateString('pl-PL')}`, items: O().snapshot.map((it) => ({ ...it, no: '', state: 'ok' })) };
+        const res = await PdfBuild.build(ob, bytesOf, (d, t) => step(`PDF „Pozostałe nuty”: ${d} z ${t}`, 0.85 + 0.1 * (d / t)));
+        const cur = O().pdf;
+        const up = await Drive.uploadFile(`${OTHERS_NAME}.pdf`, 'application/pdf', new Blob([res.bytes], { type: 'application/pdf' }), folder, cur && cur.id);
+        O().pdf = { id: up.id, size: res.bytes.length, pages: res.pages, at: O().at };
+        problems.push(...res.problems.map((x) => `${OTHERS_NAME}: ${x}`));
+        A.changed();
+      }
+
       // 3. katalog dla chórzystów
       step('Zapisywanie spisów dla chórzystów…', 0.96);
       await writeCatalog(folder);
       markPublished();
-      const summary = (updated.length ? `Zaktualizowano: ${updated.join(', ')}.` : 'Nic nie wymagało aktualizacji.') +
+      const summary = (opts.others ? `Zaktualizowano „${OTHERS_NAME}”${opts.othersPdf ? ' (z PDF)' : ''}. ` : '') +
+        (updated.length ? `Zaktualizowano: ${updated.join(', ')}.` : opts.others ? '' : 'Nic nie wymagało aktualizacji.') +
         (same.length ? ` Bez zmian (pominięte): ${same.join(', ')}.` : '') +
         (status.removed.length ? ` Usunięto u chórzystów: ${status.removed.length}.` : '');
       step(summary, 1);
       A.toast(problems.length
         ? `Gotowe. Do PDF nie udało się dołączyć ${problems.length} ${A.plural(problems.length, 'pozycji', 'pozycji', 'pozycji')} – lista poniżej.`
-        : updated.length ? `Zaktualizowano dla chórzystów: ${updated.join(', ')}.` : 'Gotowe.', problems.length > 0);
+        : opts.others ? `Zaktualizowano „${OTHERS_NAME}” u chórzystów${opts.othersPdf ? ' razem z PDF' : ''}.`
+          : updated.length ? `Zaktualizowano dla chórzystów: ${updated.join(', ')}.` : 'Gotowe.', problems.length > 0);
     } catch (e) {
       A.changed();
       A.handleError(e);
@@ -317,6 +384,7 @@ window.Publish = (() => {
           p.pdf && pdf ? ` · PDF: ${pdf.pages} str., ${(pdf.size / 1048576).toFixed(1)} MB` : ''}</span></li>`;
       }).join('')
       : '<li class="muted">Brak spisów i programów – wczytaj spis w zakładce „Spisy pieśni” albo utwórz program w „Uroczystościach”.</li>';
+    $('pub-books').insertAdjacentHTML('beforeend', othersRow());
     const upToDate = !!p.catalogId && !status.any && Object.keys(status.books).length === all.length;
     $('pub-go').disabled = busy || !all.length || upToDate;
     $('pub-go').textContent = !p.catalogId ? 'Opublikuj dla chórzystów' : upToDate ? '✓ Wszystko aktualne' : 'Aktualizuj dla chórzystów';
@@ -338,7 +406,30 @@ window.Publish = (() => {
     }
   }
 
-  $('pub-go').addEventListener('click', publish);
+  $('pub-go').addEventListener('click', () => publish());
+  $('pub-books').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-o]');
+    if (!b || busy) return;
+    const o = O();
+    if (b.dataset.o === 'update') {
+      o.snapshot = othersNow();
+      o.at = new Date().toISOString();
+      A.changed();
+      publish({ others: true });
+    } else if (b.dataset.o === 'pdf') {
+      if (!o.snapshot) { o.snapshot = othersNow(); o.at = new Date().toISOString(); }
+      A.changed();
+      publish({ others: true, othersPdf: true });
+    }
+  });
+  $('pub-books').addEventListener('change', (e) => {
+    if (!e.target.matches('[data-o="enabled"]')) return;
+    O().enabled = e.target.checked;
+    if (e.target.checked && !O().snapshot) { O().snapshot = othersNow(); O().at = new Date().toISOString(); }
+    A.changed();
+    if (P().catalogId) publish({ others: true }); // zmiana widoczności = od razu aktualizacja u chórzystów
+    else paint();
+  });
   $('pub-force').addEventListener('click', publish);
   $('pub-pin-save').addEventListener('click', savePin);
   $('pub-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') savePin(); });

@@ -29,6 +29,7 @@
       meta: d.meta && typeof d.meta === 'object' ? d.meta : {},
       songbooks: Array.isArray(d.songbooks) ? d.songbooks : [],
       programs: Array.isArray(d.programs) ? d.programs : [],
+      dups: d.dups && typeof d.dups === 'object' ? d.dups : { groups: {} },
     };
   };
 
@@ -252,6 +253,7 @@
       data.newAt = res.scannedAt;
       rebuild();
       if (window.Songs) Songs.rematchAll(true);
+      if (window.Dups && data.dups && data.dups.at) Dups.detect(true); // duplikaty aktualne po skanowaniu
       changed();
       toast(`Gotowe: ${res.files} ${plural(res.files, 'plik', 'pliki', 'plików')} z nutami.`);
     } catch (e) {
@@ -392,7 +394,7 @@
       const m = data.meta[n.id];
       lines.push([i + 1, q((m && m.title) || stripExt(n.name)), q(n.name), q(Catalog.pathOf(data.nodes, n.id)), n.kind === 'pdf' ? 'PDF' : 'obraz'].join(';'));
     });
-    const label = { all: 'wszystkie', unnamed: 'bez-wlasnej-nazwy', named: 'z-wlasna-nazwa', new: 'nowe', unassigned: 'nieprzypisane-do-spiewnika' }[ui.filter] || 'lista';
+    const label = { all: 'wszystkie', unnamed: 'bez-wlasnej-nazwy', named: 'z-wlasna-nazwa', new: 'nowe', unassigned: 'nieprzypisane-do-spiewnika', remove: 'duplikaty-do-usuniecia' }[ui.filter] || 'lista';
     const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -413,10 +415,12 @@
     const filtering = words.length > 0 || f !== 'all';
     const isNew = isNewNode;
     const assigned = f === 'unassigned' ? assignedIds() : null;
+    const removeSet = f === 'remove' && window.Dups ? Dups.toRemove() : null;
     const match = (n) => {
       const m = data.meta[n.id];
       const title = m && m.title;
       if (assigned && assigned.has(n.id)) return false;
+      if (removeSet && !removeSet.has(n.id)) return false;
       if (f === 'named' && !title) return false;
       if (f === 'unnamed' && title) return false;
       if (f === 'new' && !isNew(n)) return false;
@@ -440,6 +444,7 @@
     let shown = 0;
     idx.roots.forEach((r) => { shown += walk(r); });
 
+    const toRemoveSet = window.Dups ? Dups.toRemove() : null;
     const fileRow = (n, d) => {
       const m = data.meta[n.id];
       const title = m && m.title;
@@ -451,7 +456,7 @@
           <button class="act" data-act="save" title="Zapisz" aria-label="Zapisz nazwę">✓</button></div>`;
       }
       return `<div class="row file" data-id="${esc(n.id)}" style="--d:${d}">${badge}
-        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}</div>
+        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}</div>
         <button class="act" data-act="edit" title="Nadaj własną nazwę" aria-label="Nadaj własną nazwę">✎</button>
         <button class="act" data-act="rotate" title="Obróć (np. nuty zapisane na leżąco)" aria-label="Obróć">⟳</button>
         <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(n.id)}/view" target="_blank" rel="noopener" title="Otwórz na Dysku" aria-label="Otwórz na Dysku">↗</a></div>`;
@@ -584,6 +589,7 @@
     renderFolders();
     renderTree();
     if (window.Songs) Songs.render();
+    if (window.Dups) Dups.render();
     if (window.Programs) Programs.render();
     if (window.Publish) Publish.render();
   }

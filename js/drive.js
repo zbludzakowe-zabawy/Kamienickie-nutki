@@ -153,7 +153,7 @@ window.Drive = (() => {
   }
 
   const esc = (id) => String(id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-  const ITEM = 'id,name,mimeType,size,modifiedTime,shortcutDetails(targetId,targetMimeType)';
+  const ITEM = 'id,name,mimeType,size,modifiedTime,md5Checksum,shortcutDetails(targetId,targetMimeType)';
 
   // wszystkie elementy folderu (do skanowania)
   const listChildren = (folderId) =>

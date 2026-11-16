@@ -71,6 +71,7 @@ window.Catalog = (() => {
                     kind: kindOf(mime || '', f.name),
                     size: Number(f.size) || 0,
                     modified: f.modifiedTime || null,
+                    md5: f.md5Checksum || null, // „odcisk” treści – identyczne pliki mają ten sam
                     added: prev ? prev.added || null : hadPrev ? now : null,
                   };
                   files++;

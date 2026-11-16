@@ -17,6 +17,7 @@ const ASSETS = [
   './js/songlist.js',
   './js/matcher.js',
   './js/songs.js',
+  './js/dups.js',
   './js/crypto.js',
   './js/pdfbuild.js',
   './js/programs.js',
