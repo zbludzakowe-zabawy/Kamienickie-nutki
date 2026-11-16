@@ -122,7 +122,16 @@
     try {
       const a = await Drive.about();
       user = a.user || null;
-      if (user && user.emailAddress) Drive.rememberEmail(user.emailAddress);
+      const email = user && user.emailAddress;
+      if (email) Drive.rememberEmail(email);
+      // dane w urządzeniu należą do innego konta → nie mieszamy, wczytamy dane tego konta z Dysku
+      if (email && data.owner && data.owner !== email) {
+        data = emptyData();
+        sync = { fileId: null, dirty: false, syncedAt: null };
+        rebuild();
+        renderAll();
+      }
+      if (email && !data.owner) { data.owner = email; persist(); }
       renderAccount();
       const f = await Drive.findDataFile();
       if (f) {
@@ -597,21 +606,72 @@
   window.addEventListener('pagehide', persist);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(); });
 
-  // ---------- start ----------
-  (async () => {
+  // ---------- tryb administratora: blokada, wylogowanie, widok chórzysty ----------
+  const ADMIN_KEY = 'kn-admin';
+  const isLocked = () => document.documentElement.classList.contains('admin-locked');
+
+  async function loadLocal() {
     data = normalize(await Store.get('data'));
     const s = await Store.get('sync');
     if (s && typeof s === 'object') sync = { ...sync, ...s };
     loadExpanded();
     rebuild();
     renderAll();
+  }
+
+  // Po zalogowaniu: zapamiętujemy urządzenie jako administratorskie i otwieramy zakładki.
+  async function unlock() {
+    try {
+      const a = await Drive.about();
+      const email = a.user && a.user.emailAddress;
+      if (!email) throw new Error('Nie udało się odczytać konta Google.');
+      try { localStorage.setItem(ADMIN_KEY, email); } catch (e) { /* trudno */ }
+      document.documentElement.classList.remove('admin-locked');
+      await loadLocal();
+      onConnected();
+    } catch (e) {
+      handleError(e);
+    }
+  }
+
+  async function logout() {
+    if (sync.dirty && Drive.isConnected()) await pushNow(); // najpierw spróbuj zapisać zmiany na Dysku
+    const msg = 'Wylogować z trybu administratora na tym urządzeniu?\n\n' +
+      'Dane w tym urządzeniu zostaną usunięte. Na Twoim Dysku Google wszystko zostaje i wróci po ponownym zalogowaniu.' +
+      (sync.dirty ? '\n\nUWAGA: część zmian nie jest zapisana na Dysku i zostanie utracona. Żeby je zachować, kliknij Anuluj i połącz się z Dyskiem.' : '');
+    if (!confirm(msg)) return;
+    Drive.disconnect();
+    await Store.set('data', null);
+    await Store.set('sync', null);
+    ['kn-admin', 'kn-email', 'kn-expanded', 'kn-tab', 'kn-songbook'].forEach((k) => { try { localStorage.removeItem(k); } catch (e) { /* trudno */ } });
+    location.reload();
+  }
+
+  function toGuest() {
+    const id = cfg.publicCatalogId || (data.publish && data.publish.catalogId);
+    if (!id) return toast('Najpierw opublikuj śpiewniki w zakładce „Dla chórzystów”.', true);
+    Guest.enter(id);
+  }
+
+  $('btn-unlock').addEventListener('click', () => { ensureConnected(); });
+  $('btn-lock-guest').addEventListener('click', toGuest);
+  $('btn-to-guest').addEventListener('click', toGuest);
+  $('btn-logout').addEventListener('click', logout);
+
+  // ---------- start ----------
+  (async () => {
+    if (document.documentElement.dataset.mode === 'guest') return; // chórzysta nie loguje się do Google
     Drive.onChange((connected) => {
+      if (connected && isLocked()) return unlock();
       renderAccount();
       renderSync();
       if (connected) onConnected();
     });
-    if (document.documentElement.dataset.mode === 'guest') return; // chórzysta nie loguje się do Google
+    if (!isLocked()) await loadLocal();
     await Drive.init();
-    if (Drive.isConnected()) onConnected();
+    if (Drive.isConnected()) {
+      if (isLocked()) unlock();
+      else onConnected();
+    }
   })();
 })();

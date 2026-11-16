@@ -18,8 +18,15 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
 | Widzi | zakładki: Nuty na Dysku / Spisy pieśni / Dla chórzystów | śpiewniki → lista pieśni → nuty na cały ekran, PDF |
 
 Tryb wybiera `js/mode.js` (w `<head>`, przed narysowaniem): `?chor=<id katalogu>` → chórzysta (zapamiętane w localStorage
-`kn-mode`, `kn-guest-id`); `KN_CONFIG.publicCatalogId` (jeśli ustawione) → domyślnie chórzysta; inaczej administrator.
-`html[data-mode]` + klasa `.admin-only` ukrywają część UI. Przełącznik „Tryb administratora” na dole ekranu chórzysty.
+`kn-mode`, `kn-guest-id`); `KN_CONFIG.publicCatalogId` jest ustawione (katalog chóru użytkownika), więc **domyślnie chórzysta**.
+`html[data-mode]` + klasa `.admin-only` ukrywają część UI. Przełączniki: „Tryb administratora” na dole ekranu chórzysty,
+„Widok chórzysty” w pasku administratora.
+
+**Ochrona trybu administratora**: bez `localStorage['kn-admin']` (e-mail) `mode.js` dodaje `html.admin-locked` → widać tylko
+ekran `#admin-lock` z „Zaloguj się kontem Google”. Po zalogowaniu (`unlock()` w app.js) urządzenie jest zapamiętane
+i można pracować bez połączenia. Google wpuszcza tylko „użytkowników testowych” z konsoli – to jest właściwa bramka.
+„Wyloguj” czyści dane z urządzenia (IndexedDB + klucze `kn-*`). `data.owner` = e-mail; przy logowaniu innym kontem
+lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent = własne konto Google i własny Dysk).
 
 ## Pliki
 
@@ -88,6 +95,10 @@ python3 -m http.server 8000
 ```
 
 - Lokalnie (`http://localhost:8000`) service worker się nie rejestruje (tylko HTTPS).
+- Zwykły adres otwiera tryb chórzysty (bo `publicCatalogId`). W testach administratora: kliknij `#g-admin`, potem `#btn-unlock`
+  (albo ustaw przed startem `localStorage` `kn-mode=admin`, `kn-admin=<e-mail>`).
+- Prawdziwy katalog chóru da się pobrać z tego środowiska (curl/Playwright do www.googleapis.com działa, z `Referer: https://zbludzakowe-zabawy.github.io/`
+  albo ze strony na localhost:8000) – przydatne przy diagnozie „nie udało się wczytać śpiewników”.
 - Z tego środowiska nie ma dostępu do github.io ani prawdziwego Google – testy Playwright robimy na **udawanym Dysku**:
   `ctx.route('https://accounts.google.com/gsi/client', …)` podstawia `google.accounts.oauth2` (initTokenClient → callback z tokenem),
   `ctx.route('https://www.googleapis.com/**', …)` odpowiada na `files`, `about`, `upload`, `copy`, `permissions`, `alt=media`.

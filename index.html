@@ -29,8 +29,10 @@
       <button class="btn light" id="btn-connect">Połącz z Dyskiem</button>
       <div class="account" id="account" hidden>
         <span class="who" id="who"></span>
-        <button class="btn ghost" id="btn-disconnect" title="Rozłącz z Dyskiem Google">Rozłącz</button>
+        <button class="btn ghost" id="btn-disconnect" title="Rozłącz z Dyskiem Google (tryb administratora zostaje otwarty)">Rozłącz</button>
       </div>
+      <button class="btn ghost" id="btn-to-guest" title="Zobacz aplikację tak jak chórzyści">Widok chórzysty</button>
+      <button class="btn ghost" id="btn-logout" title="Zamknij tryb administratora na tym urządzeniu">Wyloguj</button>
     </div>
   </header>
 
@@ -39,6 +41,15 @@
     <button role="tab" data-tab="songs">Spisy pieśni</button>
     <button role="tab" data-tab="choir">Dla chórzystów</button>
   </nav>
+
+  <section class="card lock" id="admin-lock">
+    <img src="icons/icon-192.png" alt="" width="72" height="72">
+    <h2>Tryb administratora</h2>
+    <p>Zaloguj się kontem Google dyrygenta. Wystarczy raz na tym urządzeniu. Potem możesz pracować także bez połączenia z Dyskiem.</p>
+    <button class="btn primary" id="btn-unlock">Zaloguj się kontem Google</button>
+    <p class="muted small">Wejść mogą tylko konta dopuszczone w ustawieniach aplikacji w Google Cloud.</p>
+    <p><button type="button" class="linklike" id="btn-lock-guest">‹ Przejdź do śpiewników (chórzysta)</button></p>
+  </section>
 
   <main class="admin-only">
    <div data-panel="files" class="panel">

@@ -430,3 +430,13 @@ body.g-viewing { overflow: hidden; }
 .g-offline { margin: 0; padding: 8px; text-align: center; background: #a35f00; color: #fff; font-size: .9rem; }
 #g-frame { flex: 1; width: 100%; border: none; background: #fff; }
 @media (max-width: 420px) { .g-icon { width: 38px; } }
+
+/* ---------- blokada trybu administratora ---------- */
+html.admin-locked .admin-only { display: none !important; }
+#admin-lock { display: none; }
+html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
+.lock { max-width: 520px; margin: 32px auto; text-align: center; padding: 28px 20px; }
+.lock img { border-radius: 16px; }
+.lock h2 { margin: 12px 0 6px; }
+.lock .btn { margin: 8px 0; min-height: 48px; padding: 0 22px; }
+@media (max-width: 720px) { .lock { margin: 16px; } }
