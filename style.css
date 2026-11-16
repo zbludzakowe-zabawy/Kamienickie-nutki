@@ -516,3 +516,18 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .cand .chip-name { overflow-wrap: anywhere; }
 @media (min-width: 641px) { .cand .chip { flex: none; } }
 .cand .pct { flex: none; }
+
+/* ręczna edycja spisu */
+.sb-add { display: flex; gap: 8px; margin: 8px 0 4px; flex-wrap: wrap; }
+.sb-add input { min-height: 38px; padding: 4px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+.sb-add .sb-add-no { width: 5em; }
+.sb-add #sb-add-title { flex: 1 1 220px; min-width: 0; }
+.song-edit-btns { display: inline-flex; gap: 2px; margin-left: auto; }
+.song-edit-btns .icon-btn { width: 30px; height: 30px; font-size: .9rem; }
+.song-head { align-items: center; }
+.song-edit { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.song-edit input { min-height: 36px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--panel); }
+.song-edit .se-no { width: 4.5em; }
+.song-edit .se-title { flex: 1 1 220px; min-width: 0; }
+.song.flash { animation: flash 1.6s ease; }
+@keyframes flash { 0%, 40% { background: var(--accent-soft); } }
