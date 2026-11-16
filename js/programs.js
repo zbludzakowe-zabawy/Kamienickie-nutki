@@ -35,7 +35,10 @@ window.Programs = (() => {
   function resolve(item) {
     if (item.src) {
       const b = A.data.songbooks.find((x) => x.id === item.src.book);
-      const it = b && b.items.find((x) => x.no === item.src.no && x.title === item.title) || (b && b.items.find((x) => x.no === item.src.no));
+      const byIdx = b && item.src.i != null ? b.items[item.src.i] : null;
+      const it = (byIdx && byIdx.no === item.src.no ? byIdx : null) ||
+        (b && item.src.no ? b.items.find((x) => x.no === item.src.no) : null) ||
+        (b ? b.items.find((x) => x.title === item.title) : null);
       if (it && usable(it)) return it.files.filter((f) => A.data.nodes[f]);
     }
     return (item.files || []).filter((f) => A.data.nodes[f]);
@@ -129,7 +132,8 @@ window.Programs = (() => {
         return `<div class="ev-item" data-i="${ii}">
           <div class="ev-item-main">
             <div class="ev-item-title"><strong>${esc(it.title)}</strong>${it.src ? `<span class="muted small">${esc(it.src.bookName || '')}${it.src.no ? ' · nr ' + esc(it.src.no) : ''}</span>` : ''}</div>
-            <div class="chips">${files.length ? files.map(chip).join('') : '<span class="muted small">bez nut</span>'}</div>
+            <div class="chips">${files.length ? files.map(chip).join('') : '<span class="muted small">bez nut</span>'}
+              <button class="btn small${files.length ? '' : ' primary'}" data-a="attach" title="${files.length ? 'Wybierz inne nuty dla tej pieśni' : 'Dołącz nuty do tej pieśni'}">${files.length ? 'Zmień nuty' : '♪ Dołącz nuty'}</button></div>
             <input class="ev-note" value="${esc(it.note || '')}" placeholder="uwaga, np. zwrotki 1–3, solo: Ania" maxlength="120" aria-label="Uwaga do pieśni">
           </div>
           <div class="ev-tools">
@@ -153,11 +157,14 @@ window.Programs = (() => {
 
   // ---------- wybór pieśni ----------
   let pickPart = -1;
-  function openPicker(pi) {
+  let pickItem = -1; // ≥ 0: dołączamy/zmieniamy nuty istniejącej pieśni zamiast dodawać nową
+  function openPicker(pi, ii = -1) {
     pickPart = pi;
+    pickItem = ii;
     const p = prog();
-    $('sp-title').textContent = `Dodaj pieśń: ${p.parts[pi].name}`;
-    $('sp-q').value = '';
+    const it = ii >= 0 && p.parts[pi].items[ii];
+    $('sp-title').textContent = it ? `Nuty do: ${it.title}` : `Dodaj pieśń: ${p.parts[pi].name}`;
+    $('sp-q').value = it ? it.title : '';
     $('song-picker').showModal();
     renderPicker();
     setTimeout(() => $('sp-q').focus(), 30);
@@ -183,14 +190,14 @@ window.Programs = (() => {
         return match(Catalog.norm(`${n.name} ${(m && m.title) || ''} ${Catalog.pathOf(A.data.nodes, n.id)}`));
       });
       html += songs.slice(0, 60).map(({ b, it, i }) => `<li><button type="button" class="pick-item" data-kind="song" data-b="${esc(b.id)}" data-i="${i}">
-        <span class="badge doc">SPIS</span><span><b>${esc(it.title)}</b><br><span class="muted small">${esc(b.name)}${it.no ? ' · nr ' + esc(it.no) : ''} · ${it.files.length} ${A.plural(it.files.length, 'plik', 'pliki', 'plików')}</span></span><span class="chev">Dodaj</span></button></li>`).join('');
+        <span class="badge doc">SPIS</span><span><b>${esc(it.title)}</b><br><span class="muted small">${esc(b.name)}${it.no ? ' · nr ' + esc(it.no) : ''} · ${it.files.length} ${A.plural(it.files.length, 'plik', 'pliki', 'plików')}</span></span><span class="chev">${pickItem >= 0 ? 'Wybierz' : 'Dodaj'}</span></button></li>`).join('');
       html += files.slice(0, 60).map((n) => {
         const m = A.data.meta[n.id];
         return `<li><button type="button" class="pick-item" data-kind="file" data-id="${esc(n.id)}">
-          <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span><span><b>${esc((m && m.title) || n.name)}</b><br><span class="muted small">${esc(Catalog.pathOf(A.data.nodes, n.id))}${m && m.title ? ' / ' + esc(n.name) : ''}</span></span><span class="chev">Dodaj</span></button></li>`;
+          <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span><span><b>${esc((m && m.title) || n.name)}</b><br><span class="muted small">${esc(Catalog.pathOf(A.data.nodes, n.id))}${m && m.title ? ' / ' + esc(n.name) : ''}</span></span><span class="chev">${pickItem >= 0 ? 'Wybierz' : 'Dodaj'}</span></button></li>`;
       }).join('');
-      if (!songs.length && !files.length) html += '<li class="muted">Nic nie znaleziono w spisach ani w plikach.</li>';
-      html += `<li><button type="button" class="pick-item" data-kind="text"><span class="badge doc">TXT</span><span>Dodaj „<b>${esc(q)}</b>” bez nut<br><span class="muted small">np. psalm śpiewany przez kantora – nuty możesz dodać później</span></span><span class="chev">Dodaj</span></button></li>`;
+      if (!songs.length && !files.length) html += `<li class="muted">Nic nie znaleziono w spisach ani w plikach.${pickItem >= 0 ? ' Spróbuj krótszej nazwy, np. jednego słowa z tytułu.' : ''}</li>`;
+      if (pickItem < 0) html += `<li><button type="button" class="pick-item" data-kind="text"><span class="badge doc">TXT</span><span>Dodaj „<b>${esc(q)}</b>” bez nut<br><span class="muted small">np. psalm śpiewany przez kantora – nuty możesz dodać później</span></span><span class="chev">Dodaj</span></button></li>`;
     }
     $('sp-list').innerHTML = html;
   }
@@ -199,12 +206,30 @@ window.Programs = (() => {
     const p = prog();
     const pt = p && p.parts[pickPart];
     if (!pt) return;
+    const cur = pickItem >= 0 && pt.items[pickItem];
+    if (cur) { // dołączenie nut do istniejącej pieśni – tytuł i uwaga zostają
+      if (btn.dataset.kind === 'song') {
+        const b = A.data.songbooks.find((x) => x.id === btn.dataset.b);
+        const it = b && b.items[Number(btn.dataset.i)];
+        if (!it) return;
+        cur.files = [...it.files];
+        cur.src = { book: b.id, bookName: b.name, no: it.no, i: Number(btn.dataset.i) };
+      } else if (btn.dataset.kind === 'file') {
+        cur.files = [btn.dataset.id];
+        delete cur.src;
+      } else return;
+      $('song-picker').close();
+      A.changed();
+      render();
+      A.toast(`Dołączono nuty do „${cur.title}”.`);
+      return;
+    }
     let item;
     if (btn.dataset.kind === 'song') {
       const b = A.data.songbooks.find((x) => x.id === btn.dataset.b);
       const it = b && b.items[Number(btn.dataset.i)];
       if (!it) return;
-      item = { title: it.title, files: [...it.files], note: '', src: { book: b.id, bookName: b.name, no: it.no } };
+      item = { title: it.title, files: [...it.files], note: '', src: { book: b.id, bookName: b.name, no: it.no, i: Number(btn.dataset.i) } };
     } else if (btn.dataset.kind === 'file') {
       const n = A.data.nodes[btn.dataset.id];
       const m = A.data.meta[n.id];
@@ -270,6 +295,7 @@ window.Programs = (() => {
     const swap = (arr, a, c) => { [arr[a], arr[c]] = [arr[c], arr[a]]; };
     switch (b.dataset.a) {
       case 'add': return openPicker(pi);
+      case 'attach': return openPicker(pi, ii);
       case 'pup': if (pi > 0) swap(parts, pi, pi - 1); break;
       case 'pdown': if (pi < parts.length - 1) swap(parts, pi, pi + 1); break;
       case 'pdel':

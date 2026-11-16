@@ -75,7 +75,8 @@ Chórzyści widzą tylko `ok` i `auto`. `matchItems` nie rusza `ok`/`missing`.
 **Programy uroczystości**: domyślny szkielet części (Wejście, Kyrie, Gloria, Psalm, Alleluja lub Chwała, Ofiarowanie, Sanctus,
 Agnus Dei, Komunia, Uwielbienie, Wyjście) – części można dodawać/usuwać/przestawiać/zmieniać nazwę, w części kilka pieśni.
 Pieśń ze spisu ma `src` → przy publikacji bierzemy **aktualne** dopasowanie z tego spisu (`Programs.resolve`); można też dodać plik
-albo sam tytuł „bez nut”. Program z datą w przeszłości = archiwum (u administratora i chórzysty), nadal widoczny, dopóki nie usunięty.
+albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty” przy pieśni (`openPicker(pi, ii)`) podmienia tylko
+`files`/`src` – tytuł i uwaga zostają. `src.i` = indeks pozycji w spisie (pewniejsze niż sam numer, zwłaszcza w spisach bez numerów). Program z datą w przeszłości = archiwum (u administratora i chórzysty), nadal widoczny, dopóki nie usunięty.
 „Kopiuj” tworzy kopię bez daty. Puste części są ukryte u chórzystów i w PDF. PDF programu = pseudo-śpiewnik z wierszami `section`.
 
 ## Publikacja dla chórzystów
