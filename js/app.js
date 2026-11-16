@@ -411,8 +411,9 @@
           <button class="act" data-act="save" title="Zapisz" aria-label="Zapisz nazwę">✓</button></div>`;
       }
       return `<div class="row file" data-id="${esc(n.id)}" style="--d:${d}">${badge}
-        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}</div>
+        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}</div>
         <button class="act" data-act="edit" title="Nadaj własną nazwę" aria-label="Nadaj własną nazwę">✎</button>
+        <button class="act" data-act="rotate" title="Obróć (np. nuty zapisane na leżąco)" aria-label="Obróć">⟳</button>
         <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(n.id)}/view" target="_blank" rel="noopener" title="Otwórz na Dysku" aria-label="Otwórz na Dysku">↗</a></div>`;
     };
 
@@ -444,6 +445,69 @@
       if (inp) { inp.focus(); inp.select(); }
     }
   }
+
+  // ---------- obrót pliku (tylko w aplikacji: kopie dla chórzystów i PDF-y) ----------
+  let rotId = null;
+  let rotVal = 0;
+  let rotUrl = null;
+  const rotNorm = (v) => ((v % 360) + 360) % 360;
+  function paintRot() {
+    $('rot-img').style.transform = `rotate(${rotVal}deg)`;
+    $('rot-val').textContent = rotVal ? `Obrót: ${rotVal}° w prawo` : 'Bez obrotu';
+  }
+  async function openRotate(id) {
+    const n = data.nodes[id];
+    if (!n) return;
+    rotId = id;
+    rotVal = (data.meta[id] && data.meta[id].rot) || 0;
+    const m = data.meta[id];
+    $('rot-title').textContent = (m && m.title) || n.name;
+    $('rot-open').href = `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+    $('rot-img').hidden = true;
+    $('rot-msg').hidden = false;
+    $('rot-msg').textContent = 'Wczytywanie podglądu…';
+    paintRot();
+    $('rot-dlg').showModal();
+    if (rotUrl) { URL.revokeObjectURL(rotUrl); rotUrl = null; }
+    if (n.kind === 'pdf') {
+      $('rot-msg').textContent = 'Podgląd PDF niedostępny – otwórz plik na Dysku, żeby sprawdzić, jak jest ułożony. Obrót dotyczy wszystkich stron.';
+      return;
+    }
+    if (!(await ensureConnected())) { $('rot-msg').textContent = 'Połącz z Dyskiem, żeby zobaczyć podgląd.'; return; }
+    try {
+      const buf = await Drive.download(id);
+      if (rotId !== id) return;
+      rotUrl = URL.createObjectURL(new Blob([buf]));
+      $('rot-img').onload = () => { $('rot-img').hidden = false; $('rot-msg').hidden = true; };
+      $('rot-img').onerror = () => { $('rot-msg').textContent = 'Tego formatu przeglądarka nie pokaże (np. HEIC) – otwórz plik na Dysku.'; };
+      $('rot-img').src = rotUrl;
+    } catch (e) {
+      $('rot-msg').textContent = 'Nie udało się wczytać podglądu.';
+      handleError(e);
+    }
+  }
+  $('rot-dlg').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-r]');
+    if (!b) return;
+    rotVal = rotNorm(rotVal + Number(b.dataset.r));
+    paintRot();
+  });
+  $('rot-cancel').addEventListener('click', () => $('rot-dlg').close());
+  $('rot-save').addEventListener('click', () => {
+    const m = data.meta[rotId] || {};
+    if ((m.rot || 0) !== rotVal) {
+      if (rotVal) data.meta[rotId] = { ...m, rot: rotVal };
+      else {
+        delete m.rot;
+        if (Object.keys(m).length) data.meta[rotId] = m;
+        else delete data.meta[rotId];
+      }
+      changed();
+      renderTree();
+      toast(rotVal ? `Zapisano obrót o ${rotVal}°. Chórzyści zobaczą go po aktualizacji.` : 'Usunięto obrót.');
+    }
+    $('rot-dlg').close();
+  });
 
   let committing = false;
   function commitEdit(id, value) {
@@ -580,6 +644,7 @@
     const act = e.target.closest('[data-act]');
     if (!act) return;
     if (act.dataset.act === 'edit') startEdit(row.dataset.id);
+    else if (act.dataset.act === 'rotate') openRotate(row.dataset.id);
     else if (act.dataset.act === 'save') {
       const inp = row.querySelector('.name-input');
       commitEdit(row.dataset.id, inp ? inp.value : '');

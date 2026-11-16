@@ -60,7 +60,7 @@ przy połączeniu wygrywa nowszy `updatedAt`):
 { app, v, updatedAt, scannedAt, newAt,
   roots: [{id, name}],                      // wybrane foldery
   nodes: {id: {id, name, parent, folder?, kind:'pdf'|'img', size, modified, added}},  // klucz = id pliku (dla skrótów – id celu)
-  meta:  {fileId: {title}},                 // własne nazwy
+  meta:  {fileId: {title, rot}},            // własne nazwy; rot = obrót 90/180/270° (tylko w aplikacji)
   songbooks: [{id, name, source, importedAt,
                items: [{no, title, state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
   programs: [{id, name, date:'YYYY-MM-DD', createdAt,
@@ -86,6 +86,9 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
 3. PDF każdego śpiewnika – budowany tylko, gdy zmienił się podpis (`sig` = hash pozycji i plików).
 4. Katalog `spiewniki-dla-chorzystow.json` – zaszyfrowany PIN-em (`KnCrypto`), zawiera `songbooks` i `programs` (id kopii i PDF).
    Link dla chórzystów: `<strona>?chor=<catalogId>`. Zmiana PIN-u = tylko ponowny zapis katalogu.
+**Obrót** (`meta[id].rot`, przycisk ⟳ w drzewie → okno `#rot-dlg` z podglądem obrazka): oryginał na Dysku bez zmian.
+   Przy publikacji plik z obrotem jest pobierany, obracany (`PdfBuild.rotate`: obraz przez canvas, PDF przez `setRotation`)
+   i wgrywany jako kopia; w PDF-ach śpiewników też obrócony. `rot` jest w podpisie (`sig`) i w `copies[id].rot` → zmiana obrotu = „są zmiany”.
 5. **Stan aktualności**: po publikacji zapisujemy `publish.sigs[id]` (podpis każdego śpiewnika/programu), `publish.published` (lista id)
    i `publish.pdfPublished`. `computeStatus()` porównuje bieżące podpisy → przy każdej pozycji „✓ aktualny” / „● są zmiany” / „● nowy”.
    Gdy nic się nie zmieniło, przycisk to „✓ Wszystko aktualne” (nieaktywny) + link „Aktualizuj mimo to” (np. po zmianie własnych nazw plików,

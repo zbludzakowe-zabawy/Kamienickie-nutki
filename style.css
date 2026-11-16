@@ -489,3 +489,16 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .pub-state { font-size: .78rem; font-weight: 600; white-space: nowrap; }
 .pub-state.ok { color: var(--ok); }
 .pub-state.changed, .pub-state.new { color: var(--warn); }
+
+/* ---------- obrót nut ---------- */
+.rot-tag { align-self: flex-start; font-size: .7rem; font-weight: 600; color: var(--img); border: 1px solid currentColor; border-radius: 999px; padding: 0 6px; margin-top: 2px; }
+.rot-stage {
+  height: min(52vh, 420px); display: grid; place-items: center; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--bg);
+}
+.rot-stage img { max-width: min(52vh, 400px); max-height: min(52vh, 400px); object-fit: contain; transition: transform .2s; background: #fff; box-shadow: var(--shadow); }
+.rot-stage p { padding: 16px; text-align: center; }
+.rot-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.rot-info { margin: 0; }
+#rot-dlg { width: min(560px, calc(100vw - 24px)); }
+.rot-info a { color: var(--accent); }

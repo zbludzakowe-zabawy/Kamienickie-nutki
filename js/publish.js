@@ -43,9 +43,10 @@ window.Publish = (() => {
     const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
     return [...new Uint8Array(d)].slice(0, 12).map((x) => x.toString(16).padStart(2, '0')).join('');
   }
+  const rotOf = (id) => (A.data.meta[id] && A.data.meta[id].rot) || 0;
   // „podpis” śpiewnika – PDF budujemy od nowa tylko, gdy coś się w nim zmieniło
   const sig = (b) => hash(JSON.stringify([b.name, b.subtitle || '', b.items.map((it) => (it.section ? ['§', it.title] : usable(it)
-    ? [it.no, it.title, it.files.map((f) => [f, A.data.nodes[f] && A.data.nodes[f].modified])]
+    ? [it.no, it.title, it.files.map((f) => [f, A.data.nodes[f] && A.data.nodes[f].modified, rotOf(f)])]
     : [it.no, it.title]))]));
 
   function catalog() {
@@ -169,7 +170,7 @@ window.Publish = (() => {
 
       // 1. kopie nut (tylko nowe i zmienione)
       const need = neededIds();
-      const todo = [...need].filter((id) => !p.copies[id] || p.copies[id].modified !== A.data.nodes[id].modified);
+      const todo = [...need].filter((id) => !p.copies[id] || p.copies[id].modified !== A.data.nodes[id].modified || (p.copies[id].rot || 0) !== rotOf(id));
       let i = 0;
       for (const id of todo) {
         step(`Kopiowanie nut dla chórzystów… ${++i} z ${todo.length}`, 0.05 + 0.35 * (i / todo.length));
@@ -177,14 +178,28 @@ window.Publish = (() => {
         const own = A.data.meta[id] && A.data.meta[id].title;
         const name = own ? own + extOf(n.name) : n.name;
         let copy;
-        try {
-          copy = await Drive.copyFile(id, name, folder);
-        } catch (e) {
-          if (e instanceof Drive.AuthError) throw e;
-          copy = await Drive.uploadFile(name, mimeOf(n.name), await Drive.download(id), folder); // gdy kopiowanie niedozwolone
+        const rot = rotOf(id);
+        let rotDone = 0;
+        if (rot) { // obrócony plik: pobieramy, obracamy i wgrywamy jako kopię
+          try {
+            const r = await PdfBuild.rotate(new Uint8Array(await Drive.download(id)), rot);
+            copy = await Drive.uploadFile(A.stripExt(name) + r.ext, r.mime, new Blob([r.bytes], { type: r.mime }), folder);
+            rotDone = rot;
+          } catch (e) {
+            if (e instanceof Drive.AuthError) throw e;
+            problems.push(`${own || n.name}: nie udało się obrócić (np. format HEIC) – chórzyści zobaczą oryginał`);
+          }
+        }
+        if (!copy) {
+          try {
+            copy = await Drive.copyFile(id, name, folder);
+          } catch (e) {
+            if (e instanceof Drive.AuthError) throw e;
+            copy = await Drive.uploadFile(name, mimeOf(n.name), await Drive.download(id), folder); // gdy kopiowanie niedozwolone
+          }
         }
         const old = p.copies[id];
-        p.copies[id] = { id: copy.id, modified: n.modified || null };
+        p.copies[id] = { id: copy.id, modified: n.modified || null, rot: rotDone || (rot ? rot : 0) };
         if (old) await Drive.deleteFile(old.id).catch(() => undefined);
         if (i % 10 === 0) A.changed();
       }
@@ -200,7 +215,11 @@ window.Publish = (() => {
       if (p.pdf) {
         const cache = new Map();
         const getBytes = async (fid) => {
-          if (!cache.has(fid)) cache.set(fid, new Uint8Array(await Drive.download(fid)));
+          if (!cache.has(fid)) {
+            let u8 = new Uint8Array(await Drive.download(fid));
+            if (rotOf(fid)) u8 = await PdfBuild.rotate(u8, rotOf(fid)).then((r) => r.bytes).catch(() => u8);
+            cache.set(fid, u8);
+          }
           return cache.get(fid);
         };
         for (let bi = 0; bi < books.length; bi++) {
@@ -304,7 +323,7 @@ window.Publish = (() => {
     $('pub-bar').parentElement.hidden = !busy;
     $('pub-problems').hidden = !problems.length;
     $('pub-problems').innerHTML = problems.length
-      ? `<p><b>Nie udało się dołączyć do PDF</b> (plik uszkodzony lub w nieobsługiwanym formacie, np. HEIC/TIFF):</p><ul>${problems.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`
+      ? `<p><b>Problemy przy aktualizacji</b> (plik uszkodzony lub w nieobsługiwanym formacie, np. HEIC/TIFF):</p><ul>${problems.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`
       : '';
     $('pub-link-card').hidden = !p.catalogId;
     $('pub-preview').hidden = !p.catalogId;
