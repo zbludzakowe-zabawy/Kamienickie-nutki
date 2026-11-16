@@ -254,11 +254,12 @@ dialog::backdrop { background: rgba(20, 10, 10, .45); }
 #sb-empty p:first-child { margin-top: 0; }
 .sb-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .sb-name {
-  flex: 1 1 240px; min-width: 0; font-size: 1.15rem; font-weight: 650; padding: 6px 10px;
+  flex: 1 1 0; min-width: 0; font-size: 1.15rem; font-weight: 650; padding: 6px 10px;
   border: 1px solid transparent; border-radius: 10px; background: transparent;
 }
 .sb-name:hover, .sb-name:focus { border-color: var(--line); background: var(--bg); }
-.sb-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.sb-tools { display: flex; gap: 8px; flex-wrap: wrap; flex-basis: 100%; } /* przyciski zawsze w osobnej linijce pod nazwą i identyfikatorem */
+.sb-code { flex: none; }
 #sb-source { margin: 4px 0 12px 10px; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .fchip {
