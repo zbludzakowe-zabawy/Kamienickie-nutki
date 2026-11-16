@@ -15,7 +15,8 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
 - **Odświeżanie jednego folderu** (↻ przy folderze): gdy dodasz nuty do konkretnego katalogu na Dysku,
   aplikacja sprawdza tylko ten katalog z podfolderami, a nie cały Dysk. Nowe pliki są oznaczone „nowy”.
 - **Własne nazwy**: stuknij nazwę pliku i wpisz swoją. Plik na Dysku zostaje nietknięty.
-- **Wyszukiwanie** bez względu na polskie znaki i wielkość liter, oraz filtry: bez nazwy, z nazwą, nowe od ostatniego skanu.
+- **Wyszukiwanie** bez względu na polskie znaki i wielkość liter, oraz filtry: bez nazwy, z nazwą, nowe od ostatniego skanu,
+  **nieprzypisane do żadnego śpiewnika**. Przycisk **⬇ Pobierz listę** zapisuje widoczną listę plików do pliku dla Excela lub LibreOffice.
 - **Zapis**: dane trzymane są w urządzeniu i w pliku `KamienickieNutki.json` na Dysku, więc działa to samo na komputerze i telefonie.
   Tego pliku nie usuwaj ani nie przenoś do kosza.
 - **Zapis tylko w jednym folderze**: wszystko, co aplikacja tworzy, trafia do folderu „Kamienickie Nutki” na Dysku.

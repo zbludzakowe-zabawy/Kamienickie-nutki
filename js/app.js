@@ -367,6 +367,42 @@
   }
 
   // ---------- drzewo nut ----------
+  // pliki przypisane do któregoś śpiewnika (zatwierdzone albo pewne automatycznie); programy uroczystości się nie liczą
+  function assignedIds() {
+    const ids = new Set();
+    for (const b of data.songbooks) for (const it of b.items) if (it.state === 'ok' || it.state === 'auto') it.files.forEach((id) => ids.add(id));
+    return ids;
+  }
+
+  let lastMatch = null;
+  // Zapisuje widoczną (przefiltrowaną) listę plików jako CSV – otwiera się w Excelu / LibreOffice.
+  function exportList() {
+    const rows = [];
+    const walk = (n) => {
+      for (const ch of idx.children[n.id] || []) {
+        if (ch.folder) walk(ch);
+        else if (!lastMatch || lastMatch(ch)) rows.push(ch);
+      }
+    };
+    idx.roots.forEach(walk);
+    if (!rows.length) return toast('Lista jest pusta.');
+    const q = (s) => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
+    const lines = ['Lp.;Nazwa w aplikacji;Nazwa pliku;Folder;Rodzaj'];
+    rows.forEach((n, i) => {
+      const m = data.meta[n.id];
+      lines.push([i + 1, q((m && m.title) || stripExt(n.name)), q(n.name), q(Catalog.pathOf(data.nodes, n.id)), n.kind === 'pdf' ? 'PDF' : 'obraz'].join(';'));
+    });
+    const label = { all: 'wszystkie', unnamed: 'bez-wlasnej-nazwy', named: 'z-wlasna-nazwa', new: 'nowe', unassigned: 'nieprzypisane-do-spiewnika' }[ui.filter] || 'lista';
+    const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `nuty-${label}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast(`Zapisano listę: ${rows.length} ${plural(rows.length, 'plik', 'pliki', 'plików')}.`);
+  }
+
   function renderTree() {
     const hasFiles = Object.keys(data.nodes).length > 0;
     $('files-card').hidden = !hasFiles;
@@ -376,9 +412,11 @@
     const f = ui.filter;
     const filtering = words.length > 0 || f !== 'all';
     const isNew = isNewNode;
+    const assigned = f === 'unassigned' ? assignedIds() : null;
     const match = (n) => {
       const m = data.meta[n.id];
       const title = m && m.title;
+      if (assigned && assigned.has(n.id)) return false;
       if (f === 'named' && !title) return false;
       if (f === 'unnamed' && title) return false;
       if (f === 'new' && !isNew(n)) return false;
@@ -389,6 +427,8 @@
       return true;
     };
 
+    lastMatch = filtering ? match : null;
+    $('unassigned-hint').hidden = f !== 'unassigned';
     const visible = {};
     const walk = (n) => {
       if (!n.folder) return match(n) ? 1 : 0;
@@ -620,6 +660,7 @@
     saveExpanded();
     renderTree();
   });
+  $('btn-export').addEventListener('click', exportList);
   $('btn-collapse').addEventListener('click', () => {
     ui.expanded.clear();
     saveExpanded();
