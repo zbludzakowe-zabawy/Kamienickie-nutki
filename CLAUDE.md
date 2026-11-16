@@ -40,6 +40,8 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 - `js/zip.js` + `js/songlist.js` – odczyt spisu z .odt/.docx/.txt/Dokumentu Google; parsowanie „nr<tab>tytuł”, dedup po numerze
 - `js/matcher.js` – dopasowanie pozycji spisu do plików (tokeny, wagi słów częstych, literówki, dopisek w nawiasie)
 - `js/app.js` – UI administratora: konto, synchronizacja, foldery, drzewo, zakładki; eksportuje `window.App`
+  (filtry drzewa: wszystkie / bez nazwy / z nazwą / nowe / **nieprzypisane do żadnego śpiewnika** = brak w `ok`/`auto` spisów, programy się nie liczą;
+  „⬇ Pobierz listę” = CSV z widoczną listą: Lp.;Nazwa w aplikacji;Nazwa pliku;Folder;Rodzaj, UTF-8 z BOM, separator `;`)
 - `js/songs.js` – zakładka „Spisy pieśni” (`window.Songs`)
 - `js/crypto.js` – AES-GCM + PBKDF2 z PIN-u (`KnCrypto.encrypt/decrypt`)
 - `js/pdfbuild.js` – PDF śpiewnika (pdf-lib z `js/vendor/`, spis treści rysowany na canvasie – polskie znaki bez fontów)
