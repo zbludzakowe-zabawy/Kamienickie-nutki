@@ -396,13 +396,11 @@ window.Publish = (() => {
         const st = status.books[b.id];
         const isBook = !b.subtitle;
         const h = held(b.id);
-        return `<li data-id="${esc(b.id)}"><span class="pub-row"><strong>${kind}${esc(b.name)}</strong>${st ? STATE_LABEL[st.state] : ''}${
+        return `<li data-id="${esc(b.id)}"><span class="pub-row"><strong>${kind}${esc(b.name)}${isBook && b.code ? ` <span class="muted" title="Identyfikator – zmienisz go w „Spisach pieśni”">[${esc(b.code)}]</span>` : ''}</strong>${st ? STATE_LABEL[st.state] : ''}${
           st && st.stale ? '<span class="pub-state held">⏸ PDF wstrzymany – chórzyści widzą „może być nieaktualny”</span>' : ''}</span>
           <span class="muted small">${b.subtitle ? esc(b.subtitle) + ' · ' : ''}${have} z ${songs.length} ${A.plural(songs.length, 'pozycji', 'pozycji', 'pozycji')} z nutami${
           p.pdf && pdf ? ` · PDF: ${pdf.pages} str., ${(pdf.size / 1048576).toFixed(1)} MB, z ${new Date(pdf.at).toLocaleDateString('pl-PL')}` : ''}</span>
-          <span class="pub-opts">${isBook ? `<label class="pub-code" title="Do 3 znaków, np. Z (żółty), N (niebieski). W programach uroczystości przy tytule pojawi się np. [N 34].">Identyfikator
-            <input data-code value="${esc(b.code || '')}" maxlength="3" autocomplete="off" spellcheck="false" aria-label="Identyfikator śpiewnika ${esc(b.name)}"></label>` : ''}
-            ${p.pdf ? `<label class="check small" title="Odznacz, gdy często coś zmieniasz – PDF zostanie taki, jaki jest, a chórzyści zobaczą, że może być nieaktualny.">
+          <span class="pub-opts">${p.pdf ? `<label class="check small" title="Odznacz, gdy często coś zmieniasz – PDF zostanie taki, jaki jest, a chórzyści zobaczą, że może być nieaktualny.">
               <input type="checkbox" data-hold${h ? '' : ' checked'}${busy ? ' disabled' : ''}> aktualizuj PDF, jeśli trzeba</label>` : ''}</span></li>`;
       }).join('')
       : '<li class="muted">Brak spisów i programów – wczytaj spis w zakładce „Spisy pieśni” albo utwórz program w „Uroczystościach”.</li>';
@@ -450,25 +448,6 @@ window.Publish = (() => {
       if (e.target.checked) delete P().hold[li.dataset.id];
       else P().hold[li.dataset.id] = true;
       A.changed();
-      return render();
-    }
-    if (li && e.target.matches('[data-code]')) {
-      const b = A.data.songbooks.find((x) => x.id === li.dataset.id);
-      if (!b) return;
-      let v = A.cleanCode(e.target.value);
-      if (v && A.data.songbooks.some((x) => x !== b && x.code === v)) {
-        const other = A.data.songbooks.find((x) => x !== b && x.code === v);
-        A.toast(`Identyfikator „${v}” ma już śpiewnik „${other.name}”. Wybierz inny.`, true);
-        e.target.value = b.code || '';
-        return;
-      }
-      if (!v) { b.code = ''; v = A.nextCode(A.data.songbooks); }
-      if (v !== b.code) {
-        b.code = v;
-        A.changed();
-        A.toast(`Identyfikator śpiewnika „${b.name}”: ${v}.`);
-      }
-      e.target.value = v;
       return render();
     }
     if (!e.target.matches('[data-o="enabled"]')) return;

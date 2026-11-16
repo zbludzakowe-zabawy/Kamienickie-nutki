@@ -563,6 +563,6 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .pub-state.held { color: var(--muted, #777); }
 .pub-opts { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 4px; }
 .pub-opts .check { margin: 0; }
-.pub-code { display: inline-flex; gap: 6px; align-items: center; font-size: .85rem; }
-.pub-code input { width: 4.2em; text-transform: uppercase; text-align: center; font-weight: 700; padding: 3px 4px; }
+.sb-code { display: inline-flex; gap: 6px; align-items: center; font-size: .85rem; color: var(--muted); }
+.sb-code input { width: 4.2em; text-transform: uppercase; text-align: center; font-weight: 700; padding: 3px 4px; }
 .g-stale { margin: -4px 0 12px; color: var(--warn); }

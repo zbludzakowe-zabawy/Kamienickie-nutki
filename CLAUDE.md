@@ -120,7 +120,7 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
 **Wstrzymanie PDF** (`publish.hold[id]`, pole „aktualizuj PDF, jeśli trzeba” przy każdym śpiewniku/programie, domyślnie zaznaczone):
    odznaczone = przy publikacji PDF się nie przebudowuje (zostaje stary), lista pieśni w aplikacji nadal się aktualizuje.
    Gdy PDF nie odpowiada stanowi (`status.books[id].stale`), katalog ma `stale:true` + `pdfAt` → chórzysta widzi „PDF może być nieaktualny (stan na …)”.
-**Identyfikator śpiewnika** (`code`, edycja w „Dla chórzystów”, unikalny): w programach uroczystości tytuł dostaje dopisek `[N 34]`
+**Identyfikator śpiewnika** (`code`, pole „Identyfikator” obok nazwy spisu w „Spisach pieśni” (`#sb-code`), unikalny; w „Dla chórzystów” tylko podgląd): w programach uroczystości tytuł dostaje dopisek `[N 34]`
    (`Programs.tag`: kod + numer pozycji ze `src`, a dla pieśni dodanej jako plik – pozycja spisu z tymi samymi plikami). Dopisek liczony
    na bieżąco (nie zapisany w tytule) – trafia do `forPublish()`, więc do katalogu i PDF programu.
 5. **Stan aktualności**: po publikacji zapisujemy `publish.sigs[id]` (podpis każdego śpiewnika/programu), `publish.published` (lista id)

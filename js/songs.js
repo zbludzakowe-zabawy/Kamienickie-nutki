@@ -219,6 +219,7 @@ window.Songs = (() => {
     if (!b) return;
 
     if (document.activeElement !== $('sb-name')) $('sb-name').value = b.name;
+    if (document.activeElement !== $('sb-code')) $('sb-code').value = b.code || '';
     const autos = b.items.filter((it) => it.state === 'auto').length;
     $('sb-confirm-all').hidden = !autos;
     $('sb-confirm-all').textContent = `✓ Zatwierdź pewne (${autos})`;
@@ -301,6 +302,25 @@ window.Songs = (() => {
     const v = e.target.value.trim();
     if (b && v && v !== b.name) { b.name = v; A.changed(); render(); }
   });
+  // identyfikator śpiewnika (do 3 znaków, unikalny); puste pole = automatyczny (A01, A02…)
+  $('sb-code').addEventListener('change', (e) => {
+    const b = book();
+    if (!b) return;
+    let v = A.cleanCode(e.target.value);
+    const other = v && books().find((x) => x !== b && x.code === v);
+    if (other) {
+      A.toast(`Identyfikator „${v}” ma już spis „${other.name}”. Wybierz inny.`, true);
+      e.target.value = b.code || '';
+      return;
+    }
+    if (!v) { b.code = ''; v = A.nextCode(books()); }
+    e.target.value = v;
+    if (v === b.code) return;
+    b.code = v;
+    A.changed();
+    A.toast(`Identyfikator spisu „${b.name}”: ${v}.`);
+  });
+  $('sb-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
   $('sb-confirm-all').addEventListener('click', () => {
     const b = book();
     if (!b) return;
