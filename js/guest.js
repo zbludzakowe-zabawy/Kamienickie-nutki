@@ -69,7 +69,7 @@ window.Guest = (() => {
 
   function showPin() {
     $('g-view').innerHTML = `<section class="card g-card g-pin">
-      <img src="icons/icon-192.png" alt="" width="72" height="72">
+      <img src="icons/icon-192.png?v=2" alt="" width="72" height="72">
       <h2>Śpiewniki chóru</h2>
       <p class="muted">Wpisz PIN, który podał dyrygent.</p>
       <form id="g-pin-form" autocomplete="off">

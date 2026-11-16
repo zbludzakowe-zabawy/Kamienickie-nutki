@@ -48,6 +48,8 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 - `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu `#/`, `#/s/<bookId>[/<i>]` (śpiewnik), `#/p/<programId>[/<i>]` (program; `i` = indeks w spłaszczonej liście pieśni)
 - `js/pwa.js`, `sw.js`, `manifest.webmanifest`, `icons/` – PWA; `tools/build-sw.mjs` wpisuje wersję i listę plików przy publikacji
 - `design/ikona.svg` – źródło ikony (otwarty śpiewnik); PNG generuje `make-icons.js` ze skilla pwa-na-telefon
+  **Po zmianie ikony podbij `?v=N`** we wszystkich odwołaniach (`index.html`, `manifest.webmanifest`, `guest.js`, `style.css`) –
+  inaczej przeglądarka/zainstalowana aplikacja na komputerze trzyma starą ikonę (te same nazwy plików). Teraz `?v=2`.
 
 ## Dane
 
@@ -83,6 +85,11 @@ albo sam tytuł „bez nut”. Program z datą w przeszłości = archiwum (u adm
 3. PDF każdego śpiewnika – budowany tylko, gdy zmienił się podpis (`sig` = hash pozycji i plików).
 4. Katalog `spiewniki-dla-chorzystow.json` – zaszyfrowany PIN-em (`KnCrypto`), zawiera `songbooks` i `programs` (id kopii i PDF).
    Link dla chórzystów: `<strona>?chor=<catalogId>`. Zmiana PIN-u = tylko ponowny zapis katalogu.
+5. **Stan aktualności**: po publikacji zapisujemy `publish.sigs[id]` (podpis każdego śpiewnika/programu), `publish.published` (lista id)
+   i `publish.pdfPublished`. `computeStatus()` porównuje bieżące podpisy → przy każdej pozycji „✓ aktualny” / „● są zmiany” / „● nowy”.
+   Gdy nic się nie zmieniło, przycisk to „✓ Wszystko aktualne” (nieaktywny) + link „Aktualizuj mimo to” (np. po zmianie własnych nazw plików,
+   których podpis nie obejmuje). Po aktualizacji komunikat: „Zaktualizowano: … Bez zmian (pominięte): …”.
+   Gałęzi roboczej nie nadpisujemy (`push -f` zablokowane) – po scaleniu PR dołączamy `main` zwykłym `git merge origin/main`.
 
 Chórzysta: `Drive.publicText(catalogId)` (klucz API) → PIN → katalog; kopia koperty w localStorage (`kn-guest-env`), PIN w `kn-guest-pin`.
 Nuty: `<iframe src="https://drive.google.com/file/d/<id>/preview">` (nowa ramka na każdy plik, żeby nie psuć historii „wstecz”).
