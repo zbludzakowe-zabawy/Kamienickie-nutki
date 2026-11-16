@@ -502,3 +502,17 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .rot-info { margin: 0; }
 #rot-dlg { width: min(560px, calc(100vw - 24px)); }
 .rot-info a { color: var(--accent); }
+
+/* propozycje do zaznaczenia (kilka plików naraz) */
+.cands { display: flex; flex-direction: column; gap: 6px; }
+.cand {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 8px; border-radius: 10px;
+  border: 1px dashed var(--line); cursor: pointer; align-self: flex-start; max-width: 100%;
+}
+.cand.on { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
+.cand input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.cand { flex-wrap: nowrap; width: fit-content; }
+.cand .chip { flex: 0 1 auto; max-width: none; }
+.cand .chip-name { overflow-wrap: anywhere; }
+@media (min-width: 641px) { .cand .chip { flex: none; } }
+.cand .pct { flex: none; }
