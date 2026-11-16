@@ -45,7 +45,10 @@ window.Publish = (() => {
   }
   const rotOf = (id) => (A.data.meta[id] && A.data.meta[id].rot) || 0;
   // „podpis” śpiewnika – PDF budujemy od nowa tylko, gdy coś się w nim zmieniło
-  const sig = (b) => hash(JSON.stringify([b.name, b.subtitle || '', b.items.map((it) => (it.section ? ['§', it.title] : usable(it)
+  // Wersja wyglądu PDF – podbij, gdy zmienia się sposób składania PDF (np. linki w spisie treści),
+  // wtedy wszystkie śpiewniki pokażą „są zmiany” i PDF-y zbudują się od nowa.
+  const PDF_FORMAT = 2;
+  const sig = (b) => hash(JSON.stringify([PDF_FORMAT, b.name, b.subtitle || '', b.items.map((it) => (it.section ? ['§', it.title] : usable(it)
     ? [it.no, it.title, it.files.map((f) => [f, A.data.nodes[f] && A.data.nodes[f].modified, rotOf(f)])]
     : [it.no, it.title]))]));
 
