@@ -7,6 +7,7 @@ window.Songs = (() => {
   const CUR_KEY = 'kn-songbook';
   let current = null;
   let filter = 'all';
+  let editing = -1; // indeks pozycji edytowanej ręcznie (tytuł / numer)
   let query = '';
 
   try { current = localStorage.getItem(CUR_KEY); } catch (e) { /* brak */ }
@@ -77,6 +78,67 @@ window.Songs = (() => {
     if (A.data.nodes[id] && !m.title) A.data.meta[id] = { ...m, title: it.title };
   }
 
+  // Programy uroczystości pamiętają miejsce pozycji w spisie (src.i) – po dodaniu/usunięciu pozycji przesuwamy te odwołania.
+  function shiftProgramRefs(bookId, at, delta) {
+    for (const pr of A.data.programs || []) {
+      for (const pt of pr.parts) {
+        for (const x of pt.items) {
+          if (!x.src || x.src.book !== bookId || x.src.i == null) continue;
+          if (delta < 0 && x.src.i === at) delete x.src; // pozycja usunięta – zostają nuty zapamiętane w programie
+          else if (x.src.i >= at) x.src.i += delta;
+        }
+      }
+    }
+  }
+
+  function saveEdit(el, it) {
+    const no = el.querySelector('.se-no').value.trim();
+    const title = el.querySelector('.se-title').value.trim().replace(/\s+/g, ' ');
+    if (!title) return A.toast('Tytuł nie może być pusty.', true);
+    const changedTitle = title !== it.title;
+    it.no = no;
+    it.title = title;
+    // nowy tytuł → dopasuj nuty od nowa (o ile nie były zatwierdzone ręcznie)
+    if (changedTitle && it.state !== 'ok' && it.state !== 'missing') {
+      it.state = 'none';
+      it.rejected = [];
+      Matcher.matchItems([it], A.data.nodes, A.data.meta, A.idx);
+    }
+    editing = -1;
+    A.changed();
+    render();
+    A.toast('Zapisano zmianę.');
+  }
+
+  // Nowa pozycja: miejsce według numeru (gdy numer jest liczbą), inaczej na końcu spisu.
+  function addItem() {
+    const b = book();
+    if (!b) return;
+    const no = $('sb-add-no').value.trim();
+    const title = $('sb-add-title').value.trim().replace(/\s+/g, ' ');
+    if (!title) { $('sb-add-title').focus(); return A.toast('Wpisz tytuł nowej pozycji.'); }
+    const it = { no, title, state: 'none', files: [], sugg: [] };
+    Matcher.matchItems([it], A.data.nodes, A.data.meta, A.idx);
+    let at = b.items.length;
+    const n = parseInt(no, 10);
+    if (!Number.isNaN(n)) {
+      const k = b.items.findIndex((x) => parseInt(x.no, 10) > n);
+      if (k >= 0) at = k;
+    }
+    b.items.splice(at, 0, it);
+    shiftProgramRefs(b.id, at, +1);
+    $('sb-add-no').value = '';
+    $('sb-add-title').value = '';
+    filter = 'all';
+    query = '';
+    $('sb-q').value = '';
+    A.changed();
+    render();
+    const row = $('sb-list').querySelector(`.song[data-i="${at}"]`);
+    if (row) { row.scrollIntoView({ block: 'center' }); row.classList.add('flash'); }
+    A.toast(`Dodano: ${no ? no + '. ' : ''}${title}` + (it.state === 'auto' || it.state === 'check' ? ' – znaleziono propozycję nut.' : '.'));
+  }
+
   function update(it, fn) {
     fn(it);
     A.changed();
@@ -137,7 +199,12 @@ window.Songs = (() => {
       : '';
     return `<div class="song ${cls}" data-i="${i}">
       <span class="no">${esc(it.no || '')}</span>
-      <div class="song-main"><div class="song-head"><span class="song-title">${esc(it.title)}</span><span class="state ${cls}">${label}</span></div>${body}${sugg}</div>
+      <div class="song-main">${editing === i
+        ? `<div class="song-edit"><input class="se-no" value="${esc(it.no || '')}" maxlength="6" placeholder="Nr" aria-label="Numer">
+            <input class="se-title" value="${esc(it.title)}" maxlength="200" aria-label="Tytuł">
+            <button class="btn small primary" data-a="editSave">Zapisz</button><button class="btn small" data-a="editCancel">Anuluj</button></div>`
+        : `<div class="song-head"><span class="song-title">${esc(it.title)}</span><span class="state ${cls}">${label}</span>
+            <span class="song-edit-btns"><button class="icon-btn" data-a="edit" title="Popraw tytuł lub numer" aria-label="Popraw">✎</button><button class="icon-btn" data-a="del" title="Usuń pozycję ze spisu" aria-label="Usuń pozycję">✕</button></span></div>`}${body}${sugg}</div>
       <div class="song-acts">${acts}</div></div>`;
   }
 
@@ -263,6 +330,16 @@ window.Songs = (() => {
     qt = setTimeout(() => { query = e.target.value; render(); }, 120);
   });
 
+  $('sb-add-btn').addEventListener('click', addItem);
+  $('sb-add-title').addEventListener('keydown', (e) => { if (e.key === 'Enter') addItem(); });
+  $('sb-list').addEventListener('keydown', (e) => {
+    if (!e.target.closest('.song-edit')) return;
+    const el = e.target.closest('.song');
+    const b = book();
+    if (e.key === 'Enter' && b) saveEdit(el, b.items[Number(el.dataset.i)]);
+    if (e.key === 'Escape') { editing = -1; render(); }
+  });
+
   $('sb-list').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-a]');
     const el = e.target.closest('.song');
@@ -270,7 +347,23 @@ window.Songs = (() => {
     if (!btn || !el || !b) return;
     const it = b.items[Number(el.dataset.i)];
     if (!it) return;
+    const idx = Number(el.dataset.i);
     switch (btn.dataset.a) {
+      case 'edit':
+        editing = idx;
+        render();
+        setTimeout(() => { const t = $('sb-list').querySelector('.se-title'); if (t) { t.focus(); t.select(); } }, 20);
+        return;
+      case 'editCancel': editing = -1; return render();
+      case 'editSave': return saveEdit(el, it);
+      case 'del':
+        if (!confirm(`Usunąć pozycję ${it.no ? it.no + '. ' : ''}„${it.title}” ze spisu „${b.name}”?\n\nPlik ze spisem na Dysku zostaje bez zmian.`)) return;
+        b.items.splice(idx, 1);
+        shiftProgramRefs(b.id, idx, -1);
+        editing = -1;
+        A.changed();
+        render();
+        return A.toast('Usunięto pozycję.');
       case 'confirm': return update(it, (x) => { x.state = 'ok'; autoName(x); });
       case 'reject': return update(it, (x) => {
         x.rejected = [...new Set([...(x.rejected || []), x.files.join(',')])];

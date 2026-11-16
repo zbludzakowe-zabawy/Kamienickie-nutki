@@ -75,6 +75,9 @@ Stany pozycji: `ok` zatwierdzone ręcznie, `auto` pewne automatyczne, `check` do
 Chórzyści widzą tylko `ok` i `auto`. `matchItems` nie rusza `ok`/`missing`.
 Przy `check`/`none` propozycje (`candsOf`: główna + `sugg`) mają pola wyboru – „✓ Zatwierdź zaznaczone” łączy kilka plików
 (posortowane po ścieżce/nazwie, żeby strony szły po kolei); „✕ Żadne nie pasuje” odrzuca wszystkie widoczne. Przy `ok`/`auto`: „Zmień / dodaj pliki…” (okno `#chooser`, też wielokrotny wybór).
+**Ręczna edycja spisu** (songs.js): ✎ przy pozycji = numer i tytuł (nowy tytuł → ponowne dopasowanie, chyba że `ok`/`missing`),
+✕ = usunięcie, pasek „+ Dodaj pozycję” (miejsce wg numeru `parseInt`, inaczej na końcu). Po dodaniu/usunięciu `shiftProgramRefs()`
+przesuwa `src.i` w programach uroczystości (usunięta pozycja → program zachowuje zapamiętane pliki, `src` znika). Plik spisu na Dysku się nie zmienia.
 
 **Programy uroczystości**: domyślny szkielet części (Wejście, Kyrie, Gloria, Psalm, Alleluja lub Chwała, Ofiarowanie, Sanctus,
 Agnus Dei, Komunia, Uwielbienie, Wyjście) – części można dodawać/usuwać/przestawiać/zmieniać nazwę, w części kilka pieśni.
