@@ -79,9 +79,21 @@
     <section class="card" id="dups-card" hidden>
       <div class="card-head"><h2>Porządkowanie: duplikaty</h2>
         <span class="ev-tools"><button class="btn small" id="dups-again" title="Szukaj ponownie – Twoje decyzje zostaną zachowane">↻ Szukaj ponownie</button><button class="btn small" id="dups-hide">Zwiń</button></span></div>
-      <p class="muted small">Aplikacja nie usuwa plików. Przy każdym pliku jest link do jego folderu (📁) i do pliku (↗). Usuń albo przenieś niepotrzebne pliki na Dysku,
-        a potem kliknij „Skanuj Dysk” – załatwione grupy znikną. Decyzje są zapamiętane, więc możesz wracać do tej pracy w dowolnym momencie.</p>
+      <p class="muted small">Najpierw podejmij decyzje tutaj – niepotrzebne pliki trafią na listę „Do sprzątnięcia na Dysku”. Aplikacja nie usuwa plików:
+        usuwasz je sam (linki 📁 do folderu i ↗ do pliku), a po „Skanuj Dysk” usunięte pliki odhaczą się same. Decyzje i lista są zapamiętane.</p>
       <p class="muted small" id="dups-info"></p>
+      <div class="cleanup" id="cleanup">
+        <div class="cleanup-head">
+          <h3 class="sub">Do sprzątnięcia na Dysku</h3><span class="muted small" id="cleanup-count"></span>
+          <span class="cleanup-tools">
+            <label class="check small"><input type="checkbox" id="cleanup-showdone"> pokaż zrobione</label>
+            <button class="btn small" id="cleanup-html" title="Strona do otwarcia w przeglądarce: pliki pogrupowane według folderów, z linkami">⬇ Pobierz listę (strona)</button>
+            <button class="btn small" id="cleanup-csv" title="Plik dla Excela / LibreOffice">⬇ CSV</button>
+          </span>
+        </div>
+        <div id="cleanup-list"></div>
+      </div>
+      <h3 class="sub">Grupy możliwych duplikatów</h3>
       <div class="filters" id="dups-filters" role="group" aria-label="Pokaż">
         <button class="fchip check" data-v="open">Do przejrzenia <b>0</b></button>
         <button class="fchip have" data-v="done">Rozstrzygnięte <b>0</b></button>

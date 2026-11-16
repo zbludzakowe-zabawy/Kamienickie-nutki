@@ -32,7 +32,11 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
   - „Nadaj nazwę” zaznaczonym,
   - „Użyj tych wszędzie” przy konflikcie w śpiewnikach.
 - Aplikacja niczego nie usuwa. Usuwasz na Dysku sam, a po „Skanuj Dysk” załatwione grupy znikają. Decyzje są zapamiętane.
-- Filtr **„Duplikaty do usunięcia”** + **⬇ Pobierz listę** = gotowa lista plików do usunięcia.
+- Każda decyzja dopisuje niepotrzebne pliki do listy **„Do sprzątnięcia na Dysku”**, także decyzja „Użyj tych wszędzie”.
+  Lista jest pogrupowana według folderów, z linkami i powodem. Można ją pobrać jako **stronę** (do sprzątania folder po folderze) albo **CSV**.
+  Pliki nadal używane gdzie indziej nie trafiają na listę.
+- Po „Skanuj Dysk” usunięte pliki **odhaczają się same**. Można też odhaczyć ręcznie przyciskiem **„✓ Zrobione”**.
+  Rozstrzygnięte grupy zostają w historii, więc widać, gdzie był problem.
 
 ### Śpiewnik „Pozostałe nuty”
 - Tworzy się sam z nut nieprzypisanych do żadnego spisu, alfabetycznie.

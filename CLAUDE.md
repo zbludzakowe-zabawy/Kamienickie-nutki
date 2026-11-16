@@ -73,7 +73,8 @@ przy połączeniu wygrywa nowszy `updatedAt`):
   programs: [{id, name, date:'YYYY-MM-DD', createdAt,
               parts: [{id, name, items: [{title, note, files:[fileId], src?:{book, bookName, no}}]}]}],
   publish: {pin, pdf, hold:{id:true}, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt},
-  dups: {at, hasMd5, groups: {gid: {type:'same'|'name'|'book', title, files:[id], entries?:[{book,i}], status:'open'|'kept'|'resolved', keep:[id], note, decidedAt}}},
+  dups: {at, hasMd5, groups: {gid: {type:'same'|'name'|'book', title, files:[id], entries?:[{book,i}], status:'open'|'kept'|'resolved', keep:[id], note, decidedAt, gone?}},
+         cleanup: {fileId: {gid, title, name, own, path, parent, keep:[{id,name,path}], decidedAt, done, doneBy:'auto'|'manual', doneAt}}},
   owner }
 ```
 
@@ -99,8 +100,14 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
   w **różnych** folderach (w jednym folderze to strony jednej pieśni), `b:<tytuł>` ta sama pieśń w różnych spisach z różnymi plikami.
 - Decyzje (`status`, `keep`) zapisane w `data.dups` – przy ponownym szukaniu zostają; grupa wraca do „do przejrzenia”, gdy doszły nowe pliki;
   znika, gdy po skanowaniu nie jest już duplikatem (np. użytkownik usunął plik). Po każdym skanowaniu szukanie odpala się samo (`detect(true)`).
-- „Zostaw tylko zaznaczone” → reszta „do usunięcia” (`Dups.toRemove()`; tag w drzewie, filtr „Duplikaty do usunięcia” + CSV); przy jednym
-  zachowanym pliku przepinamy śpiewniki i programy na niego (`repoint`). Aplikacja **nie usuwa** plików – daje linki do pliku i folderu.
+- „Zostaw tylko zaznaczone” → reszta na **listę „Do sprzątnięcia na Dysku”** (`data.dups.cleanup`, `toCleanup()`); przy jednym
+  zachowanym pliku przepinamy śpiewniki i programy na niego (`repoint`). „Użyj tych wszędzie” (konflikt w spisach) też dopisuje
+  pozostałe wersje do listy. Pliki **nadal używane** gdzie indziej (inna pieśń, program) nie trafiają na listę – ostrzeżenie w komunikacie.
+  Wpis zapamiętuje nazwę, folder i zachowany plik w chwili decyzji. Odhaczanie: automatycznie po skanowaniu, gdy pliku już nie ma
+  (`syncCleanup`, „✓ usunięty z Dysku”), albo ręcznie „✓ Zrobione” / „↺”. `toRemove()` = niezrobione wpisy z istniejącymi plikami
+  (tag w drzewie, filtr „Duplikaty do usunięcia”, wykluczenie z „Pozostałych nut”). Pobieranie: strona HTML (foldery z linkami, pola do odhaczania)
+  i CSV (folder, plik, linki, powód, zachowany plik, data, stan). Rozstrzygnięte grupy **zostają w historii** (`gone: true`), gdy przestaną być
+  duplikatem – żeby było widać, gdzie był problem. Aplikacja **nie usuwa** plików – daje linki do pliku i folderu.
   „Nadaj nazwę” = wspólna własna nazwa dla zaznaczonych. Konflikt w spisach: „Użyj tych wszędzie” / „Zostaw różne wersje”.
 - **Pozostałe nuty** (decyzja użytkownika): pliki nieprzypisane do żadnego spisu (`ok`/`auto`) i nie „do usunięcia”, strony z jednego folderu
   i o tej samej nazwie = jedna pozycja, alfabetycznie. U administratora zawsze aktualne; chórzyści widzą **migawkę** (`publish.others.snapshot`)
