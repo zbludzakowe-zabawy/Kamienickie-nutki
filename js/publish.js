@@ -99,10 +99,46 @@ window.Publish = (() => {
     p.catalogId = f.id;
   }
 
+  // ---------- co się zmieniło od ostatniej publikacji ----------
+  // Dla każdego śpiewnika/programu pamiętamy „podpis” z ostatniej publikacji (p.sigs).
+  // Stan: 'new' – jeszcze nie opublikowany, 'changed' – są zmiany, 'ok' – chórzyści mają aktualną wersję.
+  let status = { books: {}, removed: [], other: false, any: false };
+  async function computeStatus() {
+    const p = P();
+    const books = allBooks();
+    const st = { books: {}, removed: [], other: false, any: false };
+    for (const b of books) {
+      const s = await sig(b);
+      const prev = (p.sigs && p.sigs[b.id]) || (p.pdfs[b.id] && p.pdfs[b.id].sig);
+      let v = !prev ? 'new' : prev !== s ? 'changed' : 'ok';
+      if (v === 'ok' && p.pdf && b.items.some(usable) && !p.pdfs[b.id]) v = 'changed'; // brakuje PDF (np. włączono tworzenie PDF)
+      st.books[b.id] = { state: v, sig: s, name: b.name };
+      if (v !== 'ok') st.any = true;
+    }
+    const ids = new Set(books.map((b) => b.id));
+    st.removed = (p.published || []).filter((id) => !ids.has(id));
+    st.other = !!p.catalogId && (p.pdfPublished != null && p.pdfPublished !== !!p.pdf);
+    if (st.removed.length || st.other || !p.catalogId) st.any = true;
+    return st;
+  }
+  let statusRun = 0;
+  function refreshStatus() {
+    const run = ++statusRun;
+    computeStatus().then((st) => {
+      if (run !== statusRun) return;
+      status = st;
+      paint();
+    }).catch(() => undefined);
+  }
+
   function markPublished() {
     const p = P();
     p.at = new Date().toISOString();
-    p.dataAt = Date.now() + 5; // zmiany zapisane później = „są zmiany od publikacji”
+    p.sigs = {};
+    for (const [id, x] of Object.entries(status.books)) p.sigs[id] = x.sig;
+    p.published = Object.keys(status.books);
+    p.pdfPublished = !!p.pdf;
+    delete p.dataAt;
     A.changed();
   }
 
@@ -120,6 +156,9 @@ window.Publish = (() => {
     render();
     const p = P();
     try {
+      status = await computeStatus();
+      const updated = Object.values(status.books).filter((x) => x.state !== 'ok').map((x) => x.name);
+      const same = Object.values(status.books).filter((x) => x.state === 'ok').map((x) => x.name);
       step('Przygotowanie folderu dla chórzystów…', 0.02);
       const folder = await Drive.ensurePublicFolder();
       if (p.folderId !== folder || !p.folderPublic) {
@@ -192,11 +231,14 @@ window.Publish = (() => {
       // 3. katalog dla chórzystów
       step('Zapisywanie spisów dla chórzystów…', 0.96);
       await writeCatalog(folder);
-      step('Gotowe.', 1);
       markPublished();
+      const summary = (updated.length ? `Zaktualizowano: ${updated.join(', ')}.` : 'Nic nie wymagało aktualizacji.') +
+        (same.length ? ` Bez zmian (pominięte): ${same.join(', ')}.` : '') +
+        (status.removed.length ? ` Usunięto u chórzystów: ${status.removed.length}.` : '');
+      step(summary, 1);
       A.toast(problems.length
-        ? `Opublikowano. Do PDF nie udało się dołączyć ${problems.length} ${A.plural(problems.length, 'pozycji', 'pozycji', 'pozycji')} – lista poniżej.`
-        : 'Opublikowano dla chórzystów.', problems.length > 0);
+        ? `Gotowe. Do PDF nie udało się dołączyć ${problems.length} ${A.plural(problems.length, 'pozycji', 'pozycji', 'pozycji')} – lista poniżej.`
+        : updated.length ? `Zaktualizowano dla chórzystów: ${updated.join(', ')}.` : 'Gotowe.', problems.length > 0);
     } catch (e) {
       A.changed();
       A.handleError(e);
@@ -227,6 +269,17 @@ window.Publish = (() => {
   const link = () => `${location.origin}${location.pathname}?chor=${encodeURIComponent(P().catalogId)}`;
 
   function render() {
+    paint();
+    if (!busy) refreshStatus();
+  }
+
+  const STATE_LABEL = {
+    ok: '<span class="pub-state ok">✓ aktualny</span>',
+    changed: '<span class="pub-state changed">● są zmiany – do aktualizacji</span>',
+    new: '<span class="pub-state new">● nowy – jeszcze nie opublikowany</span>',
+  };
+
+  function paint() {
     const p = P();
     if (document.activeElement !== $('pub-pin')) $('pub-pin').value = p.pin;
     $('pub-pdf').checked = !!p.pdf;
@@ -237,12 +290,15 @@ window.Publish = (() => {
         const have = songs.filter(usable).length;
         const pdf = p.pdfs[b.id];
         const kind = b.subtitle ? `<span class="badge doc">PROGRAM</span> ` : '';
-        return `<li><strong>${kind}${esc(b.name)}</strong><span class="muted small">${b.subtitle ? esc(b.subtitle) + ' · ' : ''}${have} z ${songs.length} ${A.plural(songs.length, 'pozycji', 'pozycji', 'pozycji')} z nutami${
+        const st = status.books[b.id];
+        return `<li><span class="pub-row"><strong>${kind}${esc(b.name)}</strong>${st ? STATE_LABEL[st.state] : ''}</span><span class="muted small">${b.subtitle ? esc(b.subtitle) + ' · ' : ''}${have} z ${songs.length} ${A.plural(songs.length, 'pozycji', 'pozycji', 'pozycji')} z nutami${
           p.pdf && pdf ? ` · PDF: ${pdf.pages} str., ${(pdf.size / 1048576).toFixed(1)} MB` : ''}</span></li>`;
       }).join('')
       : '<li class="muted">Brak spisów i programów – wczytaj spis w zakładce „Spisy pieśni” albo utwórz program w „Uroczystościach”.</li>';
-    $('pub-go').disabled = busy || !all.length;
-    $('pub-go').textContent = p.catalogId ? 'Aktualizuj dla chórzystów' : 'Opublikuj dla chórzystów';
+    const upToDate = !!p.catalogId && !status.any && Object.keys(status.books).length === all.length;
+    $('pub-go').disabled = busy || !all.length || upToDate;
+    $('pub-go').textContent = !p.catalogId ? 'Opublikuj dla chórzystów' : upToDate ? '✓ Wszystko aktualne' : 'Aktualizuj dla chórzystów';
+    $('pub-force').hidden = !upToDate || busy;
     $('pub-pin-save').disabled = busy;
     $('pub-progress').hidden = !busy && !$('pub-status').textContent;
     $('pub-bar').parentElement.hidden = !busy;
@@ -254,13 +310,14 @@ window.Publish = (() => {
     $('pub-preview').hidden = !p.catalogId;
     if (p.catalogId) {
       $('pub-link').value = link();
-      const pending = p.dataAt && A.data.updatedAt > p.dataAt;
+      const changed = Object.values(status.books).filter((x) => x.state !== 'ok').length + status.removed.length;
       $('pub-info').innerHTML = `Ostatnia publikacja: ${new Date(p.at).toLocaleString('pl-PL')}.` +
-        (pending ? ' <b class="warn-text">Od tego czasu są zmiany – kliknij „Aktualizuj”, żeby chórzyści je zobaczyli.</b>' : '');
+        (changed || status.other ? ' <b class="warn-text">Są zmiany – kliknij „Aktualizuj”, żeby chórzyści je zobaczyli.</b>' : ' Chórzyści mają aktualną wersję.');
     }
   }
 
   $('pub-go').addEventListener('click', publish);
+  $('pub-force').addEventListener('click', publish);
   $('pub-pin-save').addEventListener('click', savePin);
   $('pub-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') savePin(); });
   $('pub-pdf').addEventListener('change', (e) => { P().pdf = e.target.checked; A.changed(); render(); });

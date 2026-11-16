@@ -483,3 +483,9 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 }
 .g-program .g-title { display: flex; flex-direction: column; }
 .g-pnote { font-size: .85rem; color: var(--muted); }
+
+/* stan publikacji śpiewnika/programu */
+.pub-row { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.pub-state { font-size: .78rem; font-weight: 600; white-space: nowrap; }
+.pub-state.ok { color: var(--ok); }
+.pub-state.changed, .pub-state.new { color: var(--warn); }
