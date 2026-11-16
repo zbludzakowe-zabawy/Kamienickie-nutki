@@ -99,9 +99,36 @@ window.Guest = (() => {
   // ---------- widoki ----------
   const hasNotes = (it) => it.files && it.files.length > 0;
   const book = (id) => catalog && catalog.songbooks.find((b) => b.id === id);
+  const programs = () => (catalog && catalog.programs) || [];
+  const program = (id) => programs().find((p) => p.id === id);
+  // program jako płaska lista pieśni (do przechodzenia ⏮ ⏭ w kolejności uroczystości)
+  const flat = (pr) => ({
+    id: pr.id,
+    base: `#/p/${encodeURIComponent(pr.id)}`,
+    items: pr.parts.flatMap((pt) => pt.items.map((it) => ({ ...it, part: pt.name }))),
+  });
+  const today = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const isPast = (pr) => !!pr.date && pr.date < today();
+  const fmtDate = (s) => {
+    if (!s) return '';
+    const [y, mo, d] = s.split('-').map(Number);
+    return new Date(y, mo - 1, d).toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  };
 
   function route() {
     if (!catalog) return;
+    const mp = location.hash.match(/^#\/p\/([^/]+)(?:\/(\d+))?/);
+    const pr = mp && program(decodeURIComponent(mp[1]));
+    if (pr) {
+      const fb = flat(pr);
+      renderProgram(pr, fb);
+      if (mp[2] != null && fb.items[Number(mp[2])]) openViewer(fb, Number(mp[2]));
+      else closeViewer();
+      return;
+    }
     const m = location.hash.match(/^#\/s\/([^/]+)(?:\/(\d+))?/);
     const b = m && book(decodeURIComponent(m[1]));
     if (!b) {
@@ -116,14 +143,46 @@ window.Guest = (() => {
   function renderBooks() {
     document.title = 'Kamienickie Nutki';
     const list = catalog.songbooks;
-    $('g-view').innerHTML = `<h2 class="g-h">Śpiewniki</h2>
+    const next = programs().filter((p) => !isPast(p)).sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+    const past = programs().filter(isPast).sort((a, b) => b.date.localeCompare(a.date));
+    const progCard = (p, first) => {
+      const songs = p.parts.flatMap((pt) => pt.items);
+      return `<a class="g-book g-prog${first ? ' next' : ''}" href="#/p/${encodeURIComponent(p.id)}"><span class="g-prog-ico" aria-hidden="true">✝</span>
+        <span class="g-book-text">${first ? '<span class="g-next">Najbliższa uroczystość</span>' : ''}<strong>${esc(p.name)}</strong>
+        <span class="muted">${p.date ? esc(fmtDate(p.date)) + ' · ' : ''}${songs.length} pieśni</span></span><span class="chev">›</span></a>`;
+    };
+    $('g-view').innerHTML = `${next.length ? `<h2 class="g-h">Uroczystości</h2><div class="g-books">${next.map((p, i) => progCard(p, i === 0)).join('')}</div>` : ''}
+      <h2 class="g-h">Śpiewniki</h2>
       ${list.length ? `<div class="g-books">${list.map((b) => {
         const have = b.items.filter(hasNotes).length;
         return `<a class="g-book" href="#/s/${encodeURIComponent(b.id)}"><span class="g-book-ico" aria-hidden="true"></span>
           <span class="g-book-text"><strong>${esc(b.name)}</strong><span class="muted">${b.items.length} pieśni · nuty: ${have}</span></span><span class="chev">›</span></a>`;
       }).join('')}</div>` : '<p class="muted">Dyrygent nie udostępnił jeszcze żadnego śpiewnika.</p>'}
+      ${past.length ? `<h2 class="g-h">Archiwum uroczystości</h2><div class="g-books">${past.map((p) => progCard(p, false)).join('')}</div>` : ''}
       <p class="muted small g-updated">Aktualizacja: ${new Date(catalog.at).toLocaleDateString('pl-PL')}</p>`;
     window.scrollTo(0, 0);
+  }
+
+  function renderProgram(pr, fb) {
+    document.title = pr.name + ' – Kamienickie Nutki';
+    const mb = pr.pdfSize ? ` (${(pr.pdfSize / 1048576).toFixed(1)} MB)` : '';
+    let k = 0;
+    const keep = $('g-view').dataset.book === pr.id;
+    const y = window.scrollY;
+    $('g-view').dataset.book = pr.id;
+    $('g-view').innerHTML = `<div class="g-bar"><a class="btn small" href="#/">‹ Wszystko</a></div>
+      <h2 class="g-h">${esc(pr.name)}</h2>
+      <p class="muted small">${pr.date ? esc(fmtDate(pr.date)) : 'Program uroczystości'}${isPast(pr) ? ' · archiwum' : ''}</p>
+      ${pr.pdf ? `<a class="btn primary g-pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(pr.pdf)}" target="_blank" rel="noopener">⬇ Pobierz PDF z programem${mb}</a>` : ''}
+      <div class="g-list g-program">${pr.parts.filter((pt) => pt.items.length).map((pt) => `<div class="g-part">${esc(pt.name)}</div>${pt.items.map((it) => {
+        const i = k++;
+        const note = it.note ? `<span class="g-pnote">${esc(it.note)}</span>` : '';
+        return hasNotes(it)
+          ? `<a class="g-song" href="${fb.base}/${i}"><span class="g-title">${esc(it.title)}${note}</span><span class="g-note" aria-label="nuty">♪</span></a>`
+          : `<div class="g-song off"><span class="g-title">${esc(it.title)}${note}</span><span class="g-none">bez nut</span></div>`;
+      }).join('')}`).join('') || '<p class="muted empty">Program jest jeszcze pusty.</p>'}</div>`;
+    if (keep) window.scrollTo(0, y);
+    else window.scrollTo(0, 0);
   }
 
   function renderBook(b) {
@@ -174,19 +233,21 @@ window.Guest = (() => {
   function openViewer(b, i) {
     const it = b.items[i];
     if (!hasNotes(it)) return;
-    viewer = { b, i, f: viewer && viewer.b === b && viewer.i === i ? viewer.f : 0 };
+    const key = `${b.id}:${i}`;
+    viewer = { b, i, key, f: viewer && viewer.key === key ? viewer.f : 0 };
     $('g-viewer').hidden = false;
     document.body.classList.add('g-viewing');
-    $('g-vno').textContent = it.no ? it.no + '.' : '';
-    $('g-vname').textContent = it.title;
+    $('g-vno').textContent = it.part ? it.part + ' ·' : it.no ? it.no + '.' : '';
+    $('g-vname').textContent = it.note ? `${it.title} – ${it.note}` : it.title;
+    const base = b.base || `#/s/${encodeURIComponent(b.id)}`;
     showFile();
     // poprzednia/następna pieśń z nutami
     const prev = findSong(b, i, -1);
     const next = findSong(b, i, 1);
     $('g-sprev').hidden = prev < 0;
     $('g-snext').hidden = next < 0;
-    $('g-sprev').onclick = () => { location.replace(`#/s/${encodeURIComponent(b.id)}/${prev}`); };
-    $('g-snext').onclick = () => { location.replace(`#/s/${encodeURIComponent(b.id)}/${next}`); };
+    $('g-sprev').onclick = () => { location.replace(`${base}/${prev}`); };
+    $('g-snext').onclick = () => { location.replace(`${base}/${next}`); };
   }
   function findSong(b, i, dir) {
     for (let k = i + dir; k >= 0 && k < b.items.length; k += dir) if (hasNotes(b.items[k])) return k;
@@ -229,9 +290,9 @@ window.Guest = (() => {
   // ---------- zdarzenia ----------
   if (mode === 'guest') {
     $('g-close').addEventListener('click', () => {
-      const m = location.hash.match(/^#\/s\/([^/]+)/);
+      const m = location.hash.match(/^#\/([sp])\/([^/]+)/);
       if (history.length > 1 && /\/\d+$/.test(location.hash)) history.back();
-      else location.hash = m ? `#/s/${m[1]}` : '#/';
+      else location.hash = m ? `#/${m[1]}/${m[2]}` : '#/';
     });
     $('g-prev').addEventListener('click', () => { if (viewer && viewer.f > 0) { viewer.f--; showFile(); } });
     $('g-next').addEventListener('click', () => {

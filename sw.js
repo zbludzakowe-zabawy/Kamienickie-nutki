@@ -19,6 +19,7 @@ const ASSETS = [
   './js/songs.js',
   './js/crypto.js',
   './js/pdfbuild.js',
+  './js/programs.js',
   './js/publish.js',
   './js/guest.js',
   './js/vendor/pdf-lib.min.js',

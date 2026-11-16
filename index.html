@@ -39,6 +39,7 @@
   <nav class="tabs admin-only" role="tablist">
     <button role="tab" data-tab="files">Nuty na Dysku</button>
     <button role="tab" data-tab="songs">Spisy pieśni</button>
+    <button role="tab" data-tab="events">Uroczystości</button>
     <button role="tab" data-tab="choir">Dla chórzystów</button>
   </nav>
 
@@ -133,6 +134,31 @@
       <div class="songs" id="sb-list"></div>
     </section>
    </div>
+   <div data-panel="events" class="panel" hidden>
+    <section class="card" id="ev-list-card">
+      <div class="card-head"><h2>Uroczystości</h2><button class="btn primary" id="ev-new">+ Nowy program</button></div>
+      <p class="muted small">Program na konkretną uroczystość: pieśni ułożone według części mszy, z krótkimi uwagami.
+        Po aktualizacji w zakładce „Dla chórzystów” chórzyści zobaczą go na telefonie i pobiorą PDF.</p>
+      <div id="ev-list"></div>
+    </section>
+    <section class="card" id="ev-editor" hidden>
+      <div class="ev-bar">
+        <button class="btn small" id="ev-back">‹ Wszystkie programy</button>
+        <span class="ev-bar-right"><button class="btn small" id="ev-copy">Kopiuj</button><button class="btn small" id="ev-delete">Usuń</button></span>
+      </div>
+      <div class="ev-meta">
+        <input id="ev-name" class="sb-name" maxlength="120" placeholder="Nazwa uroczystości" aria-label="Nazwa uroczystości">
+        <label class="ev-date">Data <input type="date" id="ev-date"></label>
+      </div>
+      <p class="muted small" id="ev-state"></p>
+      <div id="ev-parts"></div>
+      <div class="ev-addpart">
+        <input id="ev-newpart" maxlength="60" placeholder="Nowa część, np. Odnowienie przyrzeczeń" aria-label="Nazwa nowej części">
+        <button class="btn" id="ev-addpart">+ Dodaj część</button>
+      </div>
+    </section>
+   </div>
+
    <div data-panel="choir" class="panel" hidden>
     <section class="card">
       <div class="card-head"><h2>Dla chórzystów</h2></div>
@@ -166,6 +192,15 @@
     </section>
    </div>
   </main>
+
+  <dialog id="song-picker" aria-labelledby="sp-title">
+    <div class="picker">
+      <h2 id="sp-title">Dodaj pieśń</h2>
+      <input type="search" id="sp-q" class="sb-q" placeholder="Tytuł, numer ze spisu albo nazwa pliku…" autocomplete="off" aria-label="Szukaj pieśni">
+      <ul class="picker-list" id="sp-list"></ul>
+      <div class="dialog-actions"><button class="btn" type="button" id="sp-cancel">Zamknij</button></div>
+    </div>
+  </dialog>
 
   <div id="guest" class="guest" hidden>
     <div id="g-view"></div>
@@ -247,6 +282,7 @@
   <script src="js/songs.js"></script>
   <script src="js/crypto.js"></script>
   <script src="js/pdfbuild.js"></script>
+  <script src="js/programs.js"></script>
   <script src="js/publish.js"></script>
   <script src="js/guest.js"></script>
   <script src="js/pwa.js"></script>

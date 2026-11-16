@@ -24,16 +24,27 @@ window.Publish = (() => {
 
   function neededIds() {
     const ids = new Set();
-    for (const b of A.data.songbooks) for (const it of b.items) if (usable(it)) it.files.forEach((f) => { if (A.data.nodes[f]) ids.add(f); });
+    for (const b of allBooks()) for (const it of b.items) if (usable(it)) it.files.forEach((f) => { if (A.data.nodes[f]) ids.add(f); });
     return ids;
   }
+
+  // Programy uroczystości jako „śpiewniki” do PDF: nagłówki części + pieśni (z uwagą w nawiasie).
+  const programs = () => (window.Programs ? Programs.forPublish() : []);
+  const programBooks = () => programs().map((pr) => ({
+    id: pr.id,
+    name: pr.name,
+    subtitle: pr.date ? Programs.fmtDate(pr.date) : 'Program uroczystości',
+    items: pr.parts.filter((pt) => pt.items.length).flatMap((pt) => [{ section: true, title: pt.name },
+      ...pt.items.map((it) => ({ no: '', title: it.note ? `${it.title} (${it.note})` : it.title, state: 'ok', files: it.files }))]),
+  }));
+  const allBooks = () => [...A.data.songbooks, ...programBooks()];
 
   async function hash(text) {
     const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
     return [...new Uint8Array(d)].slice(0, 12).map((x) => x.toString(16).padStart(2, '0')).join('');
   }
   // „podpis” śpiewnika – PDF budujemy od nowa tylko, gdy coś się w nim zmieniło
-  const sig = (b) => hash(JSON.stringify([b.name, b.items.map((it) => (usable(it)
+  const sig = (b) => hash(JSON.stringify([b.name, b.subtitle || '', b.items.map((it) => (it.section ? ['§', it.title] : usable(it)
     ? [it.no, it.title, it.files.map((f) => [f, A.data.nodes[f] && A.data.nodes[f].modified])]
     : [it.no, it.title]))]));
 
@@ -53,6 +64,20 @@ window.Publish = (() => {
             no: it.no,
             title: it.title,
             files: usable(it) ? it.files.map((f) => p.copies[f] && p.copies[f].id).filter(Boolean) : [],
+          })),
+        };
+      }),
+      programs: programs().map((pr) => {
+        const pdf = p.pdf && p.pdfs[pr.id];
+        return {
+          id: pr.id,
+          name: pr.name,
+          date: pr.date,
+          pdf: pdf ? pdf.id : null,
+          pdfSize: pdf ? pdf.size : 0,
+          parts: pr.parts.map((pt) => ({
+            name: pt.name,
+            items: pt.items.map((it) => ({ title: it.title, note: it.note, files: it.files.map((f) => p.copies[f] && p.copies[f].id).filter(Boolean) })),
           })),
         };
       }),
@@ -88,7 +113,7 @@ window.Publish = (() => {
 
   async function publish() {
     if (busy) return;
-    if (!A.data.songbooks.length) return A.toast('Najpierw wczytaj spis pieśni w zakładce „Spisy pieśni”.', true);
+    if (!allBooks().length) return A.toast('Najpierw wczytaj spis pieśni albo utwórz program uroczystości.', true);
     if (!(await A.ensureConnected())) return;
     busy = true;
     problems = [];
@@ -132,7 +157,7 @@ window.Publish = (() => {
       A.changed();
 
       // 2. PDF-y śpiewników (tylko gdy coś się zmieniło)
-      const books = A.data.songbooks;
+      const books = allBooks();
       if (p.pdf) {
         const cache = new Map();
         const getBytes = async (fid) => {
@@ -205,15 +230,18 @@ window.Publish = (() => {
     const p = P();
     if (document.activeElement !== $('pub-pin')) $('pub-pin').value = p.pin;
     $('pub-pdf').checked = !!p.pdf;
-    $('pub-books').innerHTML = A.data.songbooks.length
-      ? A.data.songbooks.map((b) => {
-        const have = b.items.filter(usable).length;
+    const all = allBooks();
+    $('pub-books').innerHTML = all.length
+      ? all.map((b) => {
+        const songs = b.items.filter((it) => !it.section);
+        const have = songs.filter(usable).length;
         const pdf = p.pdfs[b.id];
-        return `<li><strong>${esc(b.name)}</strong><span class="muted small">${have} z ${b.items.length} ${A.plural(b.items.length, 'pozycji', 'pozycji', 'pozycji')} z nutami${
+        const kind = b.subtitle ? `<span class="badge doc">PROGRAM</span> ` : '';
+        return `<li><strong>${kind}${esc(b.name)}</strong><span class="muted small">${b.subtitle ? esc(b.subtitle) + ' · ' : ''}${have} z ${songs.length} ${A.plural(songs.length, 'pozycji', 'pozycji', 'pozycji')} z nutami${
           p.pdf && pdf ? ` · PDF: ${pdf.pages} str., ${(pdf.size / 1048576).toFixed(1)} MB` : ''}</span></li>`;
       }).join('')
-      : '<li class="muted">Brak spisów – wczytaj spis w zakładce „Spisy pieśni”.</li>';
-    $('pub-go').disabled = busy || !A.data.songbooks.length;
+      : '<li class="muted">Brak spisów i programów – wczytaj spis w zakładce „Spisy pieśni” albo utwórz program w „Uroczystościach”.</li>';
+    $('pub-go').disabled = busy || !all.length;
     $('pub-go').textContent = p.catalogId ? 'Aktualizuj dla chórzystów' : 'Opublikuj dla chórzystów';
     $('pub-pin-save').disabled = busy;
     $('pub-progress').hidden = !busy && !$('pub-status').textContent;

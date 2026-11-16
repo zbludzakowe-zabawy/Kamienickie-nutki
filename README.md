@@ -45,6 +45,17 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
   - **Widok chórzysty** przełącza na widok chórzysty, a z powrotem prowadzi link „Tryb administratora”, już bez logowania.
   - **Wyloguj** zamyka tryb administratora na tym urządzeniu i czyści z niego dane. Na Dysku wszystko zostaje.
 
+### Uroczystości
+- **Program na konkretną uroczystość**, np. Pierwszą Komunię: nazwa, data i pieśni ułożone według części mszy.
+  Szkielet to Wejście, Kyrie, Gloria, Psalm, Alleluja lub Chwała, Ofiarowanie, Sanctus, Agnus Dei, Komunia, Uwielbienie, Wyjście.
+  Części można dodawać, usuwać, przestawiać i zmieniać im nazwy, a w każdej części może być kilka pieśni.
+- Pieśni wybiera się ze **spisów pieśni** (wtedy obowiązuje aktualne dopasowanie nut ze spisu) albo **wprost z plików**.
+  Można też dodać sam tytuł **bez nut**, np. psalm kantora.
+- **Krótka uwaga** przy pieśni, np. „zwrotki 1–3” czy „solo: Ania”. Jest też przycisk **Kopiuj**, np. tegoroczna Komunia z zeszłorocznej.
+- Po dacie uroczystości program trafia do **archiwum**, ale chórzyści nadal go widzą, dopóki go nie usuniesz.
+- Chórzysta widzi **najbliższą uroczystość na górze listy**. Program jest ułożony według części mszy, z uwagami, a ⏮ ⏭ w podglądzie nut prowadzą po kolei przez program.
+  Może też pobrać **PDF z programem**: spis treści według części i nuty w kolejności mszy.
+
 ### Dla chórzystów
 - **Tryb chórzysty** na telefonie, **bez logowania**, tylko z PIN-em ustalonym przez administratora (na start 2018).
 - Chórzysta widzi **wszystkie śpiewniki**, a w każdym **wszystkie pozycje**. Te z nutami można stuknąć, pozostałe mają opis „brak nut”.
@@ -108,6 +119,7 @@ Potem otwórz http://localhost:8000.
 - `js/mode.js` – wybór trybu: administrator / chórzysta
 - `js/crypto.js` – szyfrowanie listy pieśni PIN-em
 - `js/pdfbuild.js`, `js/vendor/pdf-lib.min.js` – składanie PDF śpiewnika (pdf-lib, licencja MIT)
+- `js/programs.js` – zakładka „Uroczystości”
 - `js/publish.js` – zakładka „Dla chórzystów”
 - `js/guest.js` – tryb chórzysty
 - `CLAUDE.md` – notatki techniczne o budowie aplikacji
