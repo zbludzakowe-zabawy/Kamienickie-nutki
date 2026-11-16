@@ -61,6 +61,7 @@ window.PdfBuild = (() => {
       c.width = W;
       c.height = H;
       const g = c.getContext('2d');
+      c.links = []; // miejsca klikalnych tytułów: { page, y } (y = linia pisma na canvasie)
       g.fillStyle = '#fff';
       g.fillRect(0, 0, W, H);
       g.fillStyle = '#222';
@@ -94,12 +95,74 @@ window.PdfBuild = (() => {
         g.textAlign = 'right';
         g.fillText(r.page ? String(r.page) : 'brak nut', W - 110, y);
         g.textAlign = 'left';
+        if (r.page) c.links.push({ page: r.page, y });
         y += 44;
       }
       pages.push(c);
       if (start + TOC_LINES >= rows.length) break;
     }
     return pages;
+  }
+
+  // Klikalny spis treści: na każdy tytuł z nutami nakładamy niewidoczny link do jego strony.
+  function addLinks(doc, tocCanvases) {
+    const { PDFName } = window.PDFLib;
+    const s = A4[0] / 1240; // canvas 1240 px → szerokość A4 w punktach
+    const refs = doc.getPages().map((p) => p.ref);
+    tocCanvases.forEach((c, i) => {
+      const annots = c.links.filter((l) => refs[l.page - 1]).map((l) => doc.context.register(doc.context.obj({
+        Type: 'Annot',
+        Subtype: 'Link',
+        Rect: [100 * s, A4[1] - (l.y + 12) * s, (1240 - 100) * s, A4[1] - (l.y - 34) * s],
+        Border: [0, 0, 0],
+        Dest: [refs[l.page - 1], 'Fit'],
+      })));
+      if (annots.length) doc.getPage(i).node.set(PDFName.of('Annots'), doc.context.obj(annots));
+    });
+  }
+
+  // Zakładki PDF (panel boczny czytnika): „Spis treści”, potem pieśni; w programach pogrupowane według części.
+  function addOutline(doc, rows, tocCount) {
+    const { PDFName, PDFHexString, PDFNumber } = window.PDFLib;
+    const ctx = doc.context;
+    const refs = doc.getPages().map((p) => p.ref);
+    const entries = [{ title: 'Spis treści', page: 1 }];
+    let section = null;
+    for (const r of rows) {
+      if (r.section) { section = { title: r.title, children: [] }; entries.push(section); continue; }
+      if (!r.page) continue;
+      const e = { title: `${r.no ? r.no + '. ' : ''}${r.title}`, page: r.page };
+      if (section) section.children.push(e);
+      else entries.push(e);
+    }
+    const clean = entries.filter((e) => !e.children || e.children.length);
+    clean.forEach((e) => { if (e.children) e.page = e.children[0].page; });
+    const build = (list, parentRef) => {
+      const items = list.map((e) => ({ e, ref: ctx.nextRef() }));
+      items.forEach(({ e, ref }, i) => {
+        const d = {
+          Title: PDFHexString.fromText(e.title),
+          Parent: parentRef,
+          Dest: [refs[Math.min(e.page, refs.length) - 1], 'Fit'],
+        };
+        if (i > 0) d.Prev = items[i - 1].ref;
+        if (i < items.length - 1) d.Next = items[i + 1].ref;
+        if (e.children && e.children.length) {
+          const kids = build(e.children, ref);
+          d.First = kids[0].ref;
+          d.Last = kids[kids.length - 1].ref;
+          d.Count = PDFNumber.of(kids.length);
+        }
+        ctx.assign(ref, ctx.obj(d));
+      });
+      return items;
+    };
+    const rootRef = ctx.nextRef();
+    const top = build(clean, rootRef);
+    ctx.assign(rootRef, ctx.obj({ Type: 'Outlines', First: top[0].ref, Last: top[top.length - 1].ref, Count: PDFNumber.of(top.length) }));
+    doc.catalog.set(PDFName.of('Outlines'), rootRef);
+    doc.catalog.set(PDFName.of('PageMode'), PDFName.of('UseOutlines')); // czytnik od razu pokaże zakładki
+    return tocCount;
   }
 
   // book – spis; getBytes(fileId) → Uint8Array; zwraca { bytes, missing: [opisy], pages }
@@ -150,6 +213,8 @@ window.PdfBuild = (() => {
       const page = doc.insertPage(i, A4);
       page.drawImage(img, { x: 0, y: 0, width: A4[0], height: A4[1] });
     }
+    addLinks(doc, tocFinal);
+    addOutline(doc, rows, tocFinal.length);
     return { bytes: await doc.save(), problems: [...new Set(problems)], pages: doc.getPageCount() };
   }
 
