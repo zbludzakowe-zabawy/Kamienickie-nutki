@@ -36,10 +36,25 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
 - **„Dopasuj ponownie”** nie łączy się z Dyskiem: dopasowuje jeszcze raz pozycje niezatwierdzone do plików z ostatniego skanowania.
   Nowe pliki z Dysku trzeba najpierw wczytać („Skanuj Dysk” albo ↻ przy folderze).
 
+### Dla chórzystów
+- **Tryb chórzysty** na telefonie, **bez logowania**, tylko z PIN-em ustalonym przez administratora (na start 2018).
+- Chórzysta widzi **wszystkie śpiewniki**, a w każdym **wszystkie pozycje**. Te z nutami można stuknąć, pozostałe mają opis „brak nut”.
+  Jest wyszukiwarka i przełącznik „tylko z nutami”.
+- **Nuty na cały ekran**. Przy kilku stronach są strzałki ‹ ›, przyciski ⏮ ⏭ przechodzą do poprzedniej/następnej pieśni,
+  a przycisk „wstecz” w telefonie zamyka nuty.
+- **Pobierz PDF ze śpiewnikiem**: spis treści z numerami stron i nuty w kolejności spisu.
+- Administrator w zakładce **„Dla chórzystów”** ustala PIN i klika **Opublikuj / Aktualizuj**. Aplikacja wtedy:
+  - kopiuje potrzebne nuty do folderu `Kamienickie Nutki/Dla chórzystów` (dostęp dla każdego, kto ma link),
+  - składa PDF-y,
+  - zapisuje listę pieśni zaszyfrowaną PIN-em.
+
+  Oryginalne pliki zostają prywatne. Przy kolejnych aktualizacjach kopiowane są tylko nowe i zmienione nuty, a PDF powstaje od nowa tylko wtedy, gdy coś się zmieniło.
+- **Link dla chórzystów** (z przyciskiem „Kopiuj”) wysyłasz SMS-em albo na grupę. Zmiana PIN-u działa od razu: chórzyści zostaną poproszeni o nowy.
+
 ## Następne etapy
 
-1. Tryb przeglądania bez logowania dla gości (telefon, PIN, folder publiczny + klucz API).
-2. Tworzenie jednego PDF-a z wybranych nut.
+- Nuty dostępne bez internetu u chórzystów.
+- PDF z wybranych pozycji, np. na konkretną mszę.
 
 ## Aplikacja na telefon
 
@@ -81,6 +96,12 @@ Potem otwórz http://localhost:8000.
 - `js/zip.js`, `js/songlist.js` – odczyt spisu z .odt / .docx / .txt
 - `js/matcher.js` – dopasowanie pozycji spisu do plików
 - `js/songs.js` – ekran spisów pieśni
+- `js/mode.js` – wybór trybu: administrator / chórzysta
+- `js/crypto.js` – szyfrowanie listy pieśni PIN-em
+- `js/pdfbuild.js`, `js/vendor/pdf-lib.min.js` – składanie PDF śpiewnika (pdf-lib, licencja MIT)
+- `js/publish.js` – zakładka „Dla chórzystów”
+- `js/guest.js` – tryb chórzysty
+- `CLAUDE.md` – notatki techniczne o budowie aplikacji
 - `js/app.js` – interfejs
 - `js/pwa.js`, `sw.js`, `manifest.webmanifest`, `icons/` – aplikacja na telefon (instalacja, praca offline, aktualizacje)
 - `design/ikona.svg` – źródło ikony

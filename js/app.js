@@ -470,6 +470,7 @@
     renderFolders();
     renderTree();
     if (window.Songs) Songs.render();
+    if (window.Publish) Publish.render();
   }
 
   // ---------- zakładki ----------
@@ -482,9 +483,10 @@
     });
     document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== name; });
     try { localStorage.setItem(TAB_KEY, name); } catch (e) { /* trudno */ }
+    if (name === 'choir' && window.Publish) Publish.render();
   }
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
-  try { showTab(localStorage.getItem(TAB_KEY) === 'songs' ? 'songs' : 'files'); } catch (e) { showTab('files'); }
+  try { const t = localStorage.getItem(TAB_KEY); showTab(t === 'songs' || t === 'choir' ? t : 'files'); } catch (e) { showTab('files'); }
 
   // wspólne funkcje dla pozostałych modułów (spisy pieśni)
   window.App = {
@@ -608,6 +610,7 @@
       renderSync();
       if (connected) onConnected();
     });
+    if (document.documentElement.dataset.mode === 'guest') return; // chórzysta nie loguje się do Google
     await Drive.init();
     if (Drive.isConnected()) onConnected();
   })();

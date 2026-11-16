@@ -1,0 +1,103 @@
+# Kamienickie Nutki – notatki dla Claude
+
+Aplikacja (PWA, czysty HTML/JS bez buildu) do porządkowania nut chóru trzymanych na Dysku Google.
+Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR-y po polsku.
+
+- Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/ (repo `zbludzakowe-zabawy/Kamienickie-nutki`, **wielkie K** w adresie!)
+- Publikacja: GitHub Actions (`.github/workflows/pages.yml`) po każdym pushu do `main`.
+- **Sposób pracy**: zmiany na gałęzi roboczej → push → **PR do `main`** (użytkownik scala sam). Wcześniej scalaliśmy
+  bezpośrednio, ale od etapu 3 użytkownik prosi o PR. Nie pushuj do `main` bez wyraźnej zgody.
+- Skill `pwa-na-telefon` to przepis użytkownika na PWA (manifest, SW, banery) – projekt jest według niego zrobiony.
+
+## Dwa tryby
+
+| | Administrator (dyrygent, komputer) | Chórzysta (telefon) |
+|---|---|---|
+| Logowanie | Google OAuth (GIS token client) | brak – tylko PIN |
+| Dostęp do Dysku | `drive.readonly` + `drive.file` | klucz API (`?key=`) do plików publicznych |
+| Widzi | zakładki: Nuty na Dysku / Spisy pieśni / Dla chórzystów | śpiewniki → lista pieśni → nuty na cały ekran, PDF |
+
+Tryb wybiera `js/mode.js` (w `<head>`, przed narysowaniem): `?chor=<id katalogu>` → chórzysta (zapamiętane w localStorage
+`kn-mode`, `kn-guest-id`); `KN_CONFIG.publicCatalogId` (jeśli ustawione) → domyślnie chórzysta; inaczej administrator.
+`html[data-mode]` + klasa `.admin-only` ukrywają część UI. Przełącznik „Tryb administratora” na dole ekranu chórzysty.
+
+## Pliki
+
+- `index.html`, `style.css` – cały UI (karty, zakładki `data-tab`/`data-panel`, dialogi `#picker`, `#chooser`, widok gościa `#guest`, `#g-viewer`)
+- `js/config.js` – `clientId` (OAuth), `apiKey`, `dataFileName`, `appFolderName`, opcjonalnie `publicCatalogId`
+- `js/mode.js` – wybór trybu
+- `js/store.js` – IndexedDB (klucze `data`, `sync`), awaryjnie localStorage
+- `js/drive.js` – logowanie i całe Drive API (lista, skan, pobieranie, zapis JSON, foldery z tagiem `appProperties.kn`,
+  kopie, uprawnienia „anyone reader”, upload multipart, `publicText()` z kluczem API)
+- `js/catalog.js` – skan folderów (`scan`, `rescanFolder`), drzewo (`buildIndex`), `norm()` (bez polskich znaków)
+- `js/zip.js` + `js/songlist.js` – odczyt spisu z .odt/.docx/.txt/Dokumentu Google; parsowanie „nr<tab>tytuł”, dedup po numerze
+- `js/matcher.js` – dopasowanie pozycji spisu do plików (tokeny, wagi słów częstych, literówki, dopisek w nawiasie)
+- `js/app.js` – UI administratora: konto, synchronizacja, foldery, drzewo, zakładki; eksportuje `window.App`
+- `js/songs.js` – zakładka „Spisy pieśni” (`window.Songs`)
+- `js/crypto.js` – AES-GCM + PBKDF2 z PIN-u (`KnCrypto.encrypt/decrypt`)
+- `js/pdfbuild.js` – PDF śpiewnika (pdf-lib z `js/vendor/`, spis treści rysowany na canvasie – polskie znaki bez fontów)
+- `js/publish.js` – zakładka „Dla chórzystów” (`window.Publish`)
+- `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu `#/`, `#/s/<bookId>`, `#/s/<bookId>/<i>`
+- `js/pwa.js`, `sw.js`, `manifest.webmanifest`, `icons/` – PWA; `tools/build-sw.mjs` wpisuje wersję i listę plików przy publikacji
+- `design/ikona.svg` – źródło ikony (otwarty śpiewnik); PNG generuje `make-icons.js` ze skilla pwa-na-telefon
+
+## Dane
+
+Wszystko w jednym obiekcie `data` (IndexedDB + `Kamienickie Nutki/KamienickieNutki.json` na Dysku administratora;
+przy połączeniu wygrywa nowszy `updatedAt`):
+
+```
+{ app, v, updatedAt, scannedAt, newAt,
+  roots: [{id, name}],                      // wybrane foldery
+  nodes: {id: {id, name, parent, folder?, kind:'pdf'|'img', size, modified, added}},  // klucz = id pliku (dla skrótów – id celu)
+  meta:  {fileId: {title}},                 // własne nazwy
+  songbooks: [{id, name, source, importedAt,
+               items: [{no, title, state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
+  publish: {pin, pdf, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId:{id, sig, size, pages, at}}, at, dataAt} }
+```
+
+Stany pozycji: `ok` zatwierdzone ręcznie, `auto` pewne automatyczne, `check` do sprawdzenia, `none` brak, `missing` „nie mamy” potwierdzone.
+Chórzyści widzą tylko `ok` i `auto`. `matchItems` nie rusza `ok`/`missing`.
+
+## Publikacja dla chórzystów
+
+1. Folder `Kamienickie Nutki/Dla chórzystów` (tag `kn=public`) z uprawnieniem „anyone with link: reader” (pliki dziedziczą).
+2. Kopie użytych nut (`files.copy`, awaryjnie pobranie + upload); kopiowane tylko nowe/zmienione (`modified`), zbędne kasowane.
+3. PDF każdego śpiewnika – budowany tylko, gdy zmienił się podpis (`sig` = hash pozycji i plików).
+4. Katalog `spiewniki-dla-chorzystow.json` – zaszyfrowany PIN-em (`KnCrypto`), zawiera id kopii i PDF.
+   Link dla chórzystów: `<strona>?chor=<catalogId>`. Zmiana PIN-u = tylko ponowny zapis katalogu.
+
+Chórzysta: `Drive.publicText(catalogId)` (klucz API) → PIN → katalog; kopia koperty w localStorage (`kn-guest-env`), PIN w `kn-guest-pin`.
+Nuty: `<iframe src="https://drive.google.com/file/d/<id>/preview">` (nowa ramka na każdy plik, żeby nie psuć historii „wstecz”).
+PDF: `https://drive.google.com/uc?export=download&id=<pdfId>`.
+
+**iPhone**: aplikacja z ekranu początkowego ma osobną pamięć od Safari i startuje z `start_url` bez `?chor=`.
+Rozwiązanie: wpisać `publicCatalogId` do `js/config.js` (id z linku po pierwszej publikacji) – wtedy zwykły adres działa dla wszystkich.
+
+## Google Cloud (konfiguruje użytkownik)
+
+Projekt KamienickieNutki, włączone Google Drive API, ekran zgody w trybie **Testowanie** (konto dyrygenta jako użytkownik testowy),
+klient OAuth „Aplikacja internetowa” ze źródłami `https://zbludzakowe-zabawy.github.io` i `http://localhost:8000`,
+klucz API ograniczony do Drive API i odsyłaczy `https://zbludzakowe-zabawy.github.io/*`, `http://localhost:8000/*`.
+Token wygasa po ok. godzinie – to normalne (brak serwera = brak odświeżania w tle).
+
+## Testowanie
+
+```bash
+python3 -m http.server 8000
+```
+
+- Lokalnie (`http://localhost:8000`) service worker się nie rejestruje (tylko HTTPS).
+- Z tego środowiska nie ma dostępu do github.io ani prawdziwego Google – testy Playwright robimy na **udawanym Dysku**:
+  `ctx.route('https://accounts.google.com/gsi/client', …)` podstawia `google.accounts.oauth2` (initTokenClient → callback z tokenem),
+  `ctx.route('https://www.googleapis.com/**', …)` odpowiada na `files`, `about`, `upload`, `copy`, `permissions`, `alt=media`.
+- Spis do testów: plik użytkownika `spiewnik_spistresci.odt` (78 pozycji + druga strona alfabetyczna) – jeśli nie ma go w uploadach,
+  poproś użytkownika albo zrób podobny .txt („1<tab>Alleluja radosne”…).
+- Sprawdzaj: brak błędów w konsoli, widok telefonu (`devices['Pixel 7']`) i komputera (1200 px), zrzuty ekranu.
+- Status publikacji: `mcp__github__actions_list` (workflow „Publikacja na GitHub Pages”).
+
+## Pomysły / dalsze etapy
+
+- Nuty offline u chórzysty (kopie w pamięci telefonu) – teraz podgląd wymaga internetu.
+- Własne PDF-y z wybranych pozycji (np. „na niedzielę”) – pdfbuild.js już umie składać.
+- Ponowne wczytanie zmienionego spisu z zachowaniem dopasowań.
