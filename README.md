@@ -36,6 +36,15 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
 - **„Dopasuj ponownie”** nie łączy się z Dyskiem: dopasowuje jeszcze raz pozycje niezatwierdzone do plików z ostatniego skanowania.
   Nowe pliki z Dysku trzeba najpierw wczytać („Skanuj Dysk” albo ↻ przy folderze).
 
+### Tryby i logowanie
+- **Zwykły adres strony otwiera śpiewniki chórzystów** (także w aplikacji dodanej do ekranu iPhone'a).
+- **Tryb administratora** (link na dole ekranu chórzysty) jest chroniony **logowaniem kontem Google**.
+  Wejść mogą tylko konta dopuszczone w Google Cloud (użytkownicy testowi). Wystarczy zalogować się raz na danym urządzeniu.
+  Potem można pracować także bez połączenia z Dyskiem.
+- W pasku administratora:
+  - **Widok chórzysty** przełącza na widok chórzysty, a z powrotem prowadzi link „Tryb administratora”, już bez logowania.
+  - **Wyloguj** zamyka tryb administratora na tym urządzeniu i czyści z niego dane. Na Dysku wszystko zostaje.
+
 ### Dla chórzystów
 - **Tryb chórzysty** na telefonie, **bez logowania**, tylko z PIN-em ustalonym przez administratora (na start 2018).
 - Chórzysta widzi **wszystkie śpiewniki**, a w każdym **wszystkie pozycje**. Te z nutami można stuknąć, pozostałe mają opis „brak nut”.

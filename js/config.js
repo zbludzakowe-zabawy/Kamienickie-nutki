@@ -9,4 +9,7 @@ window.KN_CONFIG = {
   dataFileName: 'KamienickieNutki.json',
   // Jedyny folder na Dysku, w którym aplikacja zapisuje swoje pliki
   appFolderName: 'Kamienickie Nutki',
+  // Katalog śpiewników dla chórzystów (id z linku „?chor=…” po publikacji). Dzięki temu zwykły adres
+  // strony otwiera śpiewniki – także w aplikacji dodanej do ekranu iPhone'a.
+  publicCatalogId: '17JcPVAK_vT7Vfjn8DHgAwolvUdkuuCSU',
 };

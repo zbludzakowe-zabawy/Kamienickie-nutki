@@ -10,5 +10,8 @@
     history.replaceState(null, '', location.pathname + location.hash);
   }
   const cfg = window.KN_CONFIG || {};
-  document.documentElement.dataset.mode = get('kn-mode') || (fromLink || cfg.publicCatalogId ? 'guest' : 'admin');
+  const mode = get('kn-mode') || (fromLink || cfg.publicCatalogId ? 'guest' : 'admin');
+  document.documentElement.dataset.mode = mode;
+  // tryb administratora otwiera się dopiero po zalogowaniu kontem Google na tym urządzeniu
+  if (mode === 'admin' && !get('kn-admin')) document.documentElement.classList.add('admin-locked');
 })();
