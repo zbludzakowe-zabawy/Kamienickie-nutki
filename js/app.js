@@ -18,10 +18,23 @@
 
   // ---------- stan ----------
   const emptyData = () => ({ app: 'KamienickieNutki', v: 1, roots: [], nodes: {}, meta: {}, songbooks: [], scannedAt: null, updatedAt: 0 });
+  // Identyfikator śpiewnika (do 3 znaków, np. Z – żółty, N – niebieski); nowe spisy dostają A01, A02…
+  const cleanCode = (s) => String(s || '').toUpperCase().replace(/[^0-9A-ZĄĆĘŁŃÓŚŹŻ]/g, '').slice(0, 3);
+  function nextCode(books) {
+    const used = new Set(books.map((b) => b.code));
+    for (let l = 65; l <= 90; l++) {
+      for (let n = 1; n <= 99; n++) {
+        const c = String.fromCharCode(l) + String(n).padStart(2, '0');
+        if (!used.has(c)) return c;
+      }
+    }
+    return '';
+  }
+  const ensureCodes = (d) => { d.songbooks.forEach((b) => { if (!b.code) b.code = nextCode(d.songbooks); }); return d; };
   const normalize = (d) => {
     const e = emptyData();
     if (!d || typeof d !== 'object') return e;
-    return {
+    return ensureCodes({
       ...e,
       ...d,
       roots: Array.isArray(d.roots) ? d.roots : [],
@@ -30,7 +43,7 @@
       songbooks: Array.isArray(d.songbooks) ? d.songbooks : [],
       programs: Array.isArray(d.programs) ? d.programs : [],
       dups: d.dups && typeof d.dups === 'object' ? d.dups : { groups: {} },
-    };
+    });
   };
 
   let data = emptyData();
@@ -614,7 +627,7 @@
   window.App = {
     get data() { return data; },
     get idx() { return idx; },
-    changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt,
+    changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt, cleanCode, nextCode,
   };
 
   // ---------- zdarzenia ----------

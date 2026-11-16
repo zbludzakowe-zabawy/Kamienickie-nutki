@@ -559,3 +559,10 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .pub-others { background: var(--bg); border-radius: 10px; padding: 10px !important; margin-top: 6px; }
 .pub-others-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
 .pub-others-acts .check { margin: 0; }
+.ev-tag { font-weight: 700; color: var(--accent); white-space: nowrap; }
+.pub-state.held { color: var(--muted, #777); }
+.pub-opts { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 4px; }
+.pub-opts .check { margin: 0; }
+.sb-code { display: inline-flex; gap: 6px; align-items: center; font-size: .85rem; color: var(--muted); }
+.sb-code input { width: 4.2em; text-transform: uppercase; text-align: center; font-weight: 700; padding: 3px 4px; }
+.g-stale { margin: -4px 0 12px; color: var(--warn); }

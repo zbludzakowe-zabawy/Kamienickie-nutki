@@ -112,6 +112,8 @@ window.Guest = (() => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
   const isPast = (pr) => !!pr.date && pr.date < today();
+  const staleNote = (x) => (x.pdf && x.stale
+    ? `<p class="small g-stale">⚠ PDF może być nieaktualny${x.pdfAt ? ` (stan na ${new Date(x.pdfAt).toLocaleDateString('pl-PL')})` : ''} – dyrygent wprowadza zmiany. Lista poniżej jest aktualna.</p>` : '');
   const fmtDate = (s) => {
     if (!s) return '';
     const [y, mo, d] = s.split('-').map(Number);
@@ -156,7 +158,7 @@ window.Guest = (() => {
       ${list.length ? `<div class="g-books">${list.map((b) => {
         const have = b.items.filter(hasNotes).length;
         return `<a class="g-book" href="#/s/${encodeURIComponent(b.id)}"><span class="g-book-ico" aria-hidden="true"></span>
-          <span class="g-book-text"><strong>${esc(b.name)}</strong><span class="muted">${b.items.length} pieśni · nuty: ${have}</span></span><span class="chev">›</span></a>`;
+          <span class="g-book-text"><strong>${esc(b.name)}${b.code ? ` <span class="muted">[${esc(b.code)}]</span>` : ''}</strong><span class="muted">${b.items.length} pieśni · nuty: ${have}${b.stale ? ' · PDF może być nieaktualny' : ''}</span></span><span class="chev">›</span></a>`;
       }).join('')}</div>` : '<p class="muted">Dyrygent nie udostępnił jeszcze żadnego śpiewnika.</p>'}
       ${past.length ? `<h2 class="g-h">Archiwum uroczystości</h2><div class="g-books">${past.map((p) => progCard(p, false)).join('')}</div>` : ''}
       <p class="muted small g-updated">Aktualizacja: ${new Date(catalog.at).toLocaleDateString('pl-PL')}</p>`;
@@ -173,7 +175,7 @@ window.Guest = (() => {
     $('g-view').innerHTML = `<div class="g-bar"><a class="btn small" href="#/">‹ Wszystko</a></div>
       <h2 class="g-h">${esc(pr.name)}</h2>
       <p class="muted small">${pr.date ? esc(fmtDate(pr.date)) : 'Program uroczystości'}${isPast(pr) ? ' · archiwum' : ''}</p>
-      ${pr.pdf ? `<a class="btn primary g-pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(pr.pdf)}" target="_blank" rel="noopener">⬇ Pobierz PDF z programem${mb}</a>` : ''}
+      ${pr.pdf ? `<a class="btn primary g-pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(pr.pdf)}" target="_blank" rel="noopener">⬇ Pobierz PDF z programem${mb}</a>${staleNote(pr)}` : ''}
       <div class="g-list g-program">${pr.parts.filter((pt) => pt.items.length).map((pt) => `<div class="g-part">${esc(pt.name)}</div>${pt.items.map((it) => {
         const i = k++;
         const note = it.note ? `<span class="g-pnote">${esc(it.note)}</span>` : '';
@@ -205,7 +207,7 @@ window.Guest = (() => {
       <h2 class="g-h">${esc(b.name)}</h2>
       <p class="muted small">${b.items.length} pieśni · z nutami: ${have}${b.auto && b.at ? ` · lista z dnia ${new Date(b.at).toLocaleDateString('pl-PL')}` : ''}</p>
       ${b.auto ? '<p class="muted small">Nuty, których nie ma w pozostałych śpiewnikach, ułożone alfabetycznie.</p>' : ''}
-      ${b.pdf ? `<a class="btn primary g-pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(b.pdf)}" target="_blank" rel="noopener">⬇ Pobierz PDF ze śpiewnikiem${mb}${b.pdfAt ? ` – stan na ${new Date(b.pdfAt).toLocaleDateString('pl-PL')}` : ''}</a>` : ''}
+      ${b.pdf ? `<a class="btn primary g-pdf" href="https://drive.google.com/uc?export=download&id=${encodeURIComponent(b.pdf)}" target="_blank" rel="noopener">⬇ Pobierz PDF ze śpiewnikiem${mb}${b.auto && b.pdfAt ? ` – stan na ${new Date(b.pdfAt).toLocaleDateString('pl-PL')}` : ''}</a>${staleNote(b)}` : ''}
       <div class="g-tools">
         <input type="search" id="g-q" placeholder="Szukaj (tytuł lub numer)…" value="${esc(query)}" autocomplete="off" aria-label="Szukaj pieśni">
         <label class="g-only"><input type="checkbox" id="g-only"${onlyWithNotes ? ' checked' : ''}> tylko z nutami</label>

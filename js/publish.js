@@ -15,6 +15,7 @@ window.Publish = (() => {
     if (p.pdf == null) p.pdf = true;
     p.copies = p.copies || {};
     p.pdfs = p.pdfs || {};
+    p.hold = p.hold || {}; // {id: true} – „Aktualizuj PDF, jeśli trzeba” odznaczone: PDF zostaje taki, jaki jest
     return p;
   };
   const usable = (it) => (it.state === 'ok' || it.state === 'auto') && it.files.length > 0;
@@ -53,6 +54,9 @@ window.Publish = (() => {
       ...pt.items.map((it) => ({ no: '', title: it.note ? `${it.title} (${it.note})` : it.title, state: 'ok', files: it.files }))]),
   }));
   const allBooks = () => [...A.data.songbooks, ...programBooks()];
+  const held = (id) => !!P().hold[id];
+  // czy chórzyści dostają nieaktualny PDF (wstrzymany przez administratora)
+  const staleOf = (id) => !!(status.books[id] && status.books[id].stale);
 
   async function hash(text) {
     const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -110,8 +114,11 @@ window.Publish = (() => {
         return {
           id: b.id,
           name: b.name,
+          code: b.code || '',
           pdf: pdf ? pdf.id : null,
           pdfSize: pdf ? pdf.size : 0,
+          pdfAt: pdf ? pdf.at : null,
+          stale: !!pdf && staleOf(b.id),
           items: b.items.map((it) => ({
             no: it.no,
             title: it.title,
@@ -127,6 +134,8 @@ window.Publish = (() => {
           date: pr.date,
           pdf: pdf ? pdf.id : null,
           pdfSize: pdf ? pdf.size : 0,
+          pdfAt: pdf ? pdf.at : null,
+          stale: !!pdf && staleOf(pr.id),
           parts: pr.parts.map((pt) => ({
             name: pt.name,
             items: pt.items.map((it) => ({ title: it.title, note: it.note, files: it.files.map((f) => p.copies[f] && p.copies[f].id).filter(Boolean) })),
@@ -163,8 +172,12 @@ window.Publish = (() => {
       const s = await sig(b);
       const prev = (p.sigs && p.sigs[b.id]) || (p.pdfs[b.id] && p.pdfs[b.id].sig);
       let v = !prev ? 'new' : prev !== s ? 'changed' : 'ok';
-      if (v === 'ok' && p.pdf && b.items.some(usable) && !p.pdfs[b.id]) v = 'changed'; // brakuje PDF (np. włączono tworzenie PDF)
-      st.books[b.id] = { state: v, sig: s, name: b.name };
+      const pdf = p.pdfs[b.id];
+      // PDF nie odpowiada stanowi śpiewnika (brakuje go, jest stary albo zbędny)
+      const pdfOff = !!p.pdf && (b.items.some(usable) ? !pdf || pdf.sig !== s : !!pdf);
+      const h = held(b.id);
+      if (v === 'ok' && pdfOff && !h) v = 'changed'; // np. włączono tworzenie PDF albo zdjęto wstrzymanie
+      st.books[b.id] = { state: v, sig: s, name: b.name, held: h, stale: h && pdfOff };
       if (v !== 'ok') st.any = true;
     }
     const ids = new Set(books.map((b) => b.id));
@@ -209,7 +222,7 @@ window.Publish = (() => {
     const p = P();
     try {
       status = await computeStatus();
-      const updated = Object.values(status.books).filter((x) => x.state !== 'ok').map((x) => x.name);
+      const updated = Object.values(status.books).filter((x) => x.state !== 'ok').map((x) => x.name + (x.stale && p.pdf ? ' (bez nowego PDF)' : ''));
       const same = Object.values(status.books).filter((x) => x.state === 'ok').map((x) => x.name);
       step('Przygotowanie folderu dla chórzystów…', 0.02);
       const folder = await Drive.ensurePublicFolder();
@@ -276,6 +289,7 @@ window.Publish = (() => {
         for (let bi = 0; bi < books.length; bi++) {
           const b = books[bi];
           const cur = p.pdfs[b.id];
+          if (held(b.id)) continue; // administrator wstrzymał aktualizację PDF – zostaje poprzedni
           if (!b.items.some(usable)) {
             if (cur) { await Drive.deleteFile(cur.id).catch(() => undefined); delete p.pdfs[b.id]; }
             continue;
@@ -380,8 +394,14 @@ window.Publish = (() => {
         const pdf = p.pdfs[b.id];
         const kind = b.subtitle ? `<span class="badge doc">PROGRAM</span> ` : '';
         const st = status.books[b.id];
-        return `<li><span class="pub-row"><strong>${kind}${esc(b.name)}</strong>${st ? STATE_LABEL[st.state] : ''}</span><span class="muted small">${b.subtitle ? esc(b.subtitle) + ' · ' : ''}${have} z ${songs.length} ${A.plural(songs.length, 'pozycji', 'pozycji', 'pozycji')} z nutami${
-          p.pdf && pdf ? ` · PDF: ${pdf.pages} str., ${(pdf.size / 1048576).toFixed(1)} MB` : ''}</span></li>`;
+        const isBook = !b.subtitle;
+        const h = held(b.id);
+        return `<li data-id="${esc(b.id)}"><span class="pub-row"><strong>${kind}${esc(b.name)}${isBook && b.code ? ` <span class="muted" title="Identyfikator – zmienisz go w „Spisach pieśni”">[${esc(b.code)}]</span>` : ''}</strong>${st ? STATE_LABEL[st.state] : ''}${
+          st && st.stale ? '<span class="pub-state held">⏸ PDF wstrzymany – chórzyści widzą „może być nieaktualny”</span>' : ''}</span>
+          <span class="muted small">${b.subtitle ? esc(b.subtitle) + ' · ' : ''}${have} z ${songs.length} ${A.plural(songs.length, 'pozycji', 'pozycji', 'pozycji')} z nutami${
+          p.pdf && pdf ? ` · PDF: ${pdf.pages} str., ${(pdf.size / 1048576).toFixed(1)} MB, z ${new Date(pdf.at).toLocaleDateString('pl-PL')}` : ''}</span>
+          <span class="pub-opts">${p.pdf ? `<label class="check small" title="Odznacz, gdy często coś zmieniasz – PDF zostanie taki, jaki jest, a chórzyści zobaczą, że może być nieaktualny.">
+              <input type="checkbox" data-hold${h ? '' : ' checked'}${busy ? ' disabled' : ''}> aktualizuj PDF, jeśli trzeba</label>` : ''}</span></li>`;
       }).join('')
       : '<li class="muted">Brak spisów i programów – wczytaj spis w zakładce „Spisy pieśni” albo utwórz program w „Uroczystościach”.</li>';
     $('pub-books').insertAdjacentHTML('beforeend', othersRow());
@@ -423,6 +443,13 @@ window.Publish = (() => {
     }
   });
   $('pub-books').addEventListener('change', (e) => {
+    const li = e.target.closest('li[data-id]');
+    if (li && e.target.matches('[data-hold]')) {
+      if (e.target.checked) delete P().hold[li.dataset.id];
+      else P().hold[li.dataset.id] = true;
+      A.changed();
+      return render();
+    }
     if (!e.target.matches('[data-o="enabled"]')) return;
     O().enabled = e.target.checked;
     if (e.target.checked && !O().snapshot) { O().snapshot = othersNow(); O().at = new Date().toISOString(); }
