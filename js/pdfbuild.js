@@ -52,7 +52,7 @@ window.PdfBuild = (() => {
 
   // Strony spisu treści rysujemy na canvasie (polskie znaki bez dodatkowych czcionek).
   const TOC_LINES = 34;
-  function tocPages(title, rows) {
+  function tocPages(title, rows, subtitle) {
     const W = 1240;
     const H = 1754;
     const pages = [];
@@ -71,12 +71,20 @@ window.PdfBuild = (() => {
         y += 50;
         g.font = '26px Georgia, "Times New Roman", serif';
         g.fillStyle = '#777';
-        g.fillText(`Spis treści · ${new Date().toLocaleDateString('pl-PL')}`, 110, y);
+        g.fillText(subtitle || `Spis treści · ${new Date().toLocaleDateString('pl-PL')}`, 110, y);
         y += 60;
       } else {
         y = 110;
       }
       for (const r of rows.slice(start, start + TOC_LINES)) {
+        if (r.section) { // nagłówek części (program uroczystości)
+          g.font = 'bold 30px Georgia, "Times New Roman", serif';
+          g.fillStyle = '#8c2f39';
+          g.textAlign = 'left';
+          g.fillText(r.title, 110, y + 6, W - 220);
+          y += 50;
+          continue;
+        }
         g.font = '30px Georgia, "Times New Roman", serif';
         g.fillStyle = r.page ? '#222' : '#aaa';
         g.textAlign = 'right';
@@ -102,9 +110,10 @@ window.PdfBuild = (() => {
     doc.setCreator('Kamienickie Nutki');
     const rows = [];
     const problems = [];
-    const withNotes = book.items.filter((it) => (it.state === 'ok' || it.state === 'auto') && it.files.length);
+    const withNotes = book.items.filter((it) => !it.section && (it.state === 'ok' || it.state === 'auto') && it.files.length);
     let done = 0;
     for (const it of book.items) {
+      if (it.section) { rows.push({ section: true, title: it.title }); continue; }
       const row = { no: it.no, title: it.title, page: 0 };
       rows.push(row);
       if (!withNotes.includes(it)) continue;
@@ -132,9 +141,9 @@ window.PdfBuild = (() => {
       onProgress && onProgress(done, withNotes.length);
     }
     // spis treści na początku
-    const toc = tocPages(book.name, rows);
+    const toc = tocPages(book.name, rows, book.subtitle);
     rows.forEach((r) => { if (r.page) r.page += toc.length; });
-    const tocFinal = tocPages(book.name, rows);
+    const tocFinal = tocPages(book.name, rows, book.subtitle);
     for (let i = 0; i < tocFinal.length; i++) {
       const blob = await new Promise((r) => tocFinal[i].toBlob(r, 'image/png'));
       const img = await doc.embedPng(new Uint8Array(await blob.arrayBuffer()));

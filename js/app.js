@@ -28,6 +28,7 @@
       nodes: d.nodes && typeof d.nodes === 'object' ? d.nodes : {},
       meta: d.meta && typeof d.meta === 'object' ? d.meta : {},
       songbooks: Array.isArray(d.songbooks) ? d.songbooks : [],
+      programs: Array.isArray(d.programs) ? d.programs : [],
     };
   };
 
@@ -479,6 +480,7 @@
     renderFolders();
     renderTree();
     if (window.Songs) Songs.render();
+    if (window.Programs) Programs.render();
     if (window.Publish) Publish.render();
   }
 
@@ -493,9 +495,10 @@
     document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== name; });
     try { localStorage.setItem(TAB_KEY, name); } catch (e) { /* trudno */ }
     if (name === 'choir' && window.Publish) Publish.render();
+    if (name === 'events' && window.Programs) Programs.render();
   }
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
-  try { const t = localStorage.getItem(TAB_KEY); showTab(t === 'songs' || t === 'choir' ? t : 'files'); } catch (e) { showTab('files'); }
+  try { const t = localStorage.getItem(TAB_KEY); showTab(['songs', 'events', 'choir'].includes(t) ? t : 'files'); } catch (e) { showTab('files'); }
 
   // wspólne funkcje dla pozostałych modułów (spisy pieśni)
   window.App = {

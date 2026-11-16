@@ -15,7 +15,7 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
 |---|---|---|
 | Logowanie | Google OAuth (GIS token client) | brak – tylko PIN |
 | Dostęp do Dysku | `drive.readonly` + `drive.file` | klucz API (`?key=`) do plików publicznych |
-| Widzi | zakładki: Nuty na Dysku / Spisy pieśni / Dla chórzystów | śpiewniki → lista pieśni → nuty na cały ekran, PDF |
+| Widzi | zakładki: Nuty na Dysku / Spisy pieśni / Uroczystości / Dla chórzystów | uroczystości + śpiewniki → lista pieśni → nuty na cały ekran, PDF |
 
 Tryb wybiera `js/mode.js` (w `<head>`, przed narysowaniem): `?chor=<id katalogu>` → chórzysta (zapamiętane w localStorage
 `kn-mode`, `kn-guest-id`); `KN_CONFIG.publicCatalogId` jest ustawione (katalog chóru użytkownika), więc **domyślnie chórzysta**.
@@ -43,8 +43,9 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 - `js/songs.js` – zakładka „Spisy pieśni” (`window.Songs`)
 - `js/crypto.js` – AES-GCM + PBKDF2 z PIN-u (`KnCrypto.encrypt/decrypt`)
 - `js/pdfbuild.js` – PDF śpiewnika (pdf-lib z `js/vendor/`, spis treści rysowany na canvasie – polskie znaki bez fontów)
+- `js/programs.js` – zakładka „Uroczystości” (`window.Programs`): programy mszy, części, wybór pieśni (`#song-picker`), `forPublish()`
 - `js/publish.js` – zakładka „Dla chórzystów” (`window.Publish`)
-- `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu `#/`, `#/s/<bookId>`, `#/s/<bookId>/<i>`
+- `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu `#/`, `#/s/<bookId>[/<i>]` (śpiewnik), `#/p/<programId>[/<i>]` (program; `i` = indeks w spłaszczonej liście pieśni)
 - `js/pwa.js`, `sw.js`, `manifest.webmanifest`, `icons/` – PWA; `tools/build-sw.mjs` wpisuje wersję i listę plików przy publikacji
 - `design/ikona.svg` – źródło ikony (otwarty śpiewnik); PNG generuje `make-icons.js` ze skilla pwa-na-telefon
 
@@ -60,18 +61,27 @@ przy połączeniu wygrywa nowszy `updatedAt`):
   meta:  {fileId: {title}},                 // własne nazwy
   songbooks: [{id, name, source, importedAt,
                items: [{no, title, state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
-  publish: {pin, pdf, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId:{id, sig, size, pages, at}}, at, dataAt} }
+  programs: [{id, name, date:'YYYY-MM-DD', createdAt,
+              parts: [{id, name, items: [{title, note, files:[fileId], src?:{book, bookName, no}}]}]}],
+  publish: {pin, pdf, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt},
+  owner }
 ```
 
 Stany pozycji: `ok` zatwierdzone ręcznie, `auto` pewne automatyczne, `check` do sprawdzenia, `none` brak, `missing` „nie mamy” potwierdzone.
 Chórzyści widzą tylko `ok` i `auto`. `matchItems` nie rusza `ok`/`missing`.
+
+**Programy uroczystości**: domyślny szkielet części (Wejście, Kyrie, Gloria, Psalm, Alleluja lub Chwała, Ofiarowanie, Sanctus,
+Agnus Dei, Komunia, Uwielbienie, Wyjście) – części można dodawać/usuwać/przestawiać/zmieniać nazwę, w części kilka pieśni.
+Pieśń ze spisu ma `src` → przy publikacji bierzemy **aktualne** dopasowanie z tego spisu (`Programs.resolve`); można też dodać plik
+albo sam tytuł „bez nut”. Program z datą w przeszłości = archiwum (u administratora i chórzysty), nadal widoczny, dopóki nie usunięty.
+„Kopiuj” tworzy kopię bez daty. Puste części są ukryte u chórzystów i w PDF. PDF programu = pseudo-śpiewnik z wierszami `section`.
 
 ## Publikacja dla chórzystów
 
 1. Folder `Kamienickie Nutki/Dla chórzystów` (tag `kn=public`) z uprawnieniem „anyone with link: reader” (pliki dziedziczą).
 2. Kopie użytych nut (`files.copy`, awaryjnie pobranie + upload); kopiowane tylko nowe/zmienione (`modified`), zbędne kasowane.
 3. PDF każdego śpiewnika – budowany tylko, gdy zmienił się podpis (`sig` = hash pozycji i plików).
-4. Katalog `spiewniki-dla-chorzystow.json` – zaszyfrowany PIN-em (`KnCrypto`), zawiera id kopii i PDF.
+4. Katalog `spiewniki-dla-chorzystow.json` – zaszyfrowany PIN-em (`KnCrypto`), zawiera `songbooks` i `programs` (id kopii i PDF).
    Link dla chórzystów: `<strona>?chor=<catalogId>`. Zmiana PIN-u = tylko ponowny zapis katalogu.
 
 Chórzysta: `Drive.publicText(catalogId)` (klucz API) → PIN → katalog; kopia koperty w localStorage (`kn-guest-env`), PIN w `kn-guest-pin`.
@@ -133,6 +143,9 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 - ❌ Klucz API i klient OAuth są projektu użytkownika – przy wielu chórach to nadal może zostać jeden projekt, ale wtedy limity/koszty są po stronie właściciela.
 
 ## Pomysły / dalsze etapy
+
+- **Wybieranie pieśni do przebudowy** (użytkownik: „wyszukiwarka na razie nie działa idealnie”) – dotyczy okna „Dodaj pieśń”
+  w programach (`renderPicker` w programs.js: proste dopasowanie słów) i „Wybierz plik…” w spisach. Do omówienia z użytkownikiem.
 
 - Nuty offline u chórzysty (kopie w pamięci telefonu) – teraz podgląd wymaga internetu.
 - Własne PDF-y z wybranych pozycji (np. „na niedzielę”) – pdfbuild.js już umie składać.

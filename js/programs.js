@@ -1,0 +1,294 @@
+// Administrator: programy uroczystości – pieśni ułożone według części mszy, z krótkimi uwagami.
+window.Programs = (() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const A = window.App;
+  const esc = A.esc;
+  const PARTS = ['Wejście', 'Kyrie', 'Gloria', 'Psalm', 'Alleluja lub Chwała', 'Ofiarowanie', 'Sanctus', 'Agnus Dei', 'Komunia', 'Uwielbienie', 'Wyjście'];
+  const OPEN_KEY = 'kn-program';
+  let openId = null;
+  try { openId = localStorage.getItem(OPEN_KEY); } catch (e) { /* brak */ }
+
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const list = () => {
+    if (!Array.isArray(A.data.programs)) A.data.programs = [];
+    return A.data.programs;
+  };
+  const prog = () => list().find((p) => p.id === openId) || null;
+  const setOpen = (id) => {
+    openId = id;
+    try { if (id) localStorage.setItem(OPEN_KEY, id); else localStorage.removeItem(OPEN_KEY); } catch (e) { /* trudno */ }
+  };
+  const today = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const isPast = (p) => !!p.date && p.date < today();
+  const fmtDate = (s) => {
+    if (!s) return 'bez daty';
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+  };
+  const usable = (it) => (it.state === 'ok' || it.state === 'auto') && it.files.length > 0;
+
+  // Pliki pozycji: gdy pieśń pochodzi ze spisu, bierzemy aktualne dopasowanie z tego spisu.
+  function resolve(item) {
+    if (item.src) {
+      const b = A.data.songbooks.find((x) => x.id === item.src.book);
+      const it = b && b.items.find((x) => x.no === item.src.no && x.title === item.title) || (b && b.items.find((x) => x.no === item.src.no));
+      if (it && usable(it)) return it.files.filter((f) => A.data.nodes[f]);
+    }
+    return (item.files || []).filter((f) => A.data.nodes[f]);
+  }
+
+  // Dla publikacji: programy z aktualnymi plikami (id oryginałów)
+  function forPublish() {
+    return list().map((p) => ({
+      id: p.id,
+      name: p.name,
+      date: p.date || '',
+      parts: p.parts.map((pt) => ({ name: pt.name, items: pt.items.map((it) => ({ title: it.title, note: it.note || '', files: resolve(it) })) })),
+    }));
+  }
+
+  // ---------- lista programów ----------
+  function create() {
+    const p = { id: 'pr' + uid(), name: 'Nowa uroczystość', date: '', createdAt: new Date().toISOString(),
+      parts: PARTS.map((name) => ({ id: uid(), name, items: [] })) };
+    list().push(p);
+    setOpen(p.id);
+    A.changed();
+    render();
+    setTimeout(() => { $('ev-name').focus(); $('ev-name').select(); }, 30);
+  }
+  function copy(id) {
+    const src = list().find((p) => p.id === id);
+    if (!src) return;
+    const p = JSON.parse(JSON.stringify(src));
+    p.id = 'pr' + uid();
+    p.name = src.name + ' (kopia)';
+    p.date = '';
+    p.createdAt = new Date().toISOString();
+    p.parts.forEach((pt) => { pt.id = uid(); });
+    list().push(p);
+    setOpen(p.id);
+    A.changed();
+    render();
+    A.toast('Utworzono kopię – ustaw nazwę i datę.');
+  }
+  function remove(id) {
+    const p = list().find((x) => x.id === id);
+    if (!p || !confirm(`Usunąć program „${p.name}”?\n\nPo aktualizacji zniknie też chórzystom. Nuty na Dysku zostają nietknięte.`)) return;
+    A.data.programs = list().filter((x) => x.id !== id);
+    if (openId === id) setOpen(null);
+    A.changed();
+    render();
+  }
+
+  function card(p) {
+    const items = p.parts.flatMap((pt) => pt.items);
+    const withNotes = items.filter((it) => resolve(it).length).length;
+    return `<div class="ev-row" data-id="${esc(p.id)}">
+      <div class="ev-row-main"><strong>${esc(p.name)}</strong><span class="muted small">${esc(fmtDate(p.date))} · ${items.length} ${A.plural(items.length, 'pieśń', 'pieśni', 'pieśni')}${items.length ? `, z nutami: ${withNotes}` : ''}</span></div>
+      <div class="ev-tools"><button class="btn small primary" data-a="open">Otwórz</button><button class="btn small" data-a="copy">Kopiuj</button><button class="btn small" data-a="del">Usuń</button></div></div>`;
+  }
+
+  function renderList() {
+    const all = list();
+    const next = all.filter((p) => !isPast(p)).sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
+    const past = all.filter(isPast).sort((a, b) => b.date.localeCompare(a.date));
+    $('ev-list').innerHTML = (next.length ? `<h3 class="sub">Nadchodzące</h3>${next.map(card).join('')}` : '') +
+      (past.length ? `<h3 class="sub">Archiwum <span class="muted small">(chórzyści nadal je widzą, dopóki ich nie usuniesz)</span></h3>${past.map(card).join('')}` : '') +
+      (all.length ? '' : '<p class="muted">Nie ma jeszcze żadnego programu. Kliknij „+ Nowy program”.</p>');
+  }
+
+  // ---------- edycja programu ----------
+  function chip(id) {
+    const n = A.data.nodes[id];
+    if (!n) return '<span class="chip gone">plik zniknął z Dysku</span>';
+    const m = A.data.meta[id];
+    return `<a class="chip" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener">
+      <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span><span class="chip-name">${esc((m && m.title) || n.name)}</span></a>`;
+  }
+
+  function renderEditor(p) {
+    if (document.activeElement !== $('ev-name')) $('ev-name').value = p.name;
+    $('ev-date').value = p.date || '';
+    $('ev-state').textContent = isPast(p) ? 'Archiwum – uroczystość już się odbyła' : '';
+    $('ev-parts').innerHTML = p.parts.map((pt, pi) => `<div class="ev-part" data-p="${pi}">
+      <div class="ev-part-head">
+        <input class="ev-pname" value="${esc(pt.name)}" aria-label="Nazwa części">
+        <div class="ev-tools">
+          <button class="icon-btn" data-a="pup" title="Przesuń część wyżej"${pi === 0 ? ' disabled' : ''}>↑</button>
+          <button class="icon-btn" data-a="pdown" title="Przesuń część niżej"${pi === p.parts.length - 1 ? ' disabled' : ''}>↓</button>
+          <button class="icon-btn" data-a="pdel" title="Usuń część">✕</button>
+        </div>
+      </div>
+      ${pt.items.map((it, ii) => {
+        const files = resolve(it);
+        return `<div class="ev-item" data-i="${ii}">
+          <div class="ev-item-main">
+            <div class="ev-item-title"><strong>${esc(it.title)}</strong>${it.src ? `<span class="muted small">${esc(it.src.bookName || '')}${it.src.no ? ' · nr ' + esc(it.src.no) : ''}</span>` : ''}</div>
+            <div class="chips">${files.length ? files.map(chip).join('') : '<span class="muted small">bez nut</span>'}</div>
+            <input class="ev-note" value="${esc(it.note || '')}" placeholder="uwaga, np. zwrotki 1–3, solo: Ania" maxlength="120" aria-label="Uwaga do pieśni">
+          </div>
+          <div class="ev-tools">
+            <button class="icon-btn" data-a="iup" title="Wyżej"${ii === 0 ? ' disabled' : ''}>↑</button>
+            <button class="icon-btn" data-a="idown" title="Niżej"${ii === pt.items.length - 1 ? ' disabled' : ''}>↓</button>
+            <button class="icon-btn" data-a="idel" title="Usuń pieśń z programu">✕</button>
+          </div>
+        </div>`;
+      }).join('')}
+      <button class="btn small ev-add" data-a="add">+ Dodaj pieśń</button>
+    </div>`).join('');
+  }
+
+  function render() {
+    const p = prog();
+    $('ev-list-card').hidden = !!p;
+    $('ev-editor').hidden = !p;
+    if (p) renderEditor(p);
+    else renderList();
+  }
+
+  // ---------- wybór pieśni ----------
+  let pickPart = -1;
+  function openPicker(pi) {
+    pickPart = pi;
+    const p = prog();
+    $('sp-title').textContent = `Dodaj pieśń: ${p.parts[pi].name}`;
+    $('sp-q').value = '';
+    $('song-picker').showModal();
+    renderPicker();
+    setTimeout(() => $('sp-q').focus(), 30);
+  }
+
+  function renderPicker() {
+    const q = $('sp-q').value.trim();
+    const words = Catalog.norm(q).split(' ').filter(Boolean);
+    const match = (hay) => words.every((w) => hay.includes(w));
+    let html = '';
+    if (!words.length) {
+      html = '<li class="muted">Wpisz tytuł, numer ze spisu albo nazwę pliku.</li>';
+    } else {
+      const songs = [];
+      for (const b of A.data.songbooks) {
+        b.items.forEach((it, i) => {
+          if (!usable(it)) return;
+          if (match(Catalog.norm(`${b.name} ${it.no} ${it.title}`))) songs.push({ b, it, i });
+        });
+      }
+      const files = Object.values(A.data.nodes).filter((n) => !n.folder).filter((n) => {
+        const m = A.data.meta[n.id];
+        return match(Catalog.norm(`${n.name} ${(m && m.title) || ''} ${Catalog.pathOf(A.data.nodes, n.id)}`));
+      });
+      html += songs.slice(0, 60).map(({ b, it, i }) => `<li><button type="button" class="pick-item" data-kind="song" data-b="${esc(b.id)}" data-i="${i}">
+        <span class="badge doc">SPIS</span><span><b>${esc(it.title)}</b><br><span class="muted small">${esc(b.name)}${it.no ? ' · nr ' + esc(it.no) : ''} · ${it.files.length} ${A.plural(it.files.length, 'plik', 'pliki', 'plików')}</span></span><span class="chev">Dodaj</span></button></li>`).join('');
+      html += files.slice(0, 60).map((n) => {
+        const m = A.data.meta[n.id];
+        return `<li><button type="button" class="pick-item" data-kind="file" data-id="${esc(n.id)}">
+          <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span><span><b>${esc((m && m.title) || n.name)}</b><br><span class="muted small">${esc(Catalog.pathOf(A.data.nodes, n.id))}${m && m.title ? ' / ' + esc(n.name) : ''}</span></span><span class="chev">Dodaj</span></button></li>`;
+      }).join('');
+      if (!songs.length && !files.length) html += '<li class="muted">Nic nie znaleziono w spisach ani w plikach.</li>';
+      html += `<li><button type="button" class="pick-item" data-kind="text"><span class="badge doc">TXT</span><span>Dodaj „<b>${esc(q)}</b>” bez nut<br><span class="muted small">np. psalm śpiewany przez kantora – nuty możesz dodać później</span></span><span class="chev">Dodaj</span></button></li>`;
+    }
+    $('sp-list').innerHTML = html;
+  }
+
+  function addFromPicker(btn) {
+    const p = prog();
+    const pt = p && p.parts[pickPart];
+    if (!pt) return;
+    let item;
+    if (btn.dataset.kind === 'song') {
+      const b = A.data.songbooks.find((x) => x.id === btn.dataset.b);
+      const it = b && b.items[Number(btn.dataset.i)];
+      if (!it) return;
+      item = { title: it.title, files: [...it.files], note: '', src: { book: b.id, bookName: b.name, no: it.no } };
+    } else if (btn.dataset.kind === 'file') {
+      const n = A.data.nodes[btn.dataset.id];
+      const m = A.data.meta[n.id];
+      item = { title: (m && m.title) || A.stripExt(n.name), files: [n.id], note: '' };
+    } else {
+      item = { title: $('sp-q').value.trim(), files: [], note: '' };
+    }
+    pt.items.push(item);
+    $('song-picker').close();
+    A.changed();
+    render();
+  }
+
+  // ---------- zdarzenia ----------
+  $('ev-new').addEventListener('click', create);
+  $('ev-list').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-a]');
+    const row = e.target.closest('.ev-row');
+    if (!b || !row) return;
+    if (b.dataset.a === 'open') { setOpen(row.dataset.id); render(); window.scrollTo(0, 0); }
+    if (b.dataset.a === 'copy') copy(row.dataset.id);
+    if (b.dataset.a === 'del') remove(row.dataset.id);
+  });
+  $('ev-back').addEventListener('click', () => { setOpen(null); render(); });
+  $('ev-copy').addEventListener('click', () => copy(openId));
+  $('ev-delete').addEventListener('click', () => remove(openId));
+  $('ev-name').addEventListener('change', (e) => { const p = prog(); if (p) { p.name = e.target.value.trim() || 'Uroczystość'; A.changed(); } });
+  $('ev-date').addEventListener('change', (e) => { const p = prog(); if (p) { p.date = e.target.value; A.changed(); render(); } });
+  $('ev-addpart').addEventListener('click', () => {
+    const p = prog();
+    const name = $('ev-newpart').value.trim();
+    if (!p) return;
+    if (!name) { $('ev-newpart').focus(); return A.toast('Wpisz nazwę nowej części.'); }
+    p.parts.push({ id: uid(), name, items: [] });
+    $('ev-newpart').value = '';
+    A.changed();
+    render();
+  });
+  $('ev-newpart').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('ev-addpart').click(); });
+
+  $('ev-parts').addEventListener('change', (e) => {
+    const p = prog();
+    const partEl = e.target.closest('.ev-part');
+    if (!p || !partEl) return;
+    const pt = p.parts[Number(partEl.dataset.p)];
+    if (e.target.classList.contains('ev-pname')) { pt.name = e.target.value.trim() || pt.name; A.changed(); }
+    if (e.target.classList.contains('ev-note')) {
+      const it = pt.items[Number(e.target.closest('.ev-item').dataset.i)];
+      it.note = e.target.value.trim();
+      A.changed();
+    }
+  });
+  $('ev-parts').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-a]');
+    const partEl = e.target.closest('.ev-part');
+    const p = prog();
+    if (!b || !partEl || !p) return;
+    const pi = Number(partEl.dataset.p);
+    const parts = p.parts;
+    const itemEl = e.target.closest('.ev-item');
+    const ii = itemEl ? Number(itemEl.dataset.i) : -1;
+    const items = parts[pi].items;
+    const swap = (arr, a, c) => { [arr[a], arr[c]] = [arr[c], arr[a]]; };
+    switch (b.dataset.a) {
+      case 'add': return openPicker(pi);
+      case 'pup': if (pi > 0) swap(parts, pi, pi - 1); break;
+      case 'pdown': if (pi < parts.length - 1) swap(parts, pi, pi + 1); break;
+      case 'pdel':
+        if (parts[pi].items.length && !confirm(`Usunąć część „${parts[pi].name}” razem z jej pieśniami?`)) return;
+        parts.splice(pi, 1);
+        break;
+      case 'iup': if (ii > 0) swap(items, ii, ii - 1); break;
+      case 'idown': if (ii < items.length - 1) swap(items, ii, ii + 1); break;
+      case 'idel': items.splice(ii, 1); break;
+      default: return;
+    }
+    A.changed();
+    render();
+  });
+
+  let qt = null;
+  $('sp-q').addEventListener('input', () => { clearTimeout(qt); qt = setTimeout(renderPicker, 120); });
+  $('sp-list').addEventListener('click', (e) => { const b = e.target.closest('.pick-item'); if (b) addFromPicker(b); });
+  $('sp-cancel').addEventListener('click', () => $('song-picker').close());
+
+  return { render, forPublish, isPast, fmtDate };
+})();
