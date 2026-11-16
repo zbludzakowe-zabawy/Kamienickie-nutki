@@ -107,6 +107,31 @@ python3 -m http.server 8000
 - Sprawdzaj: brak błędów w konsoli, widok telefonu (`devices['Pixel 7']`) i komputera (1200 px), zrzuty ekranu.
 - Status publikacji: `mcp__github__actions_list` (workflow „Publikacja na GitHub Pages”).
 
+## Decyzje użytkownika (do pamiętania)
+
+- **Na razie aplikacja jest tylko dla jednego dyrygenta, jego Dysku i jego chóru** (Kamienickie Nutki). Nie komplikujemy pod wielu użytkowników,
+  ale też nie zamykamy tej drogi.
+- Administrator pracuje głównie na **komputerze**, chórzyści na **telefonie**.
+- Ochrona trybu administratora: **logowanie Google raz na urządzenie** (wybrane zamiast „zakładki tylko po połączeniu z Dyskiem”,
+  bo administrator nie zawsze chce być połączony, i zamiast hasła w kodzie, bo dałoby się je odczytać ze źródła strony).
+- Chórzyści widzą **wszystkie śpiewniki i wszystkie pozycje** (bez nut – wyszarzone, nieklikalne), mogą pobrać PDF śpiewnika. PIN startowy 2018.
+- Ikona: otwarty śpiewnik z nutami (bordo `#8c2f39`, kartki kremowe).
+- PR-y opisujemy po polsku, z sekcjami „Co się zmienia”, „Sprawdzone” (uczciwie: co testowane na udawanym Dysku, czego nie dało się sprawdzić),
+  „Po scaleniu” (co użytkownik ma kliknąć).
+
+## Daleka przyszłość: aplikacja dla wielu chórów
+
+Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka droga”). Co już temu sprzyja i co trzeba będzie zmienić:
+
+- ✅ Każdy dyrygent loguje się **własnym kontem Google**, dane trzyma na **własnym Dysku** (`data.owner`, folder aplikacji z tagiem `kn=app`).
+- ✅ Katalog dla chórzystów jest per dyrygent (`?chor=<catalogId>`), zaszyfrowany jego PIN-em.
+- ❌ `publicCatalogId` wpisany na stałe w `js/config.js` → trzeba zastąpić wyborem chóru (np. lista/kod chóru, krótkie linki, zapamiętanie wielu chórów u chórzysty).
+- ❌ Ekran zgody Google w trybie **Testowanie** (limit 100 użytkowników testowych, ręczne dopisywanie) → publikacja aplikacji i **weryfikacja Google**
+  (zakres `drive.readonly` jest „restricted” – weryfikacja wymaga audytu bezpieczeństwa; alternatywa: przejść na `drive.file` + Google Picker,
+  wtedy dyrygent wskazuje foldery/pliki w okienku Google i nie trzeba szerokiego zakresu).
+- ❌ Nazwa/ikona/teksty „Kamienickie” → nazwa chóru z ustawień.
+- ❌ Klucz API i klient OAuth są projektu użytkownika – przy wielu chórach to nadal może zostać jeden projekt, ale wtedy limity/koszty są po stronie właściciela.
+
 ## Pomysły / dalsze etapy
 
 - Nuty offline u chórzysty (kopie w pamięci telefonu) – teraz podgląd wymaga internetu.
