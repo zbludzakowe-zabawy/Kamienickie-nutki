@@ -383,7 +383,7 @@ h3.sub { font-size: 1rem; margin: 16px 0 6px; }
   color: var(--ink); text-decoration: none;
 }
 .g-book:active { background: var(--hover); }
-.g-book-ico { flex: none; width: 44px; height: 44px; border-radius: 10px; background: url(icons/icon-192.png) center / cover; }
+.g-book-ico { flex: none; width: 44px; height: 44px; border-radius: 10px; background: url(icons/icon-192.png?v=2) center / cover; }
 .g-book-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .g-book-text strong { font-size: 1.1rem; overflow-wrap: anywhere; }
 .g-updated { margin-top: 18px; text-align: center; }
