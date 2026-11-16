@@ -194,6 +194,25 @@
    </div>
   </main>
 
+  <dialog id="rot-dlg" aria-labelledby="rot-title">
+    <div class="picker">
+      <p class="muted small" style="margin:0">Obróć nuty</p>
+      <h2 id="rot-title"></h2>
+      <div class="rot-stage"><img id="rot-img" alt="Podgląd nut" hidden><p id="rot-msg" class="muted small"></p></div>
+      <div class="rot-btns">
+        <button type="button" class="btn" data-r="-90">↺ W lewo</button>
+        <button type="button" class="btn" data-r="180">180°</button>
+        <button type="button" class="btn" data-r="90">↻ W prawo</button>
+      </div>
+      <p class="muted small rot-info"><span id="rot-val"></span>. Oryginał na Dysku zostaje bez zmian – obrócone będą nuty u chórzystów i w PDF-ach
+        (po kliknięciu „Aktualizuj” w zakładce „Dla chórzystów”). <a id="rot-open" target="_blank" rel="noopener">Otwórz na Dysku ↗</a></p>
+      <div class="dialog-actions">
+        <button class="btn" type="button" id="rot-cancel">Anuluj</button>
+        <button class="btn primary" type="button" id="rot-save">Zapisz</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="song-picker" aria-labelledby="sp-title">
     <div class="picker">
       <h2 id="sp-title">Dodaj pieśń</h2>

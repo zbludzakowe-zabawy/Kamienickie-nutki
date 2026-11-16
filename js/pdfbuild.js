@@ -153,5 +153,34 @@ window.PdfBuild = (() => {
     return { bytes: await doc.save(), problems: [...new Set(problems)], pages: doc.getPageCount() };
   }
 
-  return { build };
+  // Obrót pliku o 90/180/270° (zgodnie z ruchem wskazówek zegara). Oryginał na Dysku się nie zmienia –
+  // obracamy kopię dla chórzystów i strony w PDF. Zwraca { bytes, ext, mime }.
+  async function rotate(u8, rot) {
+    const r = ((Number(rot) || 0) % 360 + 360) % 360;
+    const kind = sniff(u8);
+    if (kind === 'pdf') {
+      if (!r) return { bytes: u8, ext: '.pdf', mime: 'application/pdf' };
+      const { PDFDocument, degrees } = await lib();
+      const doc = await PDFDocument.load(u8, { ignoreEncryption: true });
+      doc.getPages().forEach((pg) => pg.setRotation(degrees((pg.getRotation().angle + r) % 360)));
+      return { bytes: await doc.save(), ext: '.pdf', mime: 'application/pdf' };
+    }
+    const png = kind === 'png';
+    if (!r) return { bytes: u8, ext: png ? '.png' : '.jpg', mime: png ? 'image/png' : 'image/jpeg' };
+    const bmp = await createImageBitmap(new Blob([u8]));
+    const swap = r === 90 || r === 270;
+    const c = document.createElement('canvas');
+    c.width = swap ? bmp.height : bmp.width;
+    c.height = swap ? bmp.width : bmp.height;
+    const g = c.getContext('2d');
+    if (!png) { g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); }
+    g.translate(c.width / 2, c.height / 2);
+    g.rotate((r * Math.PI) / 180);
+    g.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+    const type = png ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise((res) => c.toBlob(res, type, 0.92));
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), ext: png ? '.png' : '.jpg', mime: type };
+  }
+
+  return { build, rotate };
 })();
