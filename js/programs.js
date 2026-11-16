@@ -31,18 +31,40 @@ window.Programs = (() => {
   };
   const usable = (it) => (it.state === 'ok' || it.state === 'auto') && it.files.length > 0;
 
+  // Pozycja spisu, z której pochodzi pieśń programu (albo null)
+  function srcItem(item) {
+    if (!item.src) return null;
+    const b = A.data.songbooks.find((x) => x.id === item.src.book);
+    if (!b) return null;
+    const byIdx = item.src.i != null ? b.items[item.src.i] : null;
+    const it = (byIdx && byIdx.no === item.src.no ? byIdx : null) ||
+      (item.src.no ? b.items.find((x) => x.no === item.src.no) : null) ||
+      b.items.find((x) => x.title === item.title);
+    return it ? { b, it } : null;
+  }
+
   // Pliki pozycji: gdy pieśń pochodzi ze spisu, bierzemy aktualne dopasowanie z tego spisu.
   function resolve(item) {
-    if (item.src) {
-      const b = A.data.songbooks.find((x) => x.id === item.src.book);
-      const byIdx = b && item.src.i != null ? b.items[item.src.i] : null;
-      const it = (byIdx && byIdx.no === item.src.no ? byIdx : null) ||
-        (b && item.src.no ? b.items.find((x) => x.no === item.src.no) : null) ||
-        (b ? b.items.find((x) => x.title === item.title) : null);
-      if (it && usable(it)) return it.files.filter((f) => A.data.nodes[f]);
-    }
+    const r = srcItem(item);
+    if (r && usable(r.it)) return r.it.files.filter((f) => A.data.nodes[f]);
     return (item.files || []).filter((f) => A.data.nodes[f]);
   }
+
+  // Dopisek do tytułu: identyfikator śpiewnika + numer, np. „[N 34]”.
+  // Pieśń dodana jako plik: szukamy pozycji spisu z dokładnie tymi samymi nutami.
+  function tag(item) {
+    let r = srcItem(item);
+    if (!r && item.files && item.files.length) {
+      const key = [...item.files].sort().join('|');
+      for (const b of A.data.songbooks) {
+        const it = b.items.find((x) => usable(x) && [...x.files].sort().join('|') === key);
+        if (it) { r = { b, it }; break; }
+      }
+    }
+    if (!r || !r.b.code) return '';
+    return `[${r.b.code}${r.it.no ? ' ' + r.it.no : ''}]`;
+  }
+  const fullTitle = (item) => { const t = tag(item); return t ? `${item.title} ${t}` : item.title; };
 
   // Dla publikacji: programy z aktualnymi plikami (id oryginałów)
   function forPublish() {
@@ -50,7 +72,7 @@ window.Programs = (() => {
       id: p.id,
       name: p.name,
       date: p.date || '',
-      parts: p.parts.map((pt) => ({ name: pt.name, items: pt.items.map((it) => ({ title: it.title, note: it.note || '', files: resolve(it) })) })),
+      parts: p.parts.map((pt) => ({ name: pt.name, items: pt.items.map((it) => ({ title: fullTitle(it), note: it.note || '', files: resolve(it) })) })),
     }));
   }
 
@@ -131,7 +153,7 @@ window.Programs = (() => {
         const files = resolve(it);
         return `<div class="ev-item" data-i="${ii}">
           <div class="ev-item-main">
-            <div class="ev-item-title"><strong>${esc(it.title)}</strong>${it.src ? `<span class="muted small">${esc(it.src.bookName || '')}${it.src.no ? ' · nr ' + esc(it.src.no) : ''}</span>` : ''}</div>
+            <div class="ev-item-title"><strong>${esc(it.title)}</strong>${tag(it) ? ` <span class="ev-tag" title="Identyfikator śpiewnika i numer – chórzyści zobaczą go przy tytule">${esc(tag(it))}</span>` : ''}${it.src ? `<span class="muted small">${esc(it.src.bookName || '')}${it.src.no ? ' · nr ' + esc(it.src.no) : ''}</span>` : ''}</div>
             <div class="chips">${files.length ? files.map(chip).join('') : '<span class="muted small">bez nut</span>'}
               <button class="btn small${files.length ? '' : ' primary'}" data-a="attach" title="${files.length ? 'Wybierz inne nuty dla tej pieśni' : 'Dołącz nuty do tej pieśni'}">${files.length ? 'Zmień nuty' : '♪ Dołącz nuty'}</button></div>
             <input class="ev-note" value="${esc(it.note || '')}" placeholder="uwaga, np. zwrotki 1–3, solo: Ania" maxlength="120" aria-label="Uwaga do pieśni">
@@ -182,7 +204,7 @@ window.Programs = (() => {
       for (const b of A.data.songbooks) {
         b.items.forEach((it, i) => {
           if (!usable(it)) return;
-          if (match(Catalog.norm(`${b.name} ${it.no} ${it.title}`))) songs.push({ b, it, i });
+          if (match(Catalog.norm(`${b.name} ${b.code || ''} ${it.no} ${it.title}`))) songs.push({ b, it, i });
         });
       }
       const files = Object.values(A.data.nodes).filter((n) => !n.folder).filter((n) => {
@@ -190,7 +212,7 @@ window.Programs = (() => {
         return match(Catalog.norm(`${n.name} ${(m && m.title) || ''} ${Catalog.pathOf(A.data.nodes, n.id)}`));
       });
       html += songs.slice(0, 60).map(({ b, it, i }) => `<li><button type="button" class="pick-item" data-kind="song" data-b="${esc(b.id)}" data-i="${i}">
-        <span class="badge doc">SPIS</span><span><b>${esc(it.title)}</b><br><span class="muted small">${esc(b.name)}${it.no ? ' · nr ' + esc(it.no) : ''} · ${it.files.length} ${A.plural(it.files.length, 'plik', 'pliki', 'plików')}</span></span><span class="chev">${pickItem >= 0 ? 'Wybierz' : 'Dodaj'}</span></button></li>`).join('');
+        <span class="badge doc">SPIS</span><span><b>${esc(it.title)}</b><br><span class="muted small">${esc(b.name)}${b.code ? ' [' + esc(b.code) + ']' : ''}${it.no ? ' · nr ' + esc(it.no) : ''} · ${it.files.length} ${A.plural(it.files.length, 'plik', 'pliki', 'plików')}</span></span><span class="chev">${pickItem >= 0 ? 'Wybierz' : 'Dodaj'}</span></button></li>`).join('');
       html += files.slice(0, 60).map((n) => {
         const m = A.data.meta[n.id];
         return `<li><button type="button" class="pick-item" data-kind="file" data-id="${esc(n.id)}">
@@ -316,5 +338,5 @@ window.Programs = (() => {
   $('sp-list').addEventListener('click', (e) => { const b = e.target.closest('.pick-item'); if (b) addFromPicker(b); });
   $('sp-cancel').addEventListener('click', () => $('song-picker').close());
 
-  return { render, forPublish, isPast, fmtDate };
+  return { render, forPublish, isPast, fmtDate, tag };
 })();

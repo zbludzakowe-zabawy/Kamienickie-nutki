@@ -26,7 +26,7 @@ window.Songs = (() => {
   function createBook(name, source, parsed) {
     const items = parsed.items.map((p) => ({ no: p.no, title: p.title, state: 'none', files: [], sugg: [] }));
     Matcher.matchItems(items, A.data.nodes, A.data.meta, A.idx);
-    const b = { id: 'sb' + Date.now().toString(36), name, source, importedAt: new Date().toISOString(), items };
+    const b = { id: 'sb' + Date.now().toString(36), name, code: A.nextCode(books()), source, importedAt: new Date().toISOString(), items };
     books().push(b);
     setCurrent(b.id);
     A.changed();

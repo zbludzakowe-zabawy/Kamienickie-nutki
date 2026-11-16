@@ -68,11 +68,11 @@ przy połączeniu wygrywa nowszy `updatedAt`):
   roots: [{id, name}],                      // wybrane foldery
   nodes: {id: {id, name, parent, folder?, kind:'pdf'|'img', size, modified, md5, added}},  // klucz = id pliku (dla skrótów – id celu)
   meta:  {fileId: {title, rot}},            // własne nazwy; rot = obrót 90/180/270° (tylko w aplikacji)
-  songbooks: [{id, name, source, importedAt,
+  songbooks: [{id, name, code, source, importedAt,   // code = identyfikator do 3 znaków (Z, N…), nowe: A01, A02… (App.nextCode)
                items: [{no, title, state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
   programs: [{id, name, date:'YYYY-MM-DD', createdAt,
               parts: [{id, name, items: [{title, note, files:[fileId], src?:{book, bookName, no}}]}]}],
-  publish: {pin, pdf, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt},
+  publish: {pin, pdf, hold:{id:true}, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt},
   dups: {at, hasMd5, groups: {gid: {type:'same'|'name'|'book', title, files:[id], entries?:[{book,i}], status:'open'|'kept'|'resolved', keep:[id], note, decidedAt}}},
   owner }
 ```
@@ -117,6 +117,12 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
 **Obrót** (`meta[id].rot`, przycisk ⟳ w drzewie → okno `#rot-dlg` z podglądem obrazka): oryginał na Dysku bez zmian.
    Przy publikacji plik z obrotem jest pobierany, obracany (`PdfBuild.rotate`: obraz przez canvas, PDF przez `setRotation`)
    i wgrywany jako kopia; w PDF-ach śpiewników też obrócony. `rot` jest w podpisie (`sig`) i w `copies[id].rot` → zmiana obrotu = „są zmiany”.
+**Wstrzymanie PDF** (`publish.hold[id]`, pole „aktualizuj PDF, jeśli trzeba” przy każdym śpiewniku/programie, domyślnie zaznaczone):
+   odznaczone = przy publikacji PDF się nie przebudowuje (zostaje stary), lista pieśni w aplikacji nadal się aktualizuje.
+   Gdy PDF nie odpowiada stanowi (`status.books[id].stale`), katalog ma `stale:true` + `pdfAt` → chórzysta widzi „PDF może być nieaktualny (stan na …)”.
+**Identyfikator śpiewnika** (`code`, edycja w „Dla chórzystów”, unikalny): w programach uroczystości tytuł dostaje dopisek `[N 34]`
+   (`Programs.tag`: kod + numer pozycji ze `src`, a dla pieśni dodanej jako plik – pozycja spisu z tymi samymi plikami). Dopisek liczony
+   na bieżąco (nie zapisany w tytule) – trafia do `forPublish()`, więc do katalogu i PDF programu.
 5. **Stan aktualności**: po publikacji zapisujemy `publish.sigs[id]` (podpis każdego śpiewnika/programu), `publish.published` (lista id)
    i `publish.pdfPublished`. `computeStatus()` porównuje bieżące podpisy → przy każdej pozycji „✓ aktualny” / „● są zmiany” / „● nowy”.
    Gdy nic się nie zmieniło, przycisk to „✓ Wszystko aktualne” (nieaktywny) + link „Aktualizuj mimo to” (np. po zmianie własnych nazw plików,
