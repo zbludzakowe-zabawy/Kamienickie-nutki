@@ -105,25 +105,35 @@ window.Songs = (() => {
     missing: ['missing', 'Brak nut · potwierdzone'],
   };
 
+  // Propozycje do zaznaczenia przy pozycji „do sprawdzenia” / „brak” – można wybrać kilka naraz (np. strona 1 i 2).
+  function candsOf(it) {
+    const main = it.state === 'check' && it.files.length ? [{ files: it.files, score: it.score, main: true }] : [];
+    return [...main, ...(it.sugg || []).slice(0, it.state === 'check' ? 3 : 4)];
+  }
+
   function row(it, i) {
     const [cls, label] = STATE[it.state] || STATE.none;
     let body = '';
     let acts = '';
+    const cands = it.state === 'check' || it.state === 'none' ? candsOf(it) : [];
     if (it.state === 'ok' || it.state === 'auto') {
       body = `<div class="chips">${chips(it.files)}</div>`;
       acts = (it.state === 'auto' ? '<button class="btn small primary" data-a="confirm">✓ Zgadza się</button><button class="btn small" data-a="reject">✕ To nie to</button>' : '') +
-        '<button class="btn small" data-a="choose">Zmień…</button>' +
+        '<button class="btn small" data-a="choose" title="Zmień albo dodaj kolejne pliki (np. drugą stronę)">Zmień / dodaj pliki…</button>' +
         (it.state === 'ok' ? '<button class="btn small" data-a="reset" title="Wróć do dopasowania automatycznego">↺</button>' : '');
-    } else if (it.state === 'check') {
-      body = `<div class="chips">${chips(it.files)}${pct(it.score)}</div>`;
-      acts = '<button class="btn small primary" data-a="confirm">✓ Zgadza się</button><button class="btn small" data-a="reject">✕ To nie to</button><button class="btn small" data-a="choose">Wybierz…</button>';
+    } else if (cands.length) {
+      const sel = cands.filter((c) => c.main).length;
+      acts = `<button class="btn small primary" data-a="confirmSel"${sel ? '' : ' disabled'}>✓ Zatwierdź zaznaczone${sel ? ` (${sel})` : ''}</button>` +
+        (it.state === 'check' ? '<button class="btn small" data-a="rejectAll" title="Żadna z propozycji nie pasuje">✕ Żadne nie pasuje</button>' : '') +
+        '<button class="btn small" data-a="choose">Wybierz inny plik…</button>' +
+        (it.state === 'none' ? '<button class="btn small" data-a="missing" title="Potwierdź, że tych nut nie ma">Nie mamy</button>' : '');
     } else {
       acts = '<button class="btn small" data-a="choose">Wybierz plik…</button>' +
         (it.state === 'none' ? '<button class="btn small" data-a="missing" title="Potwierdź, że tych nut nie ma">Nie mamy</button>' : '<button class="btn small" data-a="reset" title="Wróć do dopasowania automatycznego">↺</button>');
     }
-    const sugg = (it.state === 'check' || it.state === 'none') && it.sugg && it.sugg.length
-      ? `<div class="sugg"><span class="muted">${it.state === 'check' ? 'Inne propozycje:' : 'Może to?'}</span>${it.sugg.slice(0, 3).map((s, k) =>
-        `<span class="sugg-item">${chips(s.files)}${pct(s.score)}<button class="btn small" data-a="use" data-k="${k}">Użyj</button></span>`).join('')}</div>`
+    const sugg = cands.length
+      ? `<div class="cands"><span class="muted small">${it.state === 'check' ? 'Zaznacz pasujące pliki (można kilka):' : 'Może to? Zaznacz pasujące pliki:'}</span>${cands.map((c, k) =>
+        `<label class="cand${c.main ? ' on' : ''}"><input type="checkbox" data-k="${k}"${c.main ? ' checked' : ''} aria-label="Zaznacz">${chips(c.files)}${pct(c.score)}</label>`).join('')}</div>`
       : '';
     return `<div class="song ${cls}" data-i="${i}">
       <span class="no">${esc(it.no || '')}</span>
@@ -268,6 +278,25 @@ window.Songs = (() => {
         Matcher.matchItems([x], A.data.nodes, A.data.meta, A.idx);
         if (x.state !== 'none') { x.state = 'check'; } // po odrzuceniu kolejna propozycja zawsze do sprawdzenia
       });
+      case 'confirmSel': {
+        const ks = [...el.querySelectorAll('.cand input:checked')].map((c) => Number(c.dataset.k));
+        if (!ks.length) return A.toast('Zaznacz co najmniej jeden plik.');
+        const cands = candsOf(it);
+        return update(it, (x) => {
+          // kolejność stron według nazwy pliku (np. „… 1.jpg”, „… 2.jpg”)
+          const nm = (id) => (A.data.nodes[id] ? Catalog.pathOf(A.data.nodes, id) + '/' + A.data.nodes[id].name : id);
+          x.files = [...new Set(ks.flatMap((k) => (cands[k] ? cands[k].files : [])))]
+            .sort((a, c) => nm(a).localeCompare(nm(c), 'pl', { numeric: true, sensitivity: 'base' }));
+          x.state = 'ok';
+          autoName(x);
+        });
+      }
+      case 'rejectAll': return update(it, (x) => {
+        x.rejected = [...new Set([...(x.rejected || []), ...candsOf(x).map((c) => c.files.join(','))])];
+        x.state = 'none';
+        Matcher.matchItems([x], A.data.nodes, A.data.meta, A.idx);
+        if (x.state !== 'none') x.state = 'check';
+      });
       case 'use': return update(it, (x) => {
         const s = x.sugg[Number(btn.dataset.k)];
         if (!s) return;
@@ -283,6 +312,16 @@ window.Songs = (() => {
       case 'choose': return openChooser(it);
       default:
     }
+  });
+
+  // zaznaczanie propozycji: licznik na przycisku „Zatwierdź zaznaczone”
+  $('sb-list').addEventListener('change', (e) => {
+    if (!e.target.matches('.cand input')) return;
+    e.target.closest('.cand').classList.toggle('on', e.target.checked);
+    const el = e.target.closest('.song');
+    const n = el.querySelectorAll('.cand input:checked').length;
+    const b = el.querySelector('[data-a="confirmSel"]');
+    if (b) { b.disabled = !n; b.textContent = `✓ Zatwierdź zaznaczone${n ? ` (${n})` : ''}`; }
   });
 
   $('chooser-q').addEventListener('input', () => renderChooser());

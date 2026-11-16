@@ -73,6 +73,8 @@ przy połączeniu wygrywa nowszy `updatedAt`):
 
 Stany pozycji: `ok` zatwierdzone ręcznie, `auto` pewne automatyczne, `check` do sprawdzenia, `none` brak, `missing` „nie mamy” potwierdzone.
 Chórzyści widzą tylko `ok` i `auto`. `matchItems` nie rusza `ok`/`missing`.
+Przy `check`/`none` propozycje (`candsOf`: główna + `sugg`) mają pola wyboru – „✓ Zatwierdź zaznaczone” łączy kilka plików
+(posortowane po ścieżce/nazwie, żeby strony szły po kolei); „✕ Żadne nie pasuje” odrzuca wszystkie widoczne. Przy `ok`/`auto`: „Zmień / dodaj pliki…” (okno `#chooser`, też wielokrotny wybór).
 
 **Programy uroczystości**: domyślny szkielet części (Wejście, Kyrie, Gloria, Psalm, Alleluja lub Chwała, Ofiarowanie, Sanctus,
 Agnus Dei, Komunia, Uwielbienie, Wyjście) – części można dodawać/usuwać/przestawiać/zmieniać nazwę, w części kilka pieśni.
