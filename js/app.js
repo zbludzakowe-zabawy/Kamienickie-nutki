@@ -458,6 +458,7 @@
     idx.roots.forEach((r) => { shown += walk(r); });
 
     const toRemoveSet = window.Dups ? Dups.toRemove() : null;
+    const sib = siblingsMap();
     const fileRow = (n, d) => {
       const m = data.meta[n.id];
       const title = m && m.title;
@@ -469,7 +470,8 @@
           <button class="act" data-act="save" title="Zapisz" aria-label="Zapisz nazwę">✓</button></div>`;
       }
       return `<div class="row file" data-id="${esc(n.id)}" style="--d:${d}">${badge}
-        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}</div>
+        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}${m && m.page ? `<span class="page-tag">str. ${m.page}</span>` : ''}</div>
+        ${(sib[n.id] || []).length > 1 ? `<button class="act" data-act="order" title="Kolejność stron tej pieśni (${sib[n.id].length} pliki w tym folderze)" aria-label="Kolejność stron">⇅</button>` : ''}
         <button class="act" data-act="edit" title="Nadaj własną nazwę" aria-label="Nadaj własną nazwę">✎</button>
         <button class="act" data-act="rotate" title="Obróć (np. nuty zapisane na leżąco)" aria-label="Obróć">⟳</button>
         <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(n.id)}/view" target="_blank" rel="noopener" title="Otwórz na Dysku" aria-label="Otwórz na Dysku">↗</a></div>`;
@@ -503,6 +505,98 @@
       if (inp) { inp.focus(); inp.select(); }
     }
   }
+
+  // ---------- kolejność stron (meta[id].page – jedno miejsce, jak własne nazwy) ----------
+  const ORDER_JUNK = new Set(['pdf', 'jpg', 'jpeg', 'png', 'img', 'image', 'dsc', 'skan', 'scan', 'kopia', 'copy', 'str', 'strona', 'page', 'nuty', 'wersja', 'final']);
+  // „Barka 2.jpg” / „Barka str. 1” → „barka” (Twoja nazwa ma pierwszeństwo)
+  function songKey(id) {
+    const n = data.nodes[id];
+    const m = data.meta[id];
+    const t = (m && m.title) || (n ? stripExt(n.name) : id);
+    return Catalog.norm(t).split(' ').filter((w) => w && !ORDER_JUNK.has(w) && !/^\d+$/.test(w)).join(' ');
+  }
+  // Pliki tej samej pieśni w jednym folderze (strony) – do przycisku ⇅ w drzewie
+  function siblingsMap() {
+    const g = {};
+    for (const n of Object.values(data.nodes)) {
+      if (n.folder) continue;
+      const k = songKey(n.id);
+      if (k.length < 2) continue;
+      (g[n.parent + '|' + k] = g[n.parent + '|' + k] || []).push(n.id);
+    }
+    const out = {};
+    for (const ids of Object.values(g)) if (ids.length > 1) { const o = orderFiles(ids); o.forEach((id) => { out[id] = o; }); }
+    return out;
+  }
+  // Ustawia pliki w kolejności stron: najpierw zapisana kolejność, potem folder i nazwa pliku („… 1”, „… 2”)
+  function orderFiles(ids) {
+    const key = (id) => {
+      const n = data.nodes[id];
+      return (n ? Catalog.pathOf(data.nodes, id) + '/' + n.name : id);
+    };
+    const page = (id) => (data.meta[id] && data.meta[id].page) || 1e6;
+    return [...ids].sort((a, b) => page(a) - page(b) || key(a).localeCompare(key(b), 'pl', { numeric: true, sensitivity: 'base' }));
+  }
+  // Po zmianie kolejności: przestaw pliki we wszystkich śpiewnikach i programach, w których występują razem
+  function applyOrder(ids) {
+    const set = new Set(ids);
+    let n = 0;
+    const fix = (it) => {
+      if (!it.files || it.files.filter((id) => set.has(id)).length < 2) return;
+      const next = orderFiles(it.files);
+      if (next.join() !== it.files.join()) { it.files = next; n++; }
+    };
+    for (const b of data.songbooks) b.items.forEach(fix);
+    for (const p of data.programs || []) p.parts.forEach((pt) => pt.items.forEach(fix));
+    return n;
+  }
+
+  let orderIds = [];
+  let orderDone = null;
+  function paintOrder() {
+    $('order-list').innerHTML = orderIds.map((id, i) => {
+      const n = data.nodes[id];
+      const m = data.meta[id];
+      if (!n) return '';
+      return `<li class="order-item" data-i="${i}"><span class="order-no">${i + 1}.</span>
+        <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span>
+        <span class="order-names"><b>${esc((m && m.title) || n.name)}</b><span class="muted small">${esc(Catalog.pathOf(data.nodes, id))} / ${esc(n.name)}</span></span>
+        <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="Podejrzyj na Dysku">↗</a>
+        <button class="icon-btn" data-o="up" title="Wyżej"${i === 0 ? ' disabled' : ''}>↑</button>
+        <button class="icon-btn" data-o="down" title="Niżej"${i === orderIds.length - 1 ? ' disabled' : ''}>↓</button></li>`;
+    }).join('');
+  }
+  // Okno „Kolejność stron” – wspólne dla drzewa, spisów, programów i duplikatów. onDone(ids) – opcjonalnie po zapisie.
+  function openOrder(ids, title, onDone) {
+    orderIds = orderFiles(ids.filter((id) => data.nodes[id]));
+    if (orderIds.length < 2) return toast('Do ustalenia kolejności potrzebne są co najmniej 2 pliki.');
+    orderDone = onDone || null;
+    const first = orderIds[0];
+    $('order-title').textContent = title || (data.meta[first] && data.meta[first].title) || stripExt(data.nodes[first].name);
+    paintOrder();
+    $('order-dlg').showModal();
+  }
+  $('order-list').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-o]');
+    const li = e.target.closest('.order-item');
+    if (!b || !li) return;
+    const i = Number(li.dataset.i);
+    const j = b.dataset.o === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= orderIds.length) return;
+    [orderIds[i], orderIds[j]] = [orderIds[j], orderIds[i]];
+    paintOrder();
+  });
+  $('order-cancel').addEventListener('click', () => $('order-dlg').close());
+  $('order-save').addEventListener('click', () => {
+    orderIds.forEach((id, i) => { data.meta[id] = { ...(data.meta[id] || {}), page: i + 1 }; });
+    const moved = applyOrder(orderIds);
+    $('order-dlg').close();
+    changed();
+    renderAll();
+    if (orderDone) orderDone(orderIds);
+    toast(`Zapisano kolejność stron (${orderIds.length} ${plural(orderIds.length, 'plik', 'pliki', 'plików')}).` +
+      (moved ? ` Przestawiono ją w ${moved} ${plural(moved, 'miejscu', 'miejscach', 'miejscach')} (śpiewniki/programy).` : ''));
+  });
 
   // ---------- obrót pliku (tylko w aplikacji: kopie dla chórzystów i PDF-y) ----------
   let rotId = null;
@@ -628,6 +722,7 @@
     get data() { return data; },
     get idx() { return idx; },
     changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt, cleanCode, nextCode,
+    orderFiles, openOrder, songKey,
   };
 
   // ---------- zdarzenia ----------
@@ -705,6 +800,12 @@
     if (!act) return;
     if (act.dataset.act === 'edit') startEdit(row.dataset.id);
     else if (act.dataset.act === 'rotate') openRotate(row.dataset.id);
+    else if (act.dataset.act === 'order') {
+      const ids = siblingsMap()[row.dataset.id] || [row.dataset.id];
+      const n = data.nodes[row.dataset.id];
+      const m = data.meta[row.dataset.id];
+      openOrder(ids, ((m && m.title) || stripExt(n.name)).replace(/[\s_\-.(]*(str\.?|strona)?\s*\d+\)?\s*$/i, '').trim() || undefined);
+    }
     else if (act.dataset.act === 'save') {
       const inp = row.querySelector('.name-input');
       commitEdit(row.dataset.id, inp ? inp.value : '');

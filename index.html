@@ -234,6 +234,20 @@
    </div>
   </main>
 
+  <dialog id="order-dlg" aria-labelledby="order-title">
+    <div class="picker">
+      <p class="muted small" style="margin:0">Kolejność stron</p>
+      <h2 id="order-title"></h2>
+      <p class="muted small" style="margin:0">Ustaw pliki od pierwszej do ostatniej strony. Kolejność zapisze się przy plikach i zadziała wszędzie:
+        w śpiewnikach, programach, PDF-ach i u chórzystów (po „Aktualizuj”).</p>
+      <ol class="order-list" id="order-list"></ol>
+      <div class="dialog-actions">
+        <button class="btn" type="button" id="order-cancel">Anuluj</button>
+        <button class="btn primary" type="button" id="order-save">Zapisz kolejność</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="rot-dlg" aria-labelledby="rot-title">
     <div class="picker">
       <p class="muted small" style="margin:0">Obróć nuty</p>

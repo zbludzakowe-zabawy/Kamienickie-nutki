@@ -155,6 +155,7 @@ window.Programs = (() => {
           <div class="ev-item-main">
             <div class="ev-item-title"><strong>${esc(it.title)}</strong>${tag(it) ? ` <span class="ev-tag" title="Identyfikator śpiewnika i numer – chórzyści zobaczą go przy tytule">${esc(tag(it))}</span>` : ''}${it.src ? `<span class="muted small">${esc(it.src.bookName || '')}${it.src.no ? ' · nr ' + esc(it.src.no) : ''}</span>` : ''}</div>
             <div class="chips">${files.length ? files.map(chip).join('') : '<span class="muted small">bez nut</span>'}
+              ${files.length > 1 ? '<button class="btn small" data-a="order" title="Ustaw pliki od pierwszej do ostatniej strony">⇅ Kolejność stron</button>' : ''}
               <button class="btn small${files.length ? '' : ' primary'}" data-a="attach" title="${files.length ? 'Wybierz inne nuty dla tej pieśni' : 'Dołącz nuty do tej pieśni'}">${files.length ? 'Zmień nuty' : '♪ Dołącz nuty'}</button></div>
             <input class="ev-note" value="${esc(it.note || '')}" placeholder="uwaga, np. zwrotki 1–3, solo: Ania" maxlength="120" aria-label="Uwaga do pieśni">
           </div>
@@ -318,6 +319,7 @@ window.Programs = (() => {
     switch (b.dataset.a) {
       case 'add': return openPicker(pi);
       case 'attach': return openPicker(pi, ii);
+      case 'order': return A.openOrder(resolve(items[ii]), items[ii].title);
       case 'pup': if (pi > 0) swap(parts, pi, pi - 1); break;
       case 'pdown': if (pi < parts.length - 1) swap(parts, pi, pi + 1); break;
       case 'pdel':

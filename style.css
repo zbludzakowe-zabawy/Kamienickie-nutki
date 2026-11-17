@@ -584,3 +584,12 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .cl-main a { color: var(--ink); }
 .cl-main .muted a { color: var(--accent); }
 .dup-tag:not(.keep):not(.del) { color: var(--muted); }
+
+/* kolejność stron */
+.page-tag { align-self: flex-start; font-size: .7rem; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; margin-top: 2px; }
+#order-dlg { width: min(640px, calc(100vw - 24px)); }
+.order-list { list-style: none; margin: 4px 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: auto; }
+.order-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.order-item:last-child { border-bottom: none; }
+.order-no { flex: none; width: 1.8em; text-align: right; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.order-names { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
