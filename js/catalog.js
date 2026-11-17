@@ -52,29 +52,40 @@ window.Catalog = (() => {
               for (const f of items) {
                 let mime = f.mimeType;
                 let id = f.id;
-                if (mime === Drive.SHORTCUT && f.shortcutDetails) {
+                const viaShortcut = mime === Drive.SHORTCUT && !!f.shortcutDetails;
+                if (viaShortcut) {
                   mime = f.shortcutDetails.targetMimeType;
                   id = f.shortcutDetails.targetId;
                 }
+                // Skrót prowadzi do tego samego pliku/folderu (ten sam identyfikator) – zapisujemy go raz.
+                // Prawdziwe położenie ma pierwszeństwo: jeśli wcześniej trafiliśmy tu przez skrót, poprawiamy folder i dane.
                 if (mime === Drive.FOLDER) {
-                  if (visited.has(id)) continue; // ten sam folder w kilku miejscach / pętla skrótów
+                  if (visited.has(id)) {
+                    const n = nodes[id];
+                    if (!viaShortcut && n && n.viaShortcut && n.parent !== null) { n.parent = parent; n.name = f.name; delete n.viaShortcut; }
+                    continue; // ten sam folder w kilku miejscach / pętla skrótów
+                  }
                   visited.add(id);
-                  nodes[id] = { id, name: f.name, folder: true, parent };
+                  nodes[id] = { id, name: f.name, folder: true, parent, ...(viaShortcut ? { viaShortcut: true } : {}) };
                   queue.push(id);
                   folders++;
-                } else if (isNote(mime || '', f.name) && !nodes[id]) {
+                } else if (isNote(mime || '', f.name)) {
+                  const old = nodes[id];
+                  if (old && !(old.viaShortcut && !viaShortcut)) continue; // już mamy (skrót albo ten sam plik w kilku folderach)
                   const prev = prevNodes && prevNodes[id];
                   nodes[id] = {
                     id,
                     name: f.name,
                     parent,
                     kind: kindOf(mime || '', f.name),
-                    size: Number(f.size) || 0,
-                    modified: f.modifiedTime || null,
-                    md5: f.md5Checksum || null, // „odcisk” treści – identyczne pliki mają ten sam
-                    added: prev ? prev.added || null : hadPrev ? now : null,
+                    // skrót nie ma rozmiaru ani „odcisku” – uzupełnią się, gdy trafimy na prawdziwy plik
+                    size: viaShortcut ? 0 : Number(f.size) || 0,
+                    modified: viaShortcut ? null : f.modifiedTime || null,
+                    md5: viaShortcut ? null : f.md5Checksum || null, // „odcisk” treści – identyczne pliki mają ten sam
+                    added: old ? old.added : prev ? prev.added || null : hadPrev ? now : null,
+                    ...(viaShortcut ? { viaShortcut: true } : {}),
                   };
-                  files++;
+                  if (!old) files++;
                 }
               }
               onProgress && onProgress({ folders, files });
@@ -110,7 +121,10 @@ window.Catalog = (() => {
     let added = 0;
     let files = 0;
     for (const [k, v] of Object.entries(res.nodes)) {
-      if (k === folder.id || out[k]) continue; // sam folder i pliki leżące też gdzie indziej zostają po staremu
+      if (k === folder.id) continue;
+      // pliki leżące też gdzie indziej zostają po staremu – chyba że wcześniej znaleźliśmy je tylko przez skrót
+      if (out[k] && !(out[k].viaShortcut && !v.viaShortcut)) continue;
+      if (out[k]) { out[k] = { ...v, added: out[k].added }; continue; }
       out[k] = v;
       if (!v.folder) {
         files++;
