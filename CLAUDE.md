@@ -38,6 +38,9 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 - `js/drive.js` – logowanie i całe Drive API (lista, skan, pobieranie, zapis JSON, foldery z tagiem `appProperties.kn`,
   kopie, uprawnienia „anyone reader”, upload multipart, `publicText()` z kluczem API)
 - `js/catalog.js` – skan folderów (`scan`, `rescanFolder`), drzewo (`buildIndex`), `norm()` (bez polskich znaków)
+  **Skróty Dysku**: węzły kluczowane identyfikatorem celu, więc skrót i oryginał = jeden węzeł (nie ma duplikatów ze skrótów).
+  Jeśli pierwszy trafiony był skrót, węzeł ma `viaShortcut: true` (folder skrótu jako `parent`, bez `md5`/rozmiaru); gdy potem trafimy
+  na prawdziwe położenie, `parent`/nazwa/`md5` są poprawiane (także przy ↻ jednego folderu). Duplikaty pokazują „(przez skrót)”.
 - `js/zip.js` + `js/songlist.js` – odczyt spisu z .odt/.docx/.txt/Dokumentu Google; parsowanie „nr<tab>tytuł”, dedup po numerze
 - `js/matcher.js` – dopasowanie pozycji spisu do plików (tokeny, wagi słów częstych, literówki, dopisek w nawiasie)
 - `js/app.js` – UI administratora: konto, synchronizacja, foldery, drzewo, zakładki; eksportuje `window.App`
