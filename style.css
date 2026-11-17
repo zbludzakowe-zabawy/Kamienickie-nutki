@@ -596,3 +596,8 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 /* pole „nazwa dla zaznaczonych” w osobnej linii na całą szerokość */
 .dup-namebox { flex: 1 1 100%; order: 10; }
 .dup-name { min-width: 10em; }
+
+/* tytuły alternatywne i ponowne wczytanie spisu */
+.song-alt, .g-alt { display: block; font-size: .8rem; font-weight: 400; color: var(--muted); }
+.rl-opts { display: flex; flex-direction: column; gap: 8px; }
+.rl-opts .btn { justify-content: flex-start; text-align: left; }

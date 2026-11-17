@@ -41,7 +41,11 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
   **Skróty Dysku**: węzły kluczowane identyfikatorem celu, więc skrót i oryginał = jeden węzeł (nie ma duplikatów ze skrótów).
   Jeśli pierwszy trafiony był skrót, węzeł ma `viaShortcut: true` (folder skrótu jako `parent`, bez `md5`/rozmiaru); gdy potem trafimy
   na prawdziwe położenie, `parent`/nazwa/`md5` są poprawiane (także przy ↻ jednego folderu). Duplikaty pokazują „(przez skrót)”.
-- `js/zip.js` + `js/songlist.js` – odczyt spisu z .odt/.docx/.txt/Dokumentu Google; parsowanie „nr<tab>tytuł”, dedup po numerze
+- `js/zip.js` + `js/songlist.js` – odczyt spisu z .odt/.docx/.txt/Dokumentu Google; parsowanie „nr<tab>tytuł”, dedup po numerze.
+  **Tabele** (.odt `table:table-row`, .docx `w:tr`): wiersz = komórki połączone tabulatorem („35<tab>Tytuł”). Ten sam numer + tytuł z tych
+  samych słów (`sameSong`, ≥60% wspólnych słów, np. „A (B)” i „B (A)”) = **tytuł alternatywny** `alt`; różne pieśni z tym samym numerem
+  zostają osobno. Gdy wszystkie numery są liczbami – kolejność według numerów (np. plik zaczyna się od spisu alfabetycznego).
+  Przykład: `spiewnik2_spistresci.odt` (2 tabele: alfabetyczna i według numerów, 74 pieśni, 83 tytuły, 9 alternatywnych).
 - `js/matcher.js` – dopasowanie pozycji spisu do plików (tokeny, wagi słów częstych, literówki, dopisek w nawiasie)
 - `js/app.js` – UI administratora: konto, synchronizacja, foldery, drzewo, zakładki; eksportuje `window.App`
   (filtry drzewa: wszystkie / bez nazwy / z nazwą / nowe / **nieprzypisane do żadnego śpiewnika** = brak w `ok`/`auto` spisów, programy się nie liczą;
@@ -73,7 +77,7 @@ przy połączeniu wygrywa nowszy `updatedAt`):
   nodes: {id: {id, name, parent, folder?, kind:'pdf'|'img', size, modified, md5, added}},  // klucz = id pliku (dla skrótów – id celu)
   meta:  {fileId: {title, rot, page}},      // własne nazwy; rot = obrót 90/180/270°; page = kolejność strony (⇅) – tylko w aplikacji
   songbooks: [{id, name, code, source, importedAt,   // code = identyfikator do 3 znaków (Z, N…), nowe: A01, A02… (App.nextCode)
-               items: [{no, title, state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
+               items: [{no, title, alt?:[tytuły alternatywne], state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
   programs: [{id, name, date:'YYYY-MM-DD', createdAt,
               parts: [{id, name, items: [{title, note, files:[fileId], src?:{book, bookName, no}}]}]}],
   publish: {pin, pdf, hold:{id:true}, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt},
@@ -92,6 +96,13 @@ Stany pozycji: `ok` zatwierdzone ręcznie, `auto` pewne automatyczne, `check` do
 Chórzyści widzą tylko `ok` i `auto`. `matchItems` nie rusza `ok`/`missing`.
 Przy `check`/`none` propozycje (`candsOf`: główna + `sugg`) mają pola wyboru – „✓ Zatwierdź zaznaczone” łączy kilka plików
 (posortowane po ścieżce/nazwie, żeby strony szły po kolei); „✕ Żadne nie pasuje” odrzuca wszystkie widoczne. Przy `ok`/`auto`: „Zmień / dodaj pliki…” (okno `#chooser`, też wielokrotny wybór).
+**Tytuły alternatywne** (`alt`): dopasowanie nut po wszystkich tytułach (`Matcher.rankAll`), wyszukiwanie u administratora i chórzysty,
+wyświetlane „też: …”, w katalogu dla chórzystów i w podpisie śpiewnika.
+**↻ Wczytaj ponownie…** (okno `#reload-dlg`: ten sam plik z Dysku / inny z Dysku / z komputera; `reloadBook`): nowe pozycje z pliku,
+a decyzje (`state`, `files`, `rejected`…) przenoszone ze starych pozycji – para po wspólnym tytule (także alt; preferowany ten sam numer),
+a gdy tytuł poprawiony – ten sam numer + `sameSong`. Nazwa, `code` i id spisu zostają; `src.i`/`src.no` w programach przesunięte
+(pozycja bez pary → `src` znika, program zachowuje nuty). Komunikat: zachowane / nowe / połączone jako drugi tytuł / usunięte.
+`reloadId` pobierany od razu po wyborze pliku (`takeReload`), zamknięcie okna bez wyboru go kasuje.
 **Ręczna edycja spisu** (songs.js): ✎ przy pozycji = numer i tytuł (nowy tytuł → ponowne dopasowanie, chyba że `ok`/`missing`),
 ✕ = usunięcie, pasek „+ Dodaj pozycję” (miejsce wg numeru `parseInt`, inaczej na końcu). Po dodaniu/usunięciu `shiftProgramRefs()`
 przesuwa `src.i` w programach uroczystości (usunięta pozycja → program zachowuje zapamiętane pliki, `src` znika). Plik spisu na Dysku się nie zmienia.
