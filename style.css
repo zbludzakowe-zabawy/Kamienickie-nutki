@@ -593,3 +593,6 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .order-item:last-child { border-bottom: none; }
 .order-no { flex: none; width: 1.8em; text-align: right; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
 .order-names { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+/* pole „nazwa dla zaznaczonych” w osobnej linii na całą szerokość */
+.dup-namebox { flex: 1 1 100%; order: 10; }
+.dup-name { min-width: 10em; }

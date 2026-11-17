@@ -115,7 +115,7 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
   (tag w drzewie, filtr „Duplikaty do usunięcia”, wykluczenie z „Pozostałych nut”). Pobieranie: strona HTML (foldery z linkami, pola do odhaczania)
   i CSV (folder, plik, linki, powód, zachowany plik, data, stan). Rozstrzygnięte grupy **zostają w historii** (`gone: true`), gdy przestaną być
   duplikatem – żeby było widać, gdzie był problem. Aplikacja **nie usuwa** plików – daje linki do pliku i folderu.
-  „Nadaj nazwę” = wspólna własna nazwa dla zaznaczonych. Konflikt w spisach: „Użyj tych wszędzie” / „Zostaw różne wersje”.
+  „Nadaj nazwę zaznaczonym (n)” = własna nazwa tylko dla zaznaczonych plików (jednego albo kilku); bez zaznaczenia przycisk nieaktywny. Konflikt w spisach: „Użyj tych wszędzie” / „Zostaw różne wersje”.
 - **Pozostałe nuty** (decyzja użytkownika): pliki nieprzypisane do żadnego spisu (`ok`/`auto`) i nie „do usunięcia”, strony z jednego folderu
   i o tej samej nazwie = jedna pozycja, alfabetycznie. U administratora zawsze aktualne; chórzyści widzą **migawkę** (`publish.others.snapshot`)
   z ostatniego kliknięcia „Aktualizuj „Pozostałe nuty”” (zwykłe „Aktualizuj” jej nie zmienia); **PDF tylko przyciskiem „Utwórz PDF”**
