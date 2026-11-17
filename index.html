@@ -212,13 +212,28 @@
         <input id="pub-pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
         <button class="btn" id="pub-pin-save">Zapisz PIN</button>
       </div>
-      <label class="check"><input type="checkbox" id="pub-pdf"> Twórz PDF z całym śpiewnikiem (spis treści + nuty w kolejności spisu)</label>
+      <div class="pub-two">
+        <div class="pub-box">
+          <h3>📋 Listy pieśni w aplikacji</h3>
+          <p class="muted small">Szybko – kilka sekund. Chórzyści od razu widzą w aplikacji nowe pozycje, poprawki i nuty. PDF-y zostają bez zmian.</p>
+          <p class="pub-sum" id="pub-list-sum"></p>
+          <div class="actions">
+            <button class="btn primary" id="pub-go">Opublikuj dla chórzystów</button>
+            <button type="button" class="linklike" id="pub-force" hidden title="Np. po zmianie własnych nazw plików">Aktualizuj mimo to</button>
+          </div>
+        </div>
+        <div class="pub-box">
+          <h3>📄 PDF-y do pobrania</h3>
+          <p class="muted small">Wolniej – aplikacja pobiera wszystkie nuty śpiewnika i składa PDF od nowa. Rób to, gdy śpiewnik jest gotowy.
+            Które PDF-y przygotować, zaznaczasz w kolumnie „PDF” poniżej. Przy okazji zaktualizują się też listy pieśni.</p>
+          <p class="pub-sum" id="pub-pdf-sum"></p>
+          <div class="actions"><button class="btn primary" id="pub-pdf-go">Przygotuj PDF-y</button></div>
+        </div>
+      </div>
       <h3 class="sub">Śpiewniki i programy</h3>
       <ul class="pub-books" id="pub-books"></ul>
       <div class="actions">
-        <button class="btn primary" id="pub-go">Opublikuj dla chórzystów</button>
         <button class="btn" id="pub-preview" hidden>Podgląd jako chórzysta</button>
-        <button type="button" class="linklike" id="pub-force" hidden title="Np. po zmianie własnych nazw plików">Aktualizuj mimo to</button>
       </div>
       <div class="pub-progress" id="pub-progress" hidden>
         <div class="bar"><span id="pub-bar"></span></div>
