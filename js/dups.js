@@ -290,7 +290,8 @@ window.Dups = (() => {
            <button class="btn small" data-a="keepAll" title="To duplikaty, ale wszystkie mają zostać">Zostaw wszystkie</button>
            <button class="btn small" data-a="notDup">To różne utwory</button>`
         : '<button class="btn small" data-a="reopen">↺ Otwórz ponownie</button>') +
-        `<span class="dup-namebox"><input class="dup-name" maxlength="200" placeholder="Wspólna nazwa dla zaznaczonych" value="${esc(g.title)}"><button class="btn small" data-a="name">Nadaj nazwę</button></span>`;
+        `<span class="dup-namebox"><input class="dup-name" maxlength="200" placeholder="Wspólna nazwa dla zaznaczonych" value="${esc(g.title)}"><button class="btn small" data-a="name">Nadaj nazwę</button></span>` +
+        '<button class="btn small" data-a="order" title="Zaznacz strony jednej pieśni i ustaw ich kolejność">⇅ Kolejność stron zaznaczonych</button>';
     }
     return `<div class="dup ${g.status}" data-g="${esc(gid)}">
       <div class="dup-head"><b>${esc(g.title)}</b><span class="badge doc" title="${esc(help)}">${label}</span>${status}${g.gone ? '<span class="muted small">· załatwione – nie jest już duplikatem</span>' : ''}${g.decidedAt && g.status !== 'open' ? `<span class="muted small">· decyzja ${new Date(g.decidedAt).toLocaleDateString('pl-PL')}</span>` : ''}</div>
@@ -424,10 +425,9 @@ ${body || '<p>Nic do sprzątania.</p>'}</body></html>`;
       const k = n.parent + '|' + (nameKey(n.id) || n.id);
       (groups[k] = groups[k] || []).push(n.id);
     }
-    const nm = (id) => A.data.nodes[id].name;
     return Object.values(groups)
       .map((ids) => {
-        ids.sort((a, b) => nm(a).localeCompare(nm(b), 'pl', { numeric: true, sensitivity: 'base' }));
+        ids.splice(0, ids.length, ...A.orderFiles(ids)); // kolejność stron (⇅), inaczej według nazw
         return { no: '', title: ids.length > 1 ? baseTitle(ids[0]) : titleOf(ids[0]), state: 'ok', files: ids };
       })
       .sort((a, b) => a.title.localeCompare(b.title, 'pl', { numeric: true, sensitivity: 'base' }));
@@ -471,6 +471,11 @@ ${body || '<p>Nic do sprzątania.</p>'}</body></html>`;
     if (!b || !el) return;
     e.preventDefault();
     if (b.dataset.a === 'useAll') return useEverywhere(el.dataset.g, Number(b.dataset.k));
+    if (b.dataset.a === 'order') {
+      const ids = [...el.querySelectorAll('.dup-file input:checked')].map((c) => c.dataset.id);
+      if (ids.length < 2) return A.toast('Zaznacz co najmniej 2 pliki – strony jednej pieśni.');
+      return A.openOrder(ids, D().groups[el.dataset.g] && D().groups[el.dataset.g].title);
+    }
     decide(el.dataset.g, b.dataset.a, el);
   });
   $('dups-list').addEventListener('keydown', (e) => {

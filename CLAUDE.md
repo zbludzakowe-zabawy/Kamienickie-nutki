@@ -67,7 +67,7 @@ przy połączeniu wygrywa nowszy `updatedAt`):
 { app, v, updatedAt, scannedAt, newAt,
   roots: [{id, name}],                      // wybrane foldery
   nodes: {id: {id, name, parent, folder?, kind:'pdf'|'img', size, modified, md5, added}},  // klucz = id pliku (dla skrótów – id celu)
-  meta:  {fileId: {title, rot}},            // własne nazwy; rot = obrót 90/180/270° (tylko w aplikacji)
+  meta:  {fileId: {title, rot, page}},      // własne nazwy; rot = obrót 90/180/270°; page = kolejność strony (⇅) – tylko w aplikacji
   songbooks: [{id, name, code, source, importedAt,   // code = identyfikator do 3 znaków (Z, N…), nowe: A01, A02… (App.nextCode)
                items: [{no, title, state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
   programs: [{id, name, date:'YYYY-MM-DD', createdAt,
@@ -77,6 +77,12 @@ przy połączeniu wygrywa nowszy `updatedAt`):
          cleanup: {fileId: {gid, title, name, own, path, parent, keep:[{id,name,path}], decidedAt, done, doneBy:'auto'|'manual', doneAt}}},
   owner }
 ```
+
+**Kolejność stron** (jedno miejsce: `meta[id].page`): okno `#order-dlg` (`App.openOrder(ids, title)`) z przyciskami ⇅ w drzewie
+(pliki tej samej pieśni w jednym folderze – `songKey`/`siblingsMap`), w spisach (pozycja z ≥2 plikami), w programach i w duplikatach
+(zaznaczone). Zapis ustawia `page` 1..n i przestawia `files` we wszystkich śpiewnikach/programach, gdzie te pliki są razem (`applyOrder`).
+Każda nowa lista plików pieśni idzie przez `App.orderFiles()` (najpierw `page`, potem folder/nazwa) – zatwierdzanie propozycji,
+okno „Wybierz plik…”, „Pozostałe nuty”. Zmiana kolejności zmienia podpis śpiewnika → „są zmiany” → PDF i chórzyści po „Aktualizuj”.
 
 Stany pozycji: `ok` zatwierdzone ręcznie, `auto` pewne automatyczne, `check` do sprawdzenia, `none` brak, `missing` „nie mamy” potwierdzone.
 Chórzyści widzą tylko `ok` i `auto`. `matchItems` nie rusza `ok`/`missing`.

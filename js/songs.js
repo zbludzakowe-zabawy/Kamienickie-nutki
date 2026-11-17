@@ -179,7 +179,7 @@ window.Songs = (() => {
     let acts = '';
     const cands = it.state === 'check' || it.state === 'none' ? candsOf(it) : [];
     if (it.state === 'ok' || it.state === 'auto') {
-      body = `<div class="chips">${chips(it.files)}</div>`;
+      body = `<div class="chips">${chips(it.files)}${it.files.length > 1 ? '<button class="btn small" data-a="order" title="Ustaw pliki od pierwszej do ostatniej strony">⇅ Kolejność stron</button>' : ''}</div>`;
       acts = (it.state === 'auto' ? '<button class="btn small primary" data-a="confirm">✓ Zgadza się</button><button class="btn small" data-a="reject">✕ To nie to</button>' : '') +
         '<button class="btn small" data-a="choose" title="Zmień albo dodaj kolejne pliki (np. drugą stronę)">Zmień / dodaj pliki…</button>' +
         (it.state === 'ok' ? '<button class="btn small" data-a="reset" title="Wróć do dopasowania automatycznego">↺</button>' : '');
@@ -396,10 +396,8 @@ window.Songs = (() => {
         if (!ks.length) return A.toast('Zaznacz co najmniej jeden plik.');
         const cands = candsOf(it);
         return update(it, (x) => {
-          // kolejność stron według nazwy pliku (np. „… 1.jpg”, „… 2.jpg”)
-          const nm = (id) => (A.data.nodes[id] ? Catalog.pathOf(A.data.nodes, id) + '/' + A.data.nodes[id].name : id);
-          x.files = [...new Set(ks.flatMap((k) => (cands[k] ? cands[k].files : [])))]
-            .sort((a, c) => nm(a).localeCompare(nm(c), 'pl', { numeric: true, sensitivity: 'base' }));
+          // kolejność stron: zapisana przy plikach (⇅), a bez niej – według nazwy pliku („… 1.jpg”, „… 2.jpg”)
+          x.files = A.orderFiles([...new Set(ks.flatMap((k) => (cands[k] ? cands[k].files : [])))]);
           x.state = 'ok';
           autoName(x);
         });
@@ -423,6 +421,7 @@ window.Songs = (() => {
         Matcher.matchItems([x], A.data.nodes, A.data.meta, A.idx);
       });
       case 'choose': return openChooser(it);
+      case 'order': return A.openOrder(it.files, `${it.no ? it.no + '. ' : ''}${it.title}`);
       default:
     }
   });
@@ -451,7 +450,7 @@ window.Songs = (() => {
     const { it, selected } = chooser;
     $('chooser').close();
     update(it, (x) => {
-      x.files = [...selected];
+      x.files = A.orderFiles([...selected]);
       x.state = selected.length ? 'ok' : 'none';
       if (selected.length) autoName(x);
       else Matcher.matchItems([x], A.data.nodes, A.data.meta, A.idx);
