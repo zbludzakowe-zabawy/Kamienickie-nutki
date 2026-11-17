@@ -264,6 +264,9 @@ window.Dups = (() => {
       <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="Otwórz plik na Dysku">↗</a></label>`;
   }
 
+  // „Nadaj nazwę zaznaczonym (n)” – nazwa trafia tylko do zaznaczonych plików (jednego albo kilku)
+  const nameBtn = (n) => `<button class="btn small" data-a="name" title="Nazwa trafi tylko do zaznaczonych plików"${n ? '' : ' disabled'}>Nadaj nazwę zaznaczonym${n ? ` (${n})` : ''}</button>`;
+
   function group(gid, g, use, remove) {
     const [label, help] = TYPE[g.type];
     const status = g.status === 'open' ? '<span class="state check">do przejrzenia</span>'
@@ -291,7 +294,7 @@ window.Dups = (() => {
            <button class="btn small" data-a="keepAll" title="To duplikaty, ale wszystkie mają zostać">Zostaw wszystkie</button>
            <button class="btn small" data-a="notDup">To różne utwory</button>`
         : '<button class="btn small" data-a="reopen">↺ Otwórz ponownie</button>') +
-        `<span class="dup-namebox"><input class="dup-name" maxlength="200" placeholder="Wspólna nazwa dla zaznaczonych" value="${esc(g.title)}"><button class="btn small" data-a="name">Nadaj nazwę</button></span>` +
+        `<span class="dup-namebox"><input class="dup-name" maxlength="200" placeholder="Nazwa dla zaznaczonych plików" value="${esc(g.title)}" aria-label="Nazwa dla zaznaczonych plików">${nameBtn(g.status === 'resolved' ? (g.keep || []).filter((id) => A.data.nodes[id]).length : 0)}</span>` +
         '<button class="btn small" data-a="order" title="Zaznacz strony jednej pieśni i ustaw ich kolejność">⇅ Kolejność stron zaznaczonych</button>';
     }
     return `<div class="dup ${g.status}" data-g="${esc(gid)}">
@@ -479,6 +482,13 @@ ${body || '<p>Nic do sprzątania.</p>'}</body></html>`;
       return A.openOrder(ids, D().groups[el.dataset.g] && D().groups[el.dataset.g].title);
     }
     decide(el.dataset.g, b.dataset.a, el);
+  });
+  // licznik zaznaczonych na przycisku „Nadaj nazwę zaznaczonym”
+  $('dups-list').addEventListener('change', (e) => {
+    if (!e.target.matches('.dup-file input')) return;
+    const el = e.target.closest('.dup');
+    const b = el && el.querySelector('[data-a="name"]');
+    if (b) b.outerHTML = nameBtn(el.querySelectorAll('.dup-file input:checked').length);
   });
   $('dups-list').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.classList.contains('dup-name')) { e.preventDefault(); decide(e.target.closest('.dup').dataset.g, 'name', e.target.closest('.dup')); }
