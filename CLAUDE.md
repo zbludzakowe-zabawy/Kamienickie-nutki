@@ -133,6 +133,8 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
   **„🗑 Do wyrzucenia (n)”** = zaznaczone pliki na listę sprzątania niezależnie od decyzji w grupie (`cleanup[id].manual`, powód „oznaczony ręcznie”);
   plik używany w śpiewniku/programie – tylko po `confirm`. Przy pliku na liście: tag „do wyrzucenia/do usunięcia” + „↺ nie wyrzucaj” (usuwa wpis).
   „↺ Otwórz ponownie” nie kasuje ręcznych oznaczeń. Konflikt w spisach: „Użyj tych wszędzie” / „Zostaw różne wersje”.
+- **Pliki usunięte z Dysku** (`dropGone` w app.js, po skanowaniu i ↻ folderu): znikają z pieśni w spisach i programach, jeśli pieśń ma jeszcze inne pliki.
+  Gdy zniknęły wszystkie – zostają z „plik zniknął z Dysku” (nie kasujemy po cichu zatwierdzeń, np. po usunięciu folderu z listy); `auto` i tak dopasuje się od nowa.
 - **Pozostałe nuty** (decyzja użytkownika): pliki nieprzypisane do żadnego spisu (`ok`/`auto`) i nie „do usunięcia”, strony z jednego folderu
   i o tej samej nazwie = jedna pozycja, alfabetycznie. U administratora zawsze aktualne; chórzyści widzą **migawkę** (`publish.others.snapshot`)
   z ostatniego kliknięcia „Aktualizuj „Pozostałe nuty”” (zwykłe „Aktualizuj” jej nie zmienia); **PDF tylko przyciskiem „Utwórz PDF”**

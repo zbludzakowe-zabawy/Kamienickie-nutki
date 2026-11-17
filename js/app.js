@@ -251,6 +251,21 @@
     $('welcome').hidden = data.roots.length > 0;
   }
 
+  // Po skanowaniu: pliki, których już nie ma na Dysku (np. usunięty duplikat), znikają z pieśni,
+  // jeśli pieśń ma jeszcze inne pliki. Gdy zniknęły wszystkie – zostawiamy, żeby było widać „plik zniknął z Dysku”
+  // (np. po usunięciu folderu z listy nie kasujemy po cichu zatwierdzonych dopasowań).
+  function dropGone() {
+    const keep = (files) => {
+      if (!files || !files.length) return null;
+      const ok = files.filter((id) => data.nodes[id]);
+      return ok.length && ok.length < files.length ? ok : null;
+    };
+    let n = 0;
+    for (const b of data.songbooks) b.items.forEach((it) => { const f = keep(it.files); if (f) { it.files = f; n++; } });
+    for (const p of data.programs || []) p.parts.forEach((pt) => pt.items.forEach((it) => { const f = keep(it.files); if (f) { it.files = f; n++; } }));
+    return n;
+  }
+
   async function doScan() {
     if (!data.roots.length) return toast('Najpierw dodaj folder z nutami.');
     if (!(await ensureConnected())) return;
@@ -265,6 +280,7 @@
       data.scannedAt = res.scannedAt;
       data.newAt = res.scannedAt;
       rebuild();
+      dropGone();
       if (window.Songs) Songs.rematchAll(true);
       if (window.Dups && data.dups && data.dups.at) Dups.detect(true); // duplikaty aktualne po skanowaniu
       changed();
@@ -297,6 +313,7 @@
       if (!data.nodes[id] && r) data.nodes[id] = { id, name: r.name, folder: true, parent: null };
       data.newAt = res.at;
       rebuild();
+      dropGone();
       if (window.Songs) Songs.rematchAll(true);
       changed();
       toast(`Odświeżono „${node.name}”: ${res.files} ${plural(res.files, 'plik', 'pliki', 'plików')} z nutami` +
