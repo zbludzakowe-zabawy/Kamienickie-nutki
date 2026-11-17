@@ -140,7 +140,7 @@ window.Matcher = (() => {
     for (const it of items) {
       if (it.state === 'ok' || it.state === 'missing') continue;
       const rejected = new Set(it.rejected || []);
-      const r = rank(it.title, cands, 6).filter((s) => !rejected.has(s.files.join(','))).slice(0, 4);
+      const r = rankAll([it.title, ...(it.alt || [])], cands, 6).filter((s) => !rejected.has(s.files.join(','))).slice(0, 4);
       const best = r[0];
       const second = r[1];
       const twin = titleCount[Catalog.norm(it.title)] > 1;
@@ -164,5 +164,17 @@ window.Matcher = (() => {
     return items;
   }
 
-  return { matchItems, rank, candidates, split, score, SURE, MAYBE };
+  // Najlepsze propozycje dla kilku tytułów tej samej pieśni (tytuł + tytuły alternatywne) – liczy się najlepszy wynik
+  function rankAll(titles, cands, limit = 5, min = HINT) {
+    const best = new Map();
+    for (const t of titles) {
+      for (const r of rank(t, cands, limit * 2, min)) {
+        const k = r.files.join(',');
+        if (!best.has(k) || best.get(k).score < r.score) best.set(k, r);
+      }
+    }
+    return [...best.values()].sort((a, b) => b.score - a.score).slice(0, limit);
+  }
+
+  return { matchItems, rank, rankAll, candidates, split, score, SURE, MAYBE };
 })();

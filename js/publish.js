@@ -68,7 +68,7 @@ window.Publish = (() => {
   // wtedy wszystkie śpiewniki pokażą „są zmiany” i PDF-y zbudują się od nowa.
   const PDF_FORMAT = 2;
   const sig = (b) => hash(JSON.stringify([PDF_FORMAT, b.name, b.subtitle || '', b.items.map((it) => (it.section ? ['§', it.title] : usable(it)
-    ? [it.no, it.title, it.files.map((f) => [f, A.data.nodes[f] && A.data.nodes[f].modified, rotOf(f)])]
+    ? [it.no, it.title, it.files.map((f) => [f, A.data.nodes[f] && A.data.nodes[f].modified, rotOf(f)]), ...(it.alt ? [it.alt] : [])]
     : [it.no, it.title]))]));
 
   function othersCatalog() {
@@ -122,6 +122,7 @@ window.Publish = (() => {
           items: b.items.map((it) => ({
             no: it.no,
             title: it.title,
+            ...(it.alt && it.alt.length ? { alt: it.alt } : {}),
             files: usable(it) ? it.files.map((f) => p.copies[f] && p.copies[f].id).filter(Boolean) : [],
           })),
         };

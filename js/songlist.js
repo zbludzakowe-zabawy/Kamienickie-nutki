@@ -4,7 +4,10 @@ window.SongList = (() => {
   const NS_TEXT = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0';
   const NS_W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
-  // Akapity z .odt – z tabulatorami i spacjami tak jak w dokumencie
+  const NS_TABLE = 'urn:oasis:names:tc:opendocument:xmlns:table:1.0';
+
+  // Akapity z .odt – z tabulatorami i spacjami tak jak w dokumencie.
+  // Wiersz tabeli = jedna linijka: komórki połączone tabulatorem (np. „35<tab>Asperges me”).
   function odtLines(xml) {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     const lines = [];
@@ -22,9 +25,24 @@ window.SongList = (() => {
       }
       return s;
     };
+    // cały tekst komórki (może mieć kilka akapitów) w jednej linii
+    const cellText = (cell) => {
+      const parts = [];
+      const w = (el) => {
+        for (const ch of el.children) {
+          if (ch.namespaceURI === NS_TEXT && (ch.localName === 'p' || ch.localName === 'h')) parts.push(textOf(ch).replace(/\s+/g, ' ').trim());
+          else w(ch);
+        }
+      };
+      w(cell);
+      return parts.filter(Boolean).join(' ');
+    };
     const walk = (el) => {
       for (const ch of el.children) {
-        if (ch.namespaceURI === NS_TEXT && (ch.localName === 'p' || ch.localName === 'h')) lines.push(...textOf(ch).split('\n'));
+        if (ch.namespaceURI === NS_TABLE && ch.localName === 'table-row') {
+          const cells = [...ch.children].filter((c) => c.namespaceURI === NS_TABLE && c.localName === 'table-cell').map(cellText).filter(Boolean);
+          if (cells.length) lines.push(cells.join('\t'));
+        } else if (ch.namespaceURI === NS_TEXT && (ch.localName === 'p' || ch.localName === 'h')) lines.push(...textOf(ch).split('\n'));
         else walk(ch);
       }
     };
@@ -32,23 +50,36 @@ window.SongList = (() => {
     return lines;
   }
 
+  // .docx: akapity; wiersz tabeli (w:tr) = jedna linijka z komórkami połączonymi tabulatorem
   function docxLines(xml) {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     const lines = [];
-    for (const p of doc.getElementsByTagNameNS(NS_W, 'p')) {
+    const paraText = (p) => {
       let s = '';
-      const walk = (el) => {
+      const w = (el) => {
         for (const ch of el.children) {
           if (ch.namespaceURI !== NS_W) continue;
           if (ch.localName === 't') s += ch.textContent;
           else if (ch.localName === 'tab') s += '\t';
           else if (ch.localName === 'br') s += '\n';
-          else if (ch.localName !== 'p') walk(ch);
+          else if (ch.localName !== 'p') w(ch);
         }
       };
-      walk(p);
-      lines.push(...s.split('\n'));
-    }
+      w(p);
+      return s;
+    };
+    const cellText = (tc) => [...tc.getElementsByTagNameNS(NS_W, 'p')].map((p) => paraText(p).replace(/\s+/g, ' ').trim()).filter(Boolean).join(' ');
+    const walk = (el) => {
+      for (const ch of el.children) {
+        if (ch.namespaceURI !== NS_W) continue;
+        if (ch.localName === 'tr') {
+          const cells = [...ch.children].filter((c) => c.namespaceURI === NS_W && c.localName === 'tc').map(cellText).filter(Boolean);
+          if (cells.length) lines.push(cells.join('\t'));
+        } else if (ch.localName === 'p') lines.push(...paraText(ch).split('\n'));
+        else walk(ch);
+      }
+    };
+    walk(doc.documentElement);
     return lines;
   }
 
@@ -64,23 +95,56 @@ window.SongList = (() => {
     return null;
   }
 
-  // Zostawia pierwsze wystąpienie każdej pozycji – druga, alfabetyczna strona spisu jest pomijana.
+  // Czy dwa tytuły to ta sama pieśń pod inną nazwą, np. „Aniele Boży (Do Anioła Stróża)” i „Do Anioła Stróża (Aniele Boży)”?
+  // Porównujemy zbiory słów (bez nawiasów i kolejności) – wspólnych co najmniej 60%.
+  function sameSong(a, b) {
+    const set = (t) => new Set(Catalog.norm(t).split(' ').filter((w) => w.length > 1));
+    const A = set(a);
+    const B = set(b);
+    if (!A.size || !B.size) return false;
+    let common = 0;
+    A.forEach((w) => { if (B.has(w)) common++; });
+    return common / Math.max(A.size, B.size) >= 0.6;
+  }
+
+  // Pozycje spisu. Powtórzenia (np. druga strona/tabela alfabetycznie) są pomijane.
+  // Gdy pod tym samym numerem jest drugi tytuł tej samej pieśni – zapisujemy go jako tytuł alternatywny (alt).
+  // Różne pieśni z tym samym numerem (np. kilka na jednej stronie) zostają osobnymi pozycjami.
   function parse(lines) {
     const items = [];
-    const seen = new Set();
     let dup = 0;
+    let aliases = 0;
     const parsed = lines.map(parseLine).filter(Boolean);
     const numbered = parsed.filter((p) => p.no).length;
     // gdy większość linii ma numery, linie bez numeru to nagłówki (np. „Spis treści”) – pomijamy je
     const useNumbers = numbered >= parsed.length * 0.6;
+    const byNo = {};
+    const seenTitle = new Set();
     for (const p of parsed) {
       if (useNumbers && !p.no) continue;
-      const key = useNumbers ? 'n:' + p.no.toLowerCase() : 't:' + Catalog.norm(p.title);
-      if (seen.has(key)) { dup++; continue; }
-      seen.add(key);
-      items.push({ no: useNumbers ? p.no : '', title: p.title });
+      const tkey = Catalog.norm(p.title);
+      if (!useNumbers) {
+        if (seenTitle.has(tkey)) { dup++; continue; }
+        seenTitle.add(tkey);
+        items.push({ no: '', title: p.title });
+        continue;
+      }
+      const nkey = p.no.toLowerCase();
+      const same = (byNo[nkey] || []).find((it) => [it.title, ...(it.alt || [])].some((t) => Catalog.norm(t) === tkey));
+      if (same) { dup++; continue; }
+      const alias = (byNo[nkey] || []).find((it) => sameSong(it.title, p.title));
+      if (alias) { (alias.alt = alias.alt || []).push(p.title); aliases++; continue; }
+      const it = { no: p.no, title: p.title };
+      (byNo[nkey] = byNo[nkey] || []).push(it);
+      items.push(it);
     }
-    return { items, duplicates: dup };
+    // kolejność według numerów (gdy plik zaczyna się od spisu alfabetycznego)
+    if (useNumbers && items.every((it) => /^\d+/.test(it.no))) {
+      items.forEach((it, i) => { it._i = i; });
+      items.sort((a, b) => parseInt(a.no, 10) - parseInt(b.no, 10) || a.no.localeCompare(b.no) || a._i - b._i);
+      items.forEach((it) => { delete it._i; });
+    }
+    return { items, duplicates: dup, aliases };
   }
 
   // name – nazwa pliku (rozszerzenie decyduje o formacie); content – ArrayBuffer albo tekst
@@ -109,5 +173,5 @@ window.SongList = (() => {
   const SUPPORTED = /\.(odt|docx|txt)$/i;
   const GDOC = 'application/vnd.google-apps.document';
 
-  return { fromFile, parse, parseLine, SUPPORTED, GDOC };
+  return { fromFile, parse, parseLine, sameSong, SUPPORTED, GDOC };
 })();

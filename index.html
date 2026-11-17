@@ -153,6 +153,7 @@
           <input id="sb-code" maxlength="3" autocomplete="off" spellcheck="false"></label>
         <div class="sb-tools">
           <button class="btn small primary" id="sb-confirm-all" title="Zatwierdź wszystkie dopasowania automatyczne">✓ Zatwierdź pewne</button>
+          <button class="btn small" id="sb-reload" title="Wczytaj poprawiony plik spisu – Twoje dopasowania zostaną zachowane">↻ Wczytaj ponownie…</button>
           <button class="btn small" id="sb-rematch" title="Dopasuj jeszcze raz pozycje niezatwierdzone">↻ Dopasuj ponownie</button>
           <button class="btn small" id="sb-delete">Usuń spis</button>
         </div>
@@ -233,6 +234,21 @@
     </section>
    </div>
   </main>
+
+  <dialog id="reload-dlg" aria-labelledby="rl-head">
+    <div class="picker">
+      <h2 id="rl-head">Wczytaj ponownie spis</h2>
+      <p style="margin:0"><b id="rl-title"></b></p>
+      <p class="muted small" style="margin:0">Pozycje zostaną wczytane z pliku od nowa, ale Twoje dopasowania nut zostaną zachowane
+        (rozpoznaję pieśni po tytule i numerze). Nazwa, identyfikator spisu i programy uroczystości zostają.</p>
+      <div class="rl-opts">
+        <button class="btn primary" type="button" data-rl="same" id="rl-same"></button>
+        <button class="btn" type="button" data-rl="drive">Z innego pliku na Dysku…</button>
+        <button class="btn" type="button" data-rl="local">Z pliku z komputera…</button>
+      </div>
+      <div class="dialog-actions"><button class="btn" type="button" data-rl="cancel">Anuluj</button></div>
+    </div>
+  </dialog>
 
   <dialog id="order-dlg" aria-labelledby="order-title">
     <div class="picker">

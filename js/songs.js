@@ -24,7 +24,7 @@ window.Songs = (() => {
 
   // ---------- wczytanie spisu ----------
   function createBook(name, source, parsed) {
-    const items = parsed.items.map((p) => ({ no: p.no, title: p.title, state: 'none', files: [], sugg: [] }));
+    const items = parsed.items.map((p) => ({ no: p.no, title: p.title, ...(p.alt ? { alt: p.alt } : {}), state: 'none', files: [], sugg: [] }));
     Matcher.matchItems(items, A.data.nodes, A.data.meta, A.idx);
     const b = { id: 'sb' + Date.now().toString(36), name, code: A.nextCode(books()), source, importedAt: new Date().toISOString(), items };
     books().push(b);
@@ -37,31 +37,92 @@ window.Songs = (() => {
     const check = items.filter((i) => i.state === 'check').length;
     A.toast(`Wczytano ${items.length} ${A.plural(items.length, 'pozycję', 'pozycje', 'pozycji')}` +
       (parsed.duplicates ? ` (pominięto ${parsed.duplicates} powtórzeń)` : '') +
+      (parsed.aliases ? `, w tym ${parsed.aliases} z drugim tytułem („też: …”)` : '') +
       `. Nuty: ${have}, do sprawdzenia: ${check}.`);
     if (!Object.keys(A.data.nodes).length) A.toast('Spis wczytany, ale nie ma jeszcze plików – przeskanuj Dysk w zakładce „Nuty na Dysku”.', true);
   }
 
+  // ---------- ponowne wczytanie spisu (np. poprawiony plik) z zachowaniem Twoich dopasowań ----------
+  let reloadId = null; // id spisu, który wczytujemy ponownie (zamiast tworzyć nowy)
+  const titlesOf = (it) => [it.title, ...(it.alt || [])].map((t) => Catalog.norm(t));
+  function reloadBook(b, source, parsed) {
+    const old = b.items;
+    const used = new Set();
+    const map = {}; // stary indeks → nowy indeks (dla programów uroczystości)
+    let kept = 0;
+    const items = parsed.items.map((p, ni) => {
+      const it = { no: p.no, title: p.title, ...(p.alt ? { alt: p.alt } : {}), state: 'none', files: [], sugg: [] };
+      const nt = titlesOf(it);
+      // ta sama pieśń: wspólny tytuł (preferowany ten sam numer), a gdy tytuł poprawiony – ten sam numer i podobny tytuł
+      let oi = old.findIndex((o, i) => !used.has(i) && o.no === it.no && titlesOf(o).some((t) => nt.includes(t)));
+      if (oi < 0) oi = old.findIndex((o, i) => !used.has(i) && titlesOf(o).some((t) => nt.includes(t)));
+      if (oi < 0 && it.no) oi = old.findIndex((o, i) => !used.has(i) && o.no === it.no && SongList.sameSong(o.title, it.title));
+      if (oi >= 0) {
+        const o = old[oi];
+        used.add(oi);
+        map[oi] = ni;
+        Object.assign(it, { state: o.state, files: o.files || [], score: o.score, sugg: o.sugg || [], rejected: o.rejected });
+        if (o.state === 'ok' || o.state === 'missing' || o.state === 'auto') kept++;
+      }
+      return it;
+    });
+    Matcher.matchItems(items, A.data.nodes, A.data.meta, A.idx); // nowe i niezatwierdzone – od nowa
+    // programy uroczystości: przesuń odwołania do pozycji tego spisu
+    for (const pr of A.data.programs || []) for (const pt of pr.parts) for (const x of pt.items) {
+      if (!x.src || x.src.book !== b.id || x.src.i == null) continue;
+      if (map[x.src.i] != null) { x.src.no = items[map[x.src.i]].no; x.src.i = map[x.src.i]; } else delete x.src; // pozycja zniknęła – program zachowuje swoje nuty
+    }
+    // stare pozycje bez pary: część to dawne osobne tytuły, które teraz są drugim tytułem („też: …”) innej pozycji
+    const allNew = new Set(items.flatMap(titlesOf));
+    const leftover = old.filter((o, i) => !used.has(i));
+    const merged = leftover.filter((o) => titlesOf(o).some((t) => allNew.has(t))).length;
+    const removed = leftover.length - merged;
+    b.items = items;
+    b.source = source;
+    b.importedAt = new Date().toISOString();
+    A.changed();
+    if (window.Dups && A.data.dups && A.data.dups.at) Dups.detect(true);
+    filter = 'all';
+    query = '';
+    render();
+    A.toast(`Wczytano ponownie „${b.name}”: ${items.length} ${A.plural(items.length, 'pozycja', 'pozycje', 'pozycji')}` +
+      (parsed.aliases ? ` (${parsed.aliases} z drugim tytułem)` : '') +
+      `. Zachowane dopasowania: ${kept}, nowe pozycje: ${items.length - used.size}` +
+      (merged ? `, połączone jako drugi tytuł: ${merged}` : '') + `, usunięte ze spisu: ${removed}.`);
+  }
+  // wspólne zakończenie wczytania: nowy spis albo ponowne wczytanie istniejącego
+  // id spisu do ponownego wczytania – pobierany od razu po wyborze pliku (zamknięcie okna bez wyboru go kasuje)
+  function takeReload() { const r = reloadId; reloadId = null; return r; }
+  function finishImport(rid, name, source, parsed) {
+    const b = rid && books().find((x) => x.id === rid);
+    if (b) reloadBook(b, source, parsed);
+    else createBook(name, source, parsed);
+  }
+
   async function importLocal(file) {
+    const rid = takeReload();
     try {
       const parsed = await SongList.fromFile(file.name, await file.arrayBuffer());
-      createBook(A.stripExt(file.name), { kind: 'local', name: file.name }, parsed);
+      finishImport(rid, A.stripExt(file.name), { kind: 'local', name: file.name }, parsed);
     } catch (e) {
       A.handleError(e);
     }
   }
 
   function importDrive() {
-    A.openPicker('doc', async (f) => {
-      try {
-        A.toast('Wczytywanie spisu…');
-        const gdoc = f.mimeType === SongList.GDOC;
-        const content = gdoc ? await Drive.exportText(f.id) : await Drive.download(f.id);
-        const parsed = await SongList.fromFile(gdoc ? f.name + '.txt' : f.name, content);
-        createBook(A.stripExt(f.name), { kind: 'drive', id: f.id, name: f.name }, parsed);
-      } catch (e) {
-        A.handleError(e);
-      }
-    });
+    A.openPicker('doc', loadDriveDoc);
+  }
+  async function loadDriveDoc(f) {
+    const rid = takeReload();
+    try {
+      A.toast('Wczytywanie spisu…');
+      const gdoc = f.mimeType === SongList.GDOC;
+      const content = gdoc ? await Drive.exportText(f.id) : await Drive.download(f.id);
+      const parsed = await SongList.fromFile(gdoc ? f.name + '.txt' : f.name, content);
+      finishImport(rid, A.stripExt(f.name), { kind: 'drive', id: f.id, name: f.name }, parsed);
+    } catch (e) {
+      A.handleError(e);
+    }
   }
 
   // Ponowne dopasowanie (np. po skanowaniu); pozycji zatwierdzonych ręcznie nie rusza.
@@ -203,7 +264,7 @@ window.Songs = (() => {
         ? `<div class="song-edit"><input class="se-no" value="${esc(it.no || '')}" maxlength="6" placeholder="Nr" aria-label="Numer">
             <input class="se-title" value="${esc(it.title)}" maxlength="200" aria-label="Tytuł">
             <button class="btn small primary" data-a="editSave">Zapisz</button><button class="btn small" data-a="editCancel">Anuluj</button></div>`
-        : `<div class="song-head"><span class="song-title">${esc(it.title)}</span><span class="state ${cls}">${label}</span>
+        : `<div class="song-head"><span class="song-title">${esc(it.title)}${it.alt && it.alt.length ? ` <span class="song-alt">też: ${esc(it.alt.join('; '))}</span>` : ''}</span><span class="state ${cls}">${label}</span>
             <span class="song-edit-btns"><button class="icon-btn" data-a="edit" title="Popraw tytuł lub numer" aria-label="Popraw">✎</button><button class="icon-btn" data-a="del" title="Usuń pozycję ze spisu" aria-label="Usuń pozycję">✕</button></span></div>`}${body}${sugg}</div>
       <div class="song-acts">${acts}</div></div>`;
   }
@@ -237,7 +298,7 @@ window.Songs = (() => {
     b.items.forEach((it, i) => {
       if (filter !== 'all' && group(it) !== filter) return;
       if (words.length) {
-        const hay = Catalog.norm(it.no + ' ' + it.title);
+        const hay = Catalog.norm(it.no + ' ' + it.title + ' ' + (it.alt || []).join(' '));
         if (!words.every((w) => hay.includes(w))) return;
       }
       rows.push(row(it, i));
@@ -293,6 +354,7 @@ window.Songs = (() => {
     if (f) importLocal(f);
   });
   document.querySelectorAll('[data-import]').forEach((b) => b.addEventListener('click', () => {
+    reloadId = null; // zwykłe „Wczytaj spis” = nowy spis
     if (b.dataset.import === 'local') $('sb-file').click();
     else importDrive();
   }));
@@ -332,6 +394,31 @@ window.Songs = (() => {
     A.toast(`Zatwierdzono ${autos.length} ${A.plural(autos.length, 'pozycję', 'pozycje', 'pozycji')}.`);
   });
   $('sb-rematch').addEventListener('click', () => { rematchAll(false); A.changed(); render(); });
+  // „↻ Wczytaj ponownie…” – okno z wyborem pliku (ten sam z Dysku / inny z Dysku / z komputera)
+  $('sb-reload').addEventListener('click', () => {
+    const b = book();
+    if (!b) return;
+    const src = b.source || {};
+    $('rl-title').textContent = b.name;
+    $('rl-same').hidden = !(src.kind === 'drive' && src.id);
+    $('rl-same').textContent = `Z tego samego pliku na Dysku (${src.name || ''})`;
+    $('reload-dlg').showModal();
+  });
+  $('sb-file').addEventListener('cancel', () => { reloadId = null; });
+  $('picker').addEventListener('close', () => { setTimeout(() => { reloadId = null; }, 0); });
+  $('reload-dlg').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-rl]');
+    if (!btn) return;
+    const b = book();
+    $('reload-dlg').close();
+    if (!b || btn.dataset.rl === 'cancel') return;
+    reloadId = b.id;
+    if (btn.dataset.rl === 'same') {
+      if (!(await A.ensureConnected())) { reloadId = null; return; }
+      loadDriveDoc({ id: b.source.id, name: b.source.name, mimeType: b.source.name && /\.(odt|docx|txt)$/i.test(b.source.name) ? '' : SongList.GDOC });
+    } else if (btn.dataset.rl === 'drive') importDrive();
+    else $('sb-file').click();
+  });
   $('sb-delete').addEventListener('click', () => {
     const b = book();
     if (!b || !confirm(`Usunąć spis „${b.name}” z aplikacji?\n\nPlik na Dysku i nuty zostaną nietknięte.`)) return;

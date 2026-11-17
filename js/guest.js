@@ -187,6 +187,8 @@ window.Guest = (() => {
     else window.scrollTo(0, 0);
   }
 
+  const altOf = (it) => (it.alt && it.alt.length ? `<span class="g-alt">też: ${esc(it.alt.join('; '))}</span>` : '');
+
   function renderBook(b) {
     document.title = b.name + ' – Kamienickie Nutki';
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -195,7 +197,7 @@ window.Guest = (() => {
     const rows = b.items.map((it, i) => ({ it, i })).filter(({ it }) => {
       if (onlyWithNotes && !hasNotes(it)) return false;
       if (!nwords.length) return true;
-      const hay = norm(it.no + ' ' + it.title);
+      const hay = norm(it.no + ' ' + it.title + ' ' + (it.alt || []).join(' '));
       return nwords.every((w) => hay.includes(w));
     });
     const have = b.items.filter(hasNotes).length;
@@ -213,8 +215,8 @@ window.Guest = (() => {
         <label class="g-only"><input type="checkbox" id="g-only"${onlyWithNotes ? ' checked' : ''}> tylko z nutami</label>
       </div>
       <div class="g-list" id="g-list">${rows.map(({ it, i }) => (hasNotes(it)
-        ? `<a class="g-song" href="#/s/${encodeURIComponent(b.id)}/${i}"><span class="g-no">${esc(it.no)}</span><span class="g-title">${esc(it.title)}</span><span class="g-note" aria-label="nuty">♪</span></a>`
-        : `<div class="g-song off"><span class="g-no">${esc(it.no)}</span><span class="g-title">${esc(it.title)}</span><span class="g-none">brak nut</span></div>`)).join('')
+        ? `<a class="g-song" href="#/s/${encodeURIComponent(b.id)}/${i}"><span class="g-no">${esc(it.no)}</span><span class="g-title">${esc(it.title)}${altOf(it)}</span><span class="g-note" aria-label="nuty">♪</span></a>`
+        : `<div class="g-song off"><span class="g-no">${esc(it.no)}</span><span class="g-title">${esc(it.title)}${altOf(it)}</span><span class="g-none">brak nut</span></div>`)).join('')
         || '<p class="muted empty">Nic nie pasuje.</p>'}</div>`;
     let t = null;
     $('g-q').addEventListener('input', (e) => {
