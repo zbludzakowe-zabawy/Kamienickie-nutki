@@ -75,7 +75,7 @@ przy połączeniu wygrywa nowszy `updatedAt`):
               parts: [{id, name, items: [{title, note, files:[fileId], src?:{book, bookName, no}}]}]}],
   publish: {pin, pdf, hold:{id:true}, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt},
   dups: {at, hasMd5, groups: {gid: {type:'same'|'name'|'book', title, files:[id], entries?:[{book,i}], status:'open'|'kept'|'resolved', keep:[id], note, decidedAt, gone?}},
-         cleanup: {fileId: {gid, title, name, own, path, parent, keep:[{id,name,path}], decidedAt, done, doneBy:'auto'|'manual', doneAt}}},
+         cleanup: {fileId: {gid, manual?, title, name, own, path, parent, keep:[{id,name,path}], decidedAt, done, doneBy:'auto'|'manual', doneAt}}},
   owner }
 ```
 
@@ -115,7 +115,10 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
   (tag w drzewie, filtr „Duplikaty do usunięcia”, wykluczenie z „Pozostałych nut”). Pobieranie: strona HTML (foldery z linkami, pola do odhaczania)
   i CSV (folder, plik, linki, powód, zachowany plik, data, stan). Rozstrzygnięte grupy **zostają w historii** (`gone: true`), gdy przestaną być
   duplikatem – żeby było widać, gdzie był problem. Aplikacja **nie usuwa** plików – daje linki do pliku i folderu.
-  „Nadaj nazwę zaznaczonym (n)” = własna nazwa tylko dla zaznaczonych plików (jednego albo kilku); bez zaznaczenia przycisk nieaktywny. Konflikt w spisach: „Użyj tych wszędzie” / „Zostaw różne wersje”.
+  „Nadaj nazwę zaznaczonym (n)” = własna nazwa tylko dla zaznaczonych plików (jednego albo kilku); bez zaznaczenia przycisk nieaktywny.
+  **„🗑 Do wyrzucenia (n)”** = zaznaczone pliki na listę sprzątania niezależnie od decyzji w grupie (`cleanup[id].manual`, powód „oznaczony ręcznie”);
+  plik używany w śpiewniku/programie – tylko po `confirm`. Przy pliku na liście: tag „do wyrzucenia/do usunięcia” + „↺ nie wyrzucaj” (usuwa wpis).
+  „↺ Otwórz ponownie” nie kasuje ręcznych oznaczeń. Konflikt w spisach: „Użyj tych wszędzie” / „Zostaw różne wersje”.
 - **Pozostałe nuty** (decyzja użytkownika): pliki nieprzypisane do żadnego spisu (`ok`/`auto`) i nie „do usunięcia”, strony z jednego folderu
   i o tej samej nazwie = jedna pozycja, alfabetycznie. U administratora zawsze aktualne; chórzyści widzą **migawkę** (`publish.others.snapshot`)
   z ostatniego kliknięcia „Aktualizuj „Pozostałe nuty”” (zwykłe „Aktualizuj” jej nie zmienia); **PDF tylko przyciskiem „Utwórz PDF”**

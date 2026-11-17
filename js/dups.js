@@ -34,18 +34,19 @@ window.Dups = (() => {
   // ---------- lista „Do sprzątnięcia na Dysku” ----------
   // data.dups.cleanup[fileId] = { gid, title, name, own, path, parent, keep:[{id,name,path}], decidedAt, done, doneBy, doneAt }
   // Zapisujemy nazwę i folder w chwili decyzji – po usunięciu pliku z Dysku nadal wiadomo, co to było.
-  function addCleanup(d, id, gid, g) {
+  function addCleanup(d, id, gid, g, manual) {
     const n = A.data.nodes[id];
     if (!n) return;
     const m = A.data.meta[id];
     d.cleanup[id] = {
       gid,
+      manual: !!manual, // „🗑 Do wyrzucenia” – oznaczony ręcznie, niezależnie od decyzji w grupie
       title: g.title,
       name: n.name,
       own: (m && m.title) || '',
       path: Catalog.pathOf(A.data.nodes, id),
       parent: n.parent,
-      keep: (g.keep || []).map((k) => ({ id: k, name: A.data.nodes[k] ? A.data.nodes[k].name : k, path: A.data.nodes[k] ? Catalog.pathOf(A.data.nodes, k) : '' })),
+      keep: (manual ? [] : g.keep || []).map((k) => ({ id: k, name: A.data.nodes[k] ? A.data.nodes[k].name : k, path: A.data.nodes[k] ? Catalog.pathOf(A.data.nodes, k) : '' })),
       decidedAt: new Date().toISOString(),
       done: false,
     };
@@ -189,7 +190,7 @@ window.Dups = (() => {
     } else if (action === 'reopen') {
       g.status = 'open';
       g.keep = [];
-      for (const [id, c] of Object.entries(D().cleanup)) if (c.gid === gid && !c.done) delete D().cleanup[id];
+      for (const [id, c] of Object.entries(D().cleanup)) if (c.gid === gid && !c.done && !c.manual) delete D().cleanup[id]; // ręczne „do wyrzucenia” zostają
     } else if (action === 'name') {
       const v = el.querySelector('.dup-name').value.trim().replace(/\s+/g, ' ');
       if (!checked.length) return A.toast('Zaznacz pliki, którym chcesz nadać nazwę.');
@@ -253,8 +254,10 @@ window.Dups = (() => {
     const m = A.data.meta[id];
     const kept = (g.keep || []).includes(id);
     const c = D().cleanup[id];
-    const tag = g.status === 'resolved' ? (kept ? '<span class="dup-tag keep">zostaje</span>'
-      : c ? (c.done ? '<span class="dup-tag keep">✓ zrobione</span>' : '<span class="dup-tag del">do usunięcia</span>') : '<span class="dup-tag">nadal używany</span>') : '';
+    // oznaczenie „do usunięcia” (z decyzji albo ręczne „🗑 Do wyrzucenia”) widać zawsze, także w grupie do przejrzenia
+    const tag = c ? (c.done ? '<span class="dup-tag keep">✓ zrobione</span>'
+      : `<span class="dup-tag del">${c.manual ? 'do wyrzucenia' : 'do usunięcia'}</span> <button class="linklike small" data-a="unmark" data-id="${esc(id)}" title="Usuń z listy „Do sprzątnięcia”">↺ nie wyrzucaj</button>`)
+      : g.status === 'resolved' ? (kept ? '<span class="dup-tag keep">zostaje</span>' : '<span class="dup-tag">nadal używany</span>') : '';
     return `<label class="dup-file${remove.has(id) ? ' del' : ''}"><input type="checkbox" data-id="${esc(id)}"${g.status === 'resolved' && kept ? ' checked' : ''}>
       <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span>
       <span class="dup-main"><span><b>${esc((m && m.title) || n.name)}</b>${m && m.title ? ` <span class="muted small">${esc(n.name)}</span>` : ''} ${tag}${m && m.rot ? ` <span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}</span>
@@ -266,6 +269,24 @@ window.Dups = (() => {
 
   // „Nadaj nazwę zaznaczonym (n)” – nazwa trafia tylko do zaznaczonych plików (jednego albo kilku)
   const nameBtn = (n) => `<button class="btn small" data-a="name" title="Nazwa trafi tylko do zaznaczonych plików"${n ? '' : ' disabled'}>Nadaj nazwę zaznaczonym${n ? ` (${n})` : ''}</button>`;
+
+  const trashBtn = (n) => `<button class="btn small" data-a="trash" title="Zaznaczone pliki trafią na listę „Do sprzątnięcia na Dysku” – niezależnie od innych decyzji w grupie"${n ? '' : ' disabled'}>🗑 Do wyrzucenia${n ? ` (${n})` : ''}</button>`;
+
+  // „🗑 Do wyrzucenia” – zaznaczone pliki na listę sprzątania; plik używany w śpiewniku/programie – tylko po potwierdzeniu
+  function trash(gid, el) {
+    const g = D().groups[gid];
+    const ids = [...el.querySelectorAll('.dup-file input:checked')].map((c) => c.dataset.id).filter((id) => A.data.nodes[id]);
+    if (!g || !ids.length) return A.toast('Zaznacz plik (albo pliki) do wyrzucenia.');
+    const use = usage();
+    const used = ids.filter((id) => use[id]);
+    if (used.length && !confirm(`Te pliki są nadal używane:\n${used.map((id) => `• ${titleOf(id)} – ${use[id].join(', ')}`).join('\n')}\n\n` +
+      'Oznaczyć je mimo to do wyrzucenia? Pamiętaj, żeby w tych śpiewnikach/programach wybrać inne nuty, zanim usuniesz plik z Dysku.')) return;
+    ids.forEach((id) => addCleanup(D(), id, gid, g, true));
+    A.changed();
+    render();
+    A.renderTree();
+    A.toast(`Na listę „Do sprzątnięcia” trafiło: ${ids.length} ${A.plural(ids.length, 'plik', 'pliki', 'plików')}.`);
+  }
 
   function group(gid, g, use, remove) {
     const [label, help] = TYPE[g.type];
@@ -297,6 +318,7 @@ window.Dups = (() => {
         `<span class="dup-namebox"><input class="dup-name" maxlength="200" placeholder="Nazwa dla zaznaczonych plików" value="${esc(g.title)}" aria-label="Nazwa dla zaznaczonych plików">${nameBtn(g.status === 'resolved' ? (g.keep || []).filter((id) => A.data.nodes[id]).length : 0)}</span>` +
         '<button class="btn small" data-a="order" title="Zaznacz strony jednej pieśni i ustaw ich kolejność">⇅ Kolejność stron zaznaczonych</button>';
     }
+    acts += trashBtn(0);
     return `<div class="dup ${g.status}" data-g="${esc(gid)}">
       <div class="dup-head"><b>${esc(g.title)}</b><span class="badge doc" title="${esc(help)}">${label}</span>${status}${g.gone ? '<span class="muted small">· załatwione – nie jest już duplikatem</span>' : ''}${g.decidedAt && g.status !== 'open' ? `<span class="muted small">· decyzja ${new Date(g.decidedAt).toLocaleDateString('pl-PL')}</span>` : ''}</div>
       ${g.note && g.status === 'open' ? `<p class="small warn-text">${esc(g.note)}</p>` : ''}
@@ -349,7 +371,8 @@ window.Dups = (() => {
     list.forEach((f) => f.items.sort((a, b) => a.c.name.localeCompare(b.c.name, 'pl', { numeric: true })));
     return list;
   }
-  const reason = (c) => `duplikat „${c.title}” – zostaje: ${c.keep.map((k) => `${k.path ? k.path + ' / ' : ''}${k.name}`).join(', ') || '—'}`;
+  const reason = (c) => (c.manual ? `oznaczony ręcznie do wyrzucenia (grupa „${c.title}”)`
+    : `duplikat „${c.title}” – zostaje: ${c.keep.map((k) => `${k.path ? k.path + ' / ' : ''}${k.name}`).join(', ') || '—'}`);
 
   function renderCleanup() {
     const all = Object.entries(D().cleanup);
@@ -475,6 +498,14 @@ ${body || '<p>Nic do sprzątania.</p>'}</body></html>`;
     if (!b || !el) return;
     e.preventDefault();
     if (b.dataset.a === 'rotate') return A.openRotate(b.dataset.id);
+    if (b.dataset.a === 'trash') return trash(el.dataset.g, el);
+    if (b.dataset.a === 'unmark') {
+      delete D().cleanup[b.dataset.id];
+      A.changed();
+      render();
+      A.renderTree();
+      return A.toast('Plik nie będzie wyrzucony – usunięto go z listy „Do sprzątnięcia”.');
+    }
     if (b.dataset.a === 'useAll') return useEverywhere(el.dataset.g, Number(b.dataset.k));
     if (b.dataset.a === 'order') {
       const ids = [...el.querySelectorAll('.dup-file input:checked')].map((c) => c.dataset.id);
@@ -487,8 +518,11 @@ ${body || '<p>Nic do sprzątania.</p>'}</body></html>`;
   $('dups-list').addEventListener('change', (e) => {
     if (!e.target.matches('.dup-file input')) return;
     const el = e.target.closest('.dup');
+    const n = el ? el.querySelectorAll('.dup-file input:checked').length : 0;
     const b = el && el.querySelector('[data-a="name"]');
-    if (b) b.outerHTML = nameBtn(el.querySelectorAll('.dup-file input:checked').length);
+    if (b) b.outerHTML = nameBtn(n);
+    const t = el && el.querySelector('[data-a="trash"]');
+    if (t) t.outerHTML = trashBtn(n);
   });
   $('dups-list').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.classList.contains('dup-name')) { e.preventDefault(); decide(e.target.closest('.dup').dataset.g, 'name', e.target.closest('.dup')); }
