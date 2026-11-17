@@ -567,3 +567,20 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .sb-code { display: inline-flex; gap: 6px; align-items: center; font-size: .85rem; color: var(--muted); }
 .sb-code input { width: 4.2em; text-transform: uppercase; text-align: center; font-weight: 700; padding: 3px 4px; }
 .g-stale { margin: -4px 0 12px; color: var(--warn); }
+
+/* lista „Do sprzątnięcia na Dysku” */
+.cleanup { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 10px 0 14px; background: var(--panel); }
+.cleanup-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.cleanup-head h3 { margin: 0; }
+.cleanup-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: auto; }
+.cleanup-tools .check { margin: 0; }
+.cl-folder { margin-top: 10px; }
+.cl-folder-name { font-weight: 600; color: var(--accent); text-decoration: none; }
+.cl-folder-name:hover { text-decoration: underline; }
+.cl-item { display: flex; align-items: center; gap: 10px; padding: 6px 0 6px 18px; border-bottom: 1px solid var(--line); }
+.cl-item.done .cl-main { opacity: .55; }
+.cl-item.done .cl-main > a { text-decoration: line-through; }
+.cl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.cl-main a { color: var(--ink); }
+.cl-main .muted a { color: var(--accent); }
+.dup-tag:not(.keep):not(.del) { color: var(--muted); }
