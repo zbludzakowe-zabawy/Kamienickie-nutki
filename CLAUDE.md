@@ -5,8 +5,9 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
 
 - Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/ (repo `zbludzakowe-zabawy/Kamienickie-nutki`, **wielkie K** w adresie!)
 - Publikacja: GitHub Actions (`.github/workflows/pages.yml`) po każdym pushu do `main`.
-- **Sposób pracy**: zmiany na gałęzi roboczej → push → **PR do `main`** (użytkownik scala sam). Wcześniej scalaliśmy
-  bezpośrednio, ale od etapu 3 użytkownik prosi o PR. Nie pushuj do `main` bez wyraźnej zgody.
+- **Sposób pracy**: zmiany na gałęzi roboczej → push → **PR do `main`**. **Scala (wprowadza do `main`) wyłącznie użytkownik** –
+  nigdy nie pushuj do `main` ani nie scalaj PR-ów. Wcześniej scalaliśmy bezpośrednio, ale od etapu 3 użytkownik prosi o PR.
+  Równolegle może pracować inny wątek (gałąź `claude/funny-shannon-…`) – przed PR zawsze `git fetch` + `git merge origin/main`.
 - Skill `pwa-na-telefon` to przepis użytkownika na PWA (manifest, SW, banery) – projekt jest według niego zrobiony.
 
 ## Dwa tryby
@@ -127,7 +128,7 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
 3. PDF każdego śpiewnika – budowany tylko, gdy zmienił się podpis (`sig` = hash pozycji i plików).
 4. Katalog `spiewniki-dla-chorzystow.json` – zaszyfrowany PIN-em (`KnCrypto`), zawiera `songbooks` i `programs` (id kopii i PDF).
    Link dla chórzystów: `<strona>?chor=<catalogId>`. Zmiana PIN-u = tylko ponowny zapis katalogu.
-**Obrót** (`meta[id].rot`, przycisk ⟳ w drzewie → okno `#rot-dlg` z podglądem obrazka): oryginał na Dysku bez zmian.
+**Obrót** (`meta[id].rot`, przycisk ⟳ w drzewie i przy plikach w duplikatach → okno `#rot-dlg` z podglądem obrazka, `App.openRotate(id)`): oryginał na Dysku bez zmian.
    Przy publikacji plik z obrotem jest pobierany, obracany (`PdfBuild.rotate`: obraz przez canvas, PDF przez `setRotation`)
    i wgrywany jako kopia; w PDF-ach śpiewników też obrócony. `rot` jest w podpisie (`sig`) i w `copies[id].rot` → zmiana obrotu = „są zmiany”.
 **Wstrzymanie PDF** (`publish.hold[id]`, pole „aktualizuj PDF, jeśli trzeba” przy każdym śpiewniku/programie, domyślnie zaznaczone):

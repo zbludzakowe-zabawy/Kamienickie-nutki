@@ -656,6 +656,7 @@
       }
       changed();
       renderTree();
+      if (window.Dups) Dups.render(); // obrót widać też przy duplikatach
       toast(rotVal ? `Zapisano obrót o ${rotVal}°. Chórzyści zobaczą go po aktualizacji.` : 'Usunięto obrót.');
     }
     $('rot-dlg').close();
@@ -722,7 +723,7 @@
     get data() { return data; },
     get idx() { return idx; },
     changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt, cleanCode, nextCode,
-    orderFiles, openOrder, songKey,
+    orderFiles, openOrder, songKey, openRotate,
   };
 
   // ---------- zdarzenia ----------

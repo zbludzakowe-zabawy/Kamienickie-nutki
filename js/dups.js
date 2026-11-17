@@ -257,9 +257,10 @@ window.Dups = (() => {
       : c ? (c.done ? '<span class="dup-tag keep">✓ zrobione</span>' : '<span class="dup-tag del">do usunięcia</span>') : '<span class="dup-tag">nadal używany</span>') : '';
     return `<label class="dup-file${remove.has(id) ? ' del' : ''}"><input type="checkbox" data-id="${esc(id)}"${g.status === 'resolved' && kept ? ' checked' : ''}>
       <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span>
-      <span class="dup-main"><span><b>${esc((m && m.title) || n.name)}</b>${m && m.title ? ` <span class="muted small">${esc(n.name)}</span>` : ''} ${tag}</span>
+      <span class="dup-main"><span><b>${esc((m && m.title) || n.name)}</b>${m && m.title ? ` <span class="muted small">${esc(n.name)}</span>` : ''} ${tag}${m && m.rot ? ` <span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}</span>
         <span class="muted small"><a href="${folderUrl(n.parent)}" target="_blank" rel="noopener" title="Otwórz folder na Dysku">📁 ${esc(Catalog.pathOf(A.data.nodes, id) || 'Mój dysk')}</a>
         · ${fmtSize(n.size)}${n.modified ? ' · ' + new Date(n.modified).toLocaleDateString('pl-PL') : ''}${use[id] ? ' · używany: ' + esc(use[id].join(', ')) : ' · nieużywany'}</span></span>
+      <button class="act" data-a="rotate" data-id="${esc(id)}" title="Obróć (np. nuty zapisane na leżąco)" aria-label="Obróć">⟳</button>
       <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="Otwórz plik na Dysku">↗</a></label>`;
   }
 
@@ -470,6 +471,7 @@ ${body || '<p>Nic do sprzątania.</p>'}</body></html>`;
     const el = e.target.closest('.dup');
     if (!b || !el) return;
     e.preventDefault();
+    if (b.dataset.a === 'rotate') return A.openRotate(b.dataset.id);
     if (b.dataset.a === 'useAll') return useEverywhere(el.dataset.g, Number(b.dataset.k));
     if (b.dataset.a === 'order') {
       const ids = [...el.querySelectorAll('.dup-file input:checked')].map((c) => c.dataset.id);
