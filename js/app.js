@@ -266,6 +266,97 @@
     return n;
   }
 
+  // ---------- „to nie nuty” i „nieistotne” ----------
+  const NONOTE = '<svg class="ico-nonote" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-nonote"/></svg>';
+  function flagTag(fl) {
+    if (fl === 'notes') return `<span class="flag-tag">${NONOTE} to nie nuty</span>`;
+    if (fl === 'ignore') return '<span class="flag-tag">👻 nieistotne</span>';
+    if (fl === 'ignoreDir') return '<span class="flag-tag" title="Cały folder jest oznaczony jako nieistotny">👻 w nieistotnym folderze</span>';
+    return '';
+  }
+  // ustaw/usuń pole w meta (puste meta znika)
+  function setMeta(id, key, val) {
+    const m = { ...(data.meta[id] || {}) };
+    if (val) m[key] = val;
+    else delete m[key];
+    if (Object.keys(m).length) data.meta[id] = m;
+    else delete data.meta[id];
+  }
+  // gdzie plik jest w śpiewnikach (zatwierdzony lub automatyczny) i programach
+  function usedIn(id) {
+    const out = [];
+    for (const b of data.songbooks) b.items.forEach((it) => { if ((it.state === 'ok' || it.state === 'auto') && it.files.includes(id)) out.push(`śpiewnik „${b.name}”${it.no ? ' nr ' + it.no : ''}`); });
+    for (const p of data.programs || []) if (p.parts.some((pt) => pt.items.some((it) => (it.files || []).includes(id)))) out.push(`program „${p.name}”`);
+    return out;
+  }
+  // po zmianie oznaczeń: automatyczne dopasowania i duplikaty od nowa
+  function afterFlags() {
+    if (window.Songs) Songs.rematchAll(true);
+    if (window.Dups && data.dups && data.dups.at) Dups.detect(true);
+    changed();
+    renderAll();
+  }
+  function toggleIgnoreFolder(id) {
+    const n = data.nodes[id];
+    if (!n) return;
+    const on = !(data.meta[id] && data.meta[id].ignore);
+    setMeta(id, 'ignore', on);
+    afterFlags();
+    toast(on ? `Folder „${n.name}” oznaczony jako nieistotny – jego nuty są pomijane przy dopasowaniu, w duplikatach i „Pozostałych nutach”.`
+      : `Folder „${n.name}” znów jest brany pod uwagę.`);
+  }
+
+  let edId = null;
+  function paintEdRot() {
+    const r = (data.meta[edId] && data.meta[edId].rot) || 0;
+    $('ed-rot').textContent = r ? `o ${r}°` : 'bez obrotu';
+  }
+  function openEdit(id) {
+    const n = data.nodes[id];
+    if (!n) return;
+    edId = id;
+    const m = data.meta[id] || {};
+    $('ed-title').textContent = n.name;
+    $('ed-path').textContent = '📁 ' + (Catalog.pathOf(data.nodes, id) || 'Mój dysk') + (n.viaShortcut ? ` (skrót; oryginał: ${n.real || 'poza wybranymi folderami'})` : '');
+    $('ed-name').value = m.title || '';
+    $('ed-name').placeholder = stripExt(n.name);
+    $('ed-open').href = `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+    paintEdRot();
+    const used = usedIn(id);
+    $('ed-notes').checked = !!m.notNotes;
+    $('ed-notes').disabled = !m.notNotes && used.length > 0;
+    $('ed-notes-why').hidden = !$('ed-notes').disabled;
+    $('ed-notes-why').textContent = used.length ? `Plik jest używany: ${used.join(', ')} – najpierw go stamtąd usuń.` : '';
+    const dirIgn = Catalog.flagOf(data.nodes, { ...data.meta, [id]: {} }, id) === 'ignoreDir';
+    $('ed-ignore').checked = !!m.ignore || dirIgn;
+    $('ed-ignore').disabled = dirIgn;
+    $('ed-ignore-why').hidden = !dirIgn;
+    $('ed-ignore-why').textContent = dirIgn ? 'Cały folder jest oznaczony jako nieistotny (👻 przy folderze w „Nutach na Dysku”).' : '';
+    $('edit-dlg').showModal();
+    $('ed-name').focus();
+  }
+  // „to nie nuty” i „nieistotne” wykluczają się
+  $('ed-notes').addEventListener('change', (e) => { if (e.target.checked && !$('ed-ignore').disabled) $('ed-ignore').checked = false; });
+  $('ed-ignore').addEventListener('change', (e) => { if (e.target.checked) $('ed-notes').checked = false; });
+  $('ed-rotate').addEventListener('click', () => openRotate(edId));
+  $('rot-dlg').addEventListener('close', () => { if ($('edit-dlg').open) paintEdRot(); });
+  $('ed-cancel').addEventListener('click', () => $('edit-dlg').close());
+  $('ed-form').addEventListener('submit', () => {
+    const id = edId;
+    const m = data.meta[id] || {};
+    const title = $('ed-name').value.trim().replace(/\s+/g, ' ');
+    const notes = $('ed-notes').checked;
+    const ign = $('ed-ignore').checked && !$('ed-ignore').disabled;
+    const flagsChanged = !!m.notNotes !== notes || !!m.ignore !== ign;
+    if ((m.title || '') === title && !flagsChanged) return;
+    setMeta(id, 'title', title);
+    setMeta(id, 'notNotes', notes);
+    setMeta(id, 'ignore', ign);
+    if (flagsChanged) afterFlags();
+    else { changed(); renderTree(); if (window.Dups) Dups.render(); if (window.Songs) Songs.render(); }
+    toast(flagsChanged ? (notes ? 'Oznaczono: to nie nuty.' : ign ? 'Oznaczono jako nieistotne.' : 'Usunięto oznaczenie – plik znów jest brany pod uwagę.') : 'Zapisano nazwę.');
+  });
+
   // Skrót do pliku/folderu, którego oryginał leży poza wybranymi folderami – pokazujemy, gdzie jest naprawdę.
   function shortcutTag(n) {
     if (!n.viaShortcut || n.parent === null) return '';
@@ -456,7 +547,9 @@
     const match = (n) => {
       const m = data.meta[n.id];
       const title = m && m.title;
-      if (assigned && assigned.has(n.id)) return false;
+      const fl = Catalog.flagOf(data.nodes, data.meta, n.id);
+      if (f === 'flagged') return !!fl;
+      if (assigned && (assigned.has(n.id) || fl)) return false;
       if (removeSet && !removeSet.has(n.id)) return false;
       if (f === 'named' && !title) return false;
       if (f === 'unnamed' && title) return false;
@@ -493,11 +586,11 @@
           <span class="orig">${esc(n.name)}</span></div>
           <button class="act" data-act="save" title="Zapisz" aria-label="Zapisz nazwę">✓</button></div>`;
       }
-      return `<div class="row file" data-id="${esc(n.id)}" style="--d:${d}">${badge}
-        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}${m && m.page ? `<span class="page-tag">str. ${m.page}</span>` : ''}${shortcutTag(n)}</div>
+      const fl = Catalog.flagOf(data.nodes, data.meta, n.id);
+      return `<div class="row file${fl ? ' flagged' : ''}" data-id="${esc(n.id)}" style="--d:${d}">${badge}
+        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}${m && m.page ? `<span class="page-tag">str. ${m.page}</span>` : ''}${flagTag(fl)}${shortcutTag(n)}</div>
         ${(sib[n.id] || []).length > 1 ? `<button class="act" data-act="order" title="Kolejność stron tej pieśni (${sib[n.id].length} pliki w tym folderze)" aria-label="Kolejność stron">⇅</button>` : ''}
-        <button class="act" data-act="edit" title="Nadaj własną nazwę" aria-label="Nadaj własną nazwę">✎</button>
-        <button class="act" data-act="rotate" title="Obróć (np. nuty zapisane na leżąco)" aria-label="Obróć">⟳</button>
+        <button class="act" data-act="edit" title="Edytuj: nazwa, obrót, „to nie nuty”, „nieistotne”" aria-label="Edytuj plik">✎</button>
         <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(n.id)}/view" target="_blank" rel="noopener" title="Otwórz na Dysku" aria-label="Otwórz na Dysku">↗</a></div>`;
     };
 
@@ -506,8 +599,11 @@
       if (filtering && !visible[n.id]) return '';
       const open = filtering || ui.expanded.has(n.id);
       const cnt = filtering ? visible[n.id] : idx.counts[n.id] || 0;
-      let s = `<div class="row folder${open ? ' open' : ''}" data-id="${esc(n.id)}" style="--d:${d}" role="button" tabindex="0" aria-expanded="${open}">
-        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span>${shortcutTag(n)}<span class="cnt">${cnt}</span>
+      const ign = !!(data.meta[n.id] && data.meta[n.id].ignore);
+      const inIgn = !ign && Catalog.flagOf(data.nodes, data.meta, n.id) === 'ignoreDir';
+      let s = `<div class="row folder${open ? ' open' : ''}${ign || inIgn ? ' flagged' : ''}" data-id="${esc(n.id)}" style="--d:${d}" role="button" tabindex="0" aria-expanded="${open}">
+        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span>${ign ? '<span class="flag-tag">👻 nieistotny</span>' : ''}${shortcutTag(n)}<span class="cnt">${cnt}</span>
+        ${n.parent !== null && !inIgn ? `<button class="act ghost${ign ? ' on' : ''}" data-ghost="${esc(n.id)}" title="${ign ? 'Folder oznaczony jako nieistotny – kliknij, żeby cofnąć' : 'Oznacz folder jako nieistotny (nuty niepotrzebne chórzystom)'}" aria-label="Nieistotny folder" aria-pressed="${ign}">👻</button>` : ''}
         <button class="act refresh${ui.refreshing === n.id ? ' spin' : ''}" data-refresh="${esc(n.id)}" title="Odśwież tylko ten folder" aria-label="Odśwież folder ${esc(n.name)}"${ui.scanning ? ' disabled' : ''}>↻</button></div>`;
       if (open) s += (idx.children[n.id] || []).map((ch) => node(ch, d + 1)).join('');
       return s;
@@ -747,7 +843,7 @@
     get data() { return data; },
     get idx() { return idx; },
     changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt, cleanCode, nextCode,
-    orderFiles, openOrder, songKey, openRotate,
+    orderFiles, openOrder, songKey, openRotate, openEdit,
   };
 
   // ---------- zdarzenia ----------
@@ -816,6 +912,8 @@
     renderTree();
   };
   tree.addEventListener('click', (e) => {
+    const gh = e.target.closest('[data-ghost]');
+    if (gh) return toggleIgnoreFolder(gh.dataset.ghost);
     const rf = e.target.closest('[data-refresh]');
     if (rf) return refreshFolder(rf.dataset.refresh);
     const row = e.target.closest('.row');
@@ -823,8 +921,7 @@
     if (row.classList.contains('folder')) return toggleFolder(row);
     const act = e.target.closest('[data-act]');
     if (!act) return;
-    if (act.dataset.act === 'edit') startEdit(row.dataset.id);
-    else if (act.dataset.act === 'rotate') openRotate(row.dataset.id);
+    if (act.dataset.act === 'edit') openEdit(row.dataset.id);
     else if (act.dataset.act === 'order') {
       const ids = siblingsMap()[row.dataset.id] || [row.dataset.id];
       const n = data.nodes[row.dataset.id];

@@ -203,6 +203,20 @@ window.Catalog = (() => {
     return { children, roots, counts };
   }
 
+  // Oznaczenia użytkownika: 'notes' – „to nie nuty” (pomijany wszędzie), 'ignore' – „nieistotne” (plik albo folder),
+  // 'ignoreDir' – leży w folderze oznaczonym jako nieistotny. '' – zwykły plik.
+  function flagOf(nodes, meta, id) {
+    const m = meta[id];
+    if (m && m.notNotes) return 'notes';
+    if (m && m.ignore) return 'ignore';
+    let n = nodes[id] && nodes[nodes[id].parent];
+    for (let g = 0; n && g < 100; g++) {
+      if (meta[n.id] && meta[n.id].ignore) return 'ignoreDir';
+      n = nodes[n.parent];
+    }
+    return '';
+  }
+
   // Ścieżka folderów nad plikiem, np. „Nuty / Kolędy”
   function pathOf(nodes, id) {
     const parts = [];
@@ -231,5 +245,5 @@ window.Catalog = (() => {
     return out;
   }
 
-  return { scan, rescanFolder, buildIndex, pathOf, keepUnder, norm };
+  return { scan, rescanFolder, buildIndex, pathOf, keepUnder, norm, flagOf };
 })();

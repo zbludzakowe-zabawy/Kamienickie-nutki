@@ -310,7 +310,7 @@ window.Songs = (() => {
   let chooser = null; // { it, selected: [], cands }
   function openChooser(it) {
     if (!Object.keys(A.data.nodes).length) return A.toast('Najpierw przeskanuj Dysk w zakładce „Nuty na Dysku”.', true);
-    chooser = { it, selected: [...it.files], cands: Matcher.candidates(A.data.nodes, A.data.meta, A.idx).filter((c) => !c.folder) };
+    chooser = { it, selected: [...it.files], cands: Matcher.candidates(A.data.nodes, A.data.meta, A.idx, true).filter((c) => !c.folder) };
     $('chooser-title').textContent = `${it.no ? it.no + '. ' : ''}${it.title}`;
     $('chooser-q').value = '';
     $('chooser').showModal();

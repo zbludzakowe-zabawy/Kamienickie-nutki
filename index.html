@@ -114,6 +114,7 @@
           <option value="new">Nowe od ostatniego skanu</option>
           <option value="unassigned">Nieprzypisane do żadnego śpiewnika</option>
           <option value="remove">Duplikaty do usunięcia</option>
+          <option value="flagged">Oznaczone: „to nie nuty” i „nieistotne”</option>
         </select>
         <div class="toolbar-btns">
           <button class="btn small" id="btn-expand">Rozwiń wszystko</button>
@@ -123,7 +124,7 @@
       </div>
       <p class="hint muted unassigned-hint" id="unassigned-hint" hidden>Pliki, których nie ma w żadnym spisie pieśni jako „Są nuty”.
         Pliki tylko zaproponowane („Do sprawdzenia”) też tu są – po zatwierdzeniu w „Spisach pieśni” znikną z tej listy. Programy uroczystości nie są brane pod uwagę.</p>
-      <p class="hint muted">Stuknij nazwę pliku, żeby nadać mu własną nazwę. ↗ otwiera plik na Dysku. ↻ przy folderze odświeża tylko ten folder.</p>
+      <p class="hint muted">✎ przy pliku (albo stuknięcie nazwy): własna nazwa, obrót, „to nie nuty”, „nieistotne”. ↗ otwiera plik na Dysku. Przy folderze: 👻 oznacza cały folder jako nieistotny, ↻ odświeża tylko ten folder.</p>
       <div class="tree" id="tree"></div>
     </section>
    </div>
@@ -278,6 +279,37 @@
       </div>
     </div>
   </dialog>
+
+  <dialog id="edit-dlg" aria-labelledby="ed-title">
+    <form class="picker" method="dialog" id="ed-form">
+      <p class="muted small" style="margin:0">Edytuj plik</p>
+      <h2 id="ed-title"></h2>
+      <p class="muted small ed-path" id="ed-path"></p>
+      <label class="ed-field"><span>Nazwa w aplikacji</span>
+        <input id="ed-name" type="text" maxlength="200" autocomplete="off" enterkeyhint="done"></label>
+      <p class="muted small" style="margin:0">Nazwa i pozostałe ustawienia są tylko w aplikacji – plik na Dysku zostaje bez zmian.</p>
+      <div class="ed-rot"><span>Obrót: <b id="ed-rot"></b></span><button type="button" class="btn small" id="ed-rotate">⟳ Obróć…</button></div>
+      <label class="ed-flag"><input type="checkbox" id="ed-notes">
+        <span><b><svg class="ico-nonote" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-nonote"/></svg> To nie nuty</b>
+          <span class="muted small">Plik pomijany przy dopasowaniu do śpiewników, w duplikatach i w „Pozostałych nutach”. Zostaje na liście plików – możesz odznaczyć.</span>
+          <span class="small warn-text" id="ed-notes-why" hidden></span></span></label>
+      <label class="ed-flag"><input type="checkbox" id="ed-ignore">
+        <span><b>👻 Nieistotne</b>
+          <span class="muted small">Nuty, ale niepotrzebne chórzystom: pomijane przy automatycznym dopasowaniu, w duplikatach i w „Pozostałych nutach”.
+            Ręcznie nadal możesz je wybrać do pieśni.</span>
+          <span class="small muted" id="ed-ignore-why" hidden></span></span></label>
+      <div class="dialog-actions">
+        <a class="btn" id="ed-open" target="_blank" rel="noopener">Pokaż na Dysku ↗</a>
+        <span style="flex:1"></span>
+        <button class="btn" type="button" id="ed-cancel">Anuluj</button>
+        <button class="btn primary" type="submit" id="ed-save">Zapisz</button>
+      </div>
+    </form>
+  </dialog>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="i-nonote" viewBox="0 0 24 24"><path d="M9.5 18.5a3 3 0 1 1-2-2.83V5.2l10-2.2v11.5a3 3 0 1 1-2-2.83V7.4l-6 1.3z" fill="currentColor"/>
+      <path d="M3.5 3.5l17 17" stroke="var(--panel)" stroke-width="5" stroke-linecap="round"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </defs></svg>
 
   <dialog id="rot-dlg" aria-labelledby="rot-title">
     <div class="picker">

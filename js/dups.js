@@ -63,7 +63,8 @@ window.Dups = (() => {
     }
     return n;
   }
-  const files = () => Object.values(A.data.nodes).filter((n) => !n.folder);
+  // pliki oznaczone „to nie nuty” i „nieistotne” (także w nieistotnym folderze) pomijamy w duplikatach i „Pozostałych nutach”
+  const files = () => Object.values(A.data.nodes).filter((n) => !n.folder && !Catalog.flagOf(A.data.nodes, A.data.meta, n.id));
   const titleOf = (id) => {
     const n = A.data.nodes[id];
     const m = A.data.meta[id];
@@ -263,7 +264,7 @@ window.Dups = (() => {
       <span class="dup-main"><span><b>${esc((m && m.title) || n.name)}</b>${m && m.title ? ` <span class="muted small">${esc(n.name)}</span>` : ''} ${tag}${m && m.rot ? ` <span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}</span>
         <span class="muted small"><a href="${folderUrl(n.parent)}" target="_blank" rel="noopener" title="${n.viaShortcut ? 'Folder ze skrótem do tego pliku (prawdziwy plik leży poza wybranymi folderami)' : 'Otwórz folder na Dysku'}">📁 ${esc(Catalog.pathOf(A.data.nodes, id) || 'Mój dysk')}${n.viaShortcut ? ' (przez skrót)' : ''}</a>${n.viaShortcut && n.real ? ` <span class="muted small">· oryginał: ${esc(n.real)}</span>` : ''}
         · ${fmtSize(n.size)}${n.modified ? ' · ' + new Date(n.modified).toLocaleDateString('pl-PL') : ''}${use[id] ? ' · używany: ' + esc(use[id].join(', ')) : ' · nieużywany'}</span></span>
-      <button class="act" data-a="rotate" data-id="${esc(id)}" title="Obróć (np. nuty zapisane na leżąco)" aria-label="Obróć">⟳</button>
+      <button class="act" data-a="edit" data-id="${esc(id)}" title="Edytuj: nazwa, obrót, „to nie nuty”, „nieistotne”" aria-label="Edytuj plik">✎</button>
       <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="Otwórz plik na Dysku">↗</a></label>`;
   }
 
@@ -497,7 +498,7 @@ ${body || '<p>Nic do sprzątania.</p>'}</body></html>`;
     const el = e.target.closest('.dup');
     if (!b || !el) return;
     e.preventDefault();
-    if (b.dataset.a === 'rotate') return A.openRotate(b.dataset.id);
+    if (b.dataset.a === 'edit') return A.openEdit(b.dataset.id);
     if (b.dataset.a === 'trash') return trash(el.dataset.g, el);
     if (b.dataset.a === 'unmark') {
       delete D().cleanup[b.dataset.id];

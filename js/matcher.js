@@ -86,16 +86,19 @@ window.Matcher = (() => {
   }
 
   // Kandydaci: pliki (własna nazwa i nazwa pliku) oraz małe foldery (np. „Barka” ze stronami jako obrazy)
-  function candidates(nodes, meta, idx) {
+  // manual = ręczny wybór pliku (okno „Wybierz plik…”): pomijamy tylko „to nie nuty”; automatyczne dopasowanie pomija też „nieistotne”
+  function candidates(nodes, meta, idx, manual) {
     const out = [];
+    const skip = (id) => { const f = Catalog.flagOf(nodes, meta, id); return manual ? f === 'notes' : !!f; };
     for (const n of Object.values(nodes)) {
       if (n.folder) {
-        if (n.parent === null) continue;
-        const files = (idx.children[n.id] || []).filter((c) => !c.folder).map((c) => c.id);
+        if (n.parent === null || (!manual && skip(n.id))) continue;
+        const files = (idx.children[n.id] || []).filter((c) => !c.folder && !skip(c.id)).map((c) => c.id);
         if (!files.length || files.length > 30) continue;
         const t = split(n.name);
         out.push({ key: 'd:' + n.id, files, all: [...t.main, ...t.extra], folder: true });
       } else {
+        if (skip(n.id)) continue;
         const own = meta[n.id] && meta[n.id].title;
         const names = own ? [own, stripExt(n.name)] : [stripExt(n.name)];
         for (const nm of names) {
