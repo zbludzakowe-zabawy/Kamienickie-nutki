@@ -347,8 +347,24 @@ html[data-mode="admin"] #guest, html[data-mode="admin"] #g-viewer { display: non
 .check { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; cursor: pointer; }
 .check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: none; }
 h3.sub { font-size: 1rem; margin: 16px 0 6px; }
+.pub-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+.pub-box { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--bg); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pub-box h3 { margin: 0; font-size: 1rem; }
+.pub-box p { margin: 0; }
+.pub-box .actions { margin-top: auto; padding-top: 6px; }
+.pub-sum { font-weight: 600; }
 .pub-books { list-style: none; margin: 0 0 14px; padding: 0; border-top: 1px solid var(--line); }
-.pub-books li { display: flex; flex-direction: column; padding: 8px 2px; border-bottom: 1px solid var(--line); }
+.pub-books li { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 4px 14px; align-items: start; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.pub-books li.pub-head { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 6px 2px; }
+.pub-books li.pub-empty { display: block; }
+.pub-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: .9rem; }
+.pub-cell .lbl { display: none; font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+@media (max-width: 760px) {
+  .pub-two { grid-template-columns: 1fr; }
+  .pub-books li { grid-template-columns: 1fr; }
+  .pub-books li.pub-head { display: none; }
+  .pub-cell .lbl { display: block; }
+}
 .pub-progress { margin-top: 14px; }
 .pub-progress .bar { height: 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
 .pub-progress .bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
@@ -358,6 +374,7 @@ h3.sub { font-size: 1rem; margin: 16px 0 6px; }
 .link-row { display: flex; gap: 8px; }
 .link-row input { flex: 1; min-width: 0; min-height: 40px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: .9rem; }
 .warn-text { color: var(--warn); }
+.ok-text { color: var(--ok); }
 
 /* ---------- chórzysta ---------- */
 .guest {
@@ -487,7 +504,7 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 
 /* stan publikacji śpiewnika/programu */
 .pub-row { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
-.pub-state { font-size: .78rem; font-weight: 600; white-space: nowrap; }
+.pub-state { font-size: .82rem; font-weight: 600; }
 .pub-state.ok { color: var(--ok); }
 .pub-state.changed, .pub-state.new { color: var(--warn); }
 
@@ -557,7 +574,7 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .dup-entry:first-child { border-top: none; }
 .dup-entry .btn { align-self: flex-start; }
 
-.pub-others { background: var(--bg); border-radius: 10px; padding: 10px !important; margin-top: 6px; }
+.pub-books li.pub-others { background: var(--bg); border-radius: 10px; padding: 10px; margin-top: 6px; }
 .pub-others-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
 .pub-others-acts .check { margin: 0; }
 .ev-tag { font-weight: 700; color: var(--accent); white-space: nowrap; }

@@ -150,15 +150,18 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
 **Obrót** (`meta[id].rot`, przycisk ⟳ w drzewie i przy plikach w duplikatach → okno `#rot-dlg` z podglądem obrazka, `App.openRotate(id)`): oryginał na Dysku bez zmian.
    Przy publikacji plik z obrotem jest pobierany, obracany (`PdfBuild.rotate`: obraz przez canvas, PDF przez `setRotation`)
    i wgrywany jako kopia; w PDF-ach śpiewników też obrócony. `rot` jest w podpisie (`sig`) i w `copies[id].rot` → zmiana obrotu = „są zmiany”.
-**Wstrzymanie PDF** (`publish.hold[id]`, pole „aktualizuj PDF, jeśli trzeba” przy każdym śpiewniku/programie, domyślnie zaznaczone):
-   odznaczone = przy publikacji PDF się nie przebudowuje (zostaje stary), lista pieśni w aplikacji nadal się aktualizuje.
-   Gdy PDF nie odpowiada stanowi (`status.books[id].stale`), katalog ma `stale:true` + `pdfAt` → chórzysta widzi „PDF może być nieaktualny (stan na …)”.
+**Listy i PDF-y osobno** (decyzja użytkownika: PDF to dużo więcej pracy): dwa pola na górze zakładki – „📋 Listy pieśni w aplikacji”
+   (`#pub-go` → `publish()`: kopie nut + katalog, **bez budowania PDF**) i „📄 PDF-y do pobrania” (`#pub-pdf-go` → `publish({pdfs:true})`:
+   buduje zaznaczone nieaktualne PDF-y, przy okazji zapisuje też katalog). Tabela: Śpiewnik / Lista w aplikacji / PDF.
+   Stan PDF w `computeStatus`: `none` (bez nut) / `missing` / `stale` (`pdfs[id].sig` ≠ podpis) / `ok`; pole „przygotuj ten PDF” = `!publish.hold[id]`.
+   Katalog: `stale:true` + `pdfAt`, gdy PDF jest `stale` → chórzysta widzi „PDF może być nieaktualny (stan na …)”.
+   Nie ma już globalnego przełącznika „Twórz PDF” (`publish.pdf` nieużywane).
 **Identyfikator śpiewnika** (`code`, pole „Identyfikator” obok nazwy spisu w „Spisach pieśni” (`#sb-code`), unikalny; w „Dla chórzystów” tylko podgląd): w programach uroczystości tytuł dostaje dopisek `[N 34]`
    (`Programs.tag`: kod + numer pozycji ze `src`, a dla pieśni dodanej jako plik – pozycja spisu z tymi samymi plikami). Dopisek liczony
    na bieżąco (nie zapisany w tytule) – trafia do `forPublish()`, więc do katalogu i PDF programu.
 5. **Stan aktualności**: po publikacji zapisujemy `publish.sigs[id]` (podpis każdego śpiewnika/programu), `publish.published` (lista id)
-   i `publish.pdfPublished`. `computeStatus()` porównuje bieżące podpisy → przy każdej pozycji „✓ aktualny” / „● są zmiany” / „● nowy”.
-   Gdy nic się nie zmieniło, przycisk to „✓ Wszystko aktualne” (nieaktywny) + link „Aktualizuj mimo to” (np. po zmianie własnych nazw plików,
+   `computeStatus()` porównuje bieżące podpisy → przy każdej pozycji „✓ aktualna” / „● są zmiany” / „● nowa”.
+   Gdy nic się nie zmieniło, przycisk to „✓ Listy aktualne” (nieaktywny) + link „Aktualizuj mimo to” (np. po zmianie własnych nazw plików,
    których podpis nie obejmuje). Po aktualizacji komunikat: „Zaktualizowano: … Bez zmian (pominięte): …”.
    Gałęzi roboczej nie nadpisujemy (`push -f` zablokowane) – po scaleniu PR dołączamy `main` zwykłym `git merge origin/main`.
 

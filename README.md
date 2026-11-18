@@ -84,12 +84,13 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
 - **Nuty na cały ekran**. Przy kilku stronach są strzałki ‹ ›, przyciski ⏮ ⏭ przechodzą do poprzedniej/następnej pieśni,
   a przycisk „wstecz” w telefonie zamyka nuty.
 - **Pobierz PDF ze śpiewnikiem**: spis treści z numerami stron i nuty w kolejności spisu.
-- Administrator w zakładce **„Dla chórzystów”** ustala PIN i klika **Opublikuj / Aktualizuj**. Aplikacja wtedy:
-  - kopiuje potrzebne nuty do folderu `Kamienickie Nutki/Dla chórzystów` (dostęp dla każdego, kto ma link),
-  - składa PDF-y,
-  - zapisuje listę pieśni zaszyfrowaną PIN-em.
+- Administrator w zakładce **„Dla chórzystów”** ustala PIN i ma dwa osobne przyciski:
+  - **„Aktualizuj listy”** (szybko): kopiuje potrzebne nuty do folderu `Kamienickie Nutki/Dla chórzystów` (dostęp dla każdego, kto ma link)
+    i zapisuje listę pieśni zaszyfrowaną PIN-em. PDF-y się nie zmieniają.
+  - **„Przygotuj zaznaczone PDF-y”** (wolniej): składa od nowa PDF-y zaznaczone w kolumnie „PDF” – tylko nieaktualne lub brakujące.
+    Dopóki PDF jest nieaktualny, chórzyści widzą przy nim „PDF może być nieaktualny (stan na …)”.
 
-  Oryginalne pliki zostają prywatne. Przy kolejnych aktualizacjach kopiowane są tylko nowe i zmienione nuty, a PDF powstaje od nowa tylko wtedy, gdy coś się zmieniło.
+  Przy każdym śpiewniku i programie widać osobno stan listy i stan PDF. Oryginalne pliki zostają prywatne, kopiowane są tylko nowe i zmienione nuty.
 - **Link dla chórzystów** (z przyciskiem „Kopiuj”) wysyłasz SMS-em albo na grupę. Zmiana PIN-u działa od razu: chórzyści zostaną poproszeni o nowy.
 
 ## Następne etapy

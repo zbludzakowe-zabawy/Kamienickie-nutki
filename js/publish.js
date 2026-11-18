@@ -12,10 +12,9 @@ window.Publish = (() => {
     if (!d.publish || typeof d.publish !== 'object') d.publish = {};
     const p = d.publish;
     if (p.pin == null) p.pin = '2018';
-    if (p.pdf == null) p.pdf = true;
     p.copies = p.copies || {};
     p.pdfs = p.pdfs || {};
-    p.hold = p.hold || {}; // {id: true} – „Aktualizuj PDF, jeśli trzeba” odznaczone: PDF zostaje taki, jaki jest
+    p.hold = p.hold || {}; // {id: true} – pole „przygotuj” przy PDF odznaczone: przy „Przygotuj PDF-y” ten PDF zostaje, jaki jest
     return p;
   };
   const usable = (it) => (it.state === 'ok' || it.state === 'auto') && it.files.length > 0;
@@ -55,8 +54,8 @@ window.Publish = (() => {
   }));
   const allBooks = () => [...A.data.songbooks, ...programBooks()];
   const held = (id) => !!P().hold[id];
-  // czy chórzyści dostają nieaktualny PDF (wstrzymany przez administratora)
-  const staleOf = (id) => !!(status.books[id] && status.books[id].stale);
+  // czy chórzyści dostają nieaktualny PDF (lista zmieniona, PDF jeszcze nie przebudowany)
+  const staleOf = (id) => !!(status.books[id] && status.books[id].pdf === 'stale');
 
   async function hash(text) {
     const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -91,17 +90,21 @@ window.Publish = (() => {
     const o = O();
     const now = othersNow();
     const fresh = o.snapshot && othersSig(o.snapshot) === othersSig(now);
-    const state = !o.snapshot ? '<span class="pub-state new">● jeszcze nie udostępniony</span>'
-      : fresh ? '<span class="pub-state ok">✓ chórzyści mają aktualną listę</span>' : '<span class="pub-state changed">● lista się zmieniła – zaktualizuj osobno</span>';
+    const off = o.enabled === false;
+    const state = !o.snapshot ? '<span class="pub-state new">● jeszcze nie udostępniona</span>'
+      : fresh ? '<span class="pub-state ok">✓ aktualna</span>' : '<span class="pub-state changed">● lista się zmieniła</span>';
     const d = (iso) => new Date(iso).toLocaleDateString('pl-PL');
-    return `<li class="pub-others"><span class="pub-row"><strong><span class="badge doc">AUTO</span> ${OTHERS_NAME}</strong>${state}</span>
-      <span class="muted small">Nuty nieprzypisane do żadnego spisu, alfabetycznie: teraz ${now.length} ${A.plural(now.length, 'utwór', 'utwory', 'utworów')}${
-        o.snapshot ? ` · u chórzystów: ${o.snapshot.length} (stan na ${d(o.at)})` : ''} · PDF: ${o.pdf ? `${o.pdf.pages} str. (stan na ${d(o.pdf.at)})` : 'brak'}</span>
-      <span class="pub-others-acts">
-        <label class="check small"><input type="checkbox" data-o="enabled"${o.enabled === false ? '' : ' checked'}> widoczny dla chórzystów</label>
-        <button class="btn small" data-o="update"${busy || o.enabled === false ? ' disabled' : ''}>Aktualizuj „Pozostałe nuty”</button>
-        <button class="btn small" data-o="pdf"${busy || o.enabled === false || (!o.snapshot && !now.length) ? ' disabled' : ''}>Utwórz PDF</button>
-      </span></li>`;
+    return `<li class="pub-others">
+      <span class="pub-cell"><strong><span class="badge doc">AUTO</span> ${OTHERS_NAME}</strong>
+        <span class="muted small">Nuty nieprzypisane do żadnego spisu, alfabetycznie – teraz ${now.length} ${A.plural(now.length, 'utwór', 'utwory', 'utworów')}.
+          Aktualizujesz osobno, przyciskami obok.</span>
+        <label class="check small"><input type="checkbox" data-o="enabled"${off ? '' : ' checked'}> widoczny dla chórzystów</label></span>
+      <span class="pub-cell"><span class="lbl">Lista w aplikacji</span>${off ? '<span class="muted small">ukryty</span>' : state}
+        ${o.snapshot && !off ? `<span class="muted small">u chórzystów: ${o.snapshot.length} (stan na ${d(o.at)})</span>` : ''}
+        <span><button class="btn small" data-o="update"${busy || off ? ' disabled' : ''}>Aktualizuj listę</button></span></span>
+      <span class="pub-cell"><span class="lbl">PDF</span>${o.pdf ? `<span class="muted small">${o.pdf.pages} str., stan na ${d(o.pdf.at)}</span>` : '<span class="muted small">brak PDF</span>'}
+        <span><button class="btn small" data-o="pdf"${busy || off || (!o.snapshot && !now.length) ? ' disabled' : ''}>${o.pdf ? 'Utwórz PDF od nowa' : 'Utwórz PDF'}</button></span></span>
+    </li>`;
   }
 
   function catalog() {
@@ -110,7 +113,7 @@ window.Publish = (() => {
       v: 1,
       at: new Date().toISOString(),
       songbooks: A.data.songbooks.map((b) => {
-        const pdf = p.pdf && p.pdfs[b.id];
+        const pdf = p.pdfs[b.id];
         return {
           id: b.id,
           name: b.name,
@@ -128,7 +131,7 @@ window.Publish = (() => {
         };
       }).concat(othersCatalog()),
       programs: programs().map((pr) => {
-        const pdf = p.pdf && p.pdfs[pr.id];
+        const pdf = p.pdfs[pr.id];
         return {
           id: pr.id,
           name: pr.name,
@@ -162,29 +165,28 @@ window.Publish = (() => {
   }
 
   // ---------- co się zmieniło od ostatniej publikacji ----------
-  // Dla każdego śpiewnika/programu pamiętamy „podpis” z ostatniej publikacji (p.sigs).
-  // Stan: 'new' – jeszcze nie opublikowany, 'changed' – są zmiany, 'ok' – chórzyści mają aktualną wersję.
-  let status = { books: {}, removed: [], other: false, any: false };
+  // Lista (szybko) i PDF (wolno) mają osobne stany.
+  // Lista: 'new' – jeszcze nie opublikowana, 'changed' – są zmiany, 'ok' – chórzyści mają aktualną wersję (p.sigs).
+  // PDF: 'none' – śpiewnik bez nut, 'missing' – nie ma PDF, 'stale' – PDF starszy niż śpiewnik, 'ok' – aktualny (p.pdfs[id].sig).
+  let status = { books: {}, removed: [], any: false, pdfTodo: 0, pdfOff: 0 };
   async function computeStatus() {
     const p = P();
     const books = allBooks();
-    const st = { books: {}, removed: [], other: false, any: false };
+    const st = { books: {}, removed: [], any: false, pdfTodo: 0, pdfOff: 0 };
     for (const b of books) {
       const s = await sig(b);
       const prev = (p.sigs && p.sigs[b.id]) || (p.pdfs[b.id] && p.pdfs[b.id].sig);
-      let v = !prev ? 'new' : prev !== s ? 'changed' : 'ok';
-      const pdf = p.pdfs[b.id];
-      // PDF nie odpowiada stanowi śpiewnika (brakuje go, jest stary albo zbędny)
-      const pdfOff = !!p.pdf && (b.items.some(usable) ? !pdf || pdf.sig !== s : !!pdf);
+      const v = !prev ? 'new' : prev !== s ? 'changed' : 'ok';
+      const cur = p.pdfs[b.id];
+      const pdf = !b.items.some(usable) ? 'none' : !cur ? 'missing' : cur.sig !== s ? 'stale' : 'ok';
       const h = held(b.id);
-      if (v === 'ok' && pdfOff && !h) v = 'changed'; // np. włączono tworzenie PDF albo zdjęto wstrzymanie
-      st.books[b.id] = { state: v, sig: s, name: b.name, held: h, stale: h && pdfOff };
+      st.books[b.id] = { state: v, sig: s, name: b.name, pdf, held: h };
       if (v !== 'ok') st.any = true;
+      if (pdf === 'missing' || pdf === 'stale') { st.pdfOff++; if (!h) st.pdfTodo++; }
     }
     const ids = new Set(books.map((b) => b.id));
     st.removed = (p.published || []).filter((id) => !ids.has(id));
-    st.other = !!p.catalogId && (p.pdfPublished != null && p.pdfPublished !== !!p.pdf);
-    if (st.removed.length || st.other || !p.catalogId) st.any = true;
+    if (st.removed.length || !p.catalogId) st.any = true;
     return st;
   }
   let statusRun = 0;
@@ -203,7 +205,6 @@ window.Publish = (() => {
     p.sigs = {};
     for (const [id, x] of Object.entries(status.books)) p.sigs[id] = x.sig;
     p.published = Object.keys(status.books);
-    p.pdfPublished = !!p.pdf;
     delete p.dataAt;
     A.changed();
   }
@@ -223,8 +224,9 @@ window.Publish = (() => {
     const p = P();
     try {
       status = await computeStatus();
-      const updated = Object.values(status.books).filter((x) => x.state !== 'ok').map((x) => x.name + (x.stale && p.pdf ? ' (bez nowego PDF)' : ''));
+      const updated = Object.values(status.books).filter((x) => x.state !== 'ok').map((x) => x.name);
       const same = Object.values(status.books).filter((x) => x.state === 'ok').map((x) => x.name);
+      const pdfDone = [];
       step('Przygotowanie folderu dla chórzystów…', 0.02);
       const folder = await Drive.ensurePublicFolder();
       if (p.folderId !== folder || !p.folderPublic) {
@@ -275,9 +277,12 @@ window.Publish = (() => {
       }
       A.changed();
 
-      // 2. PDF-y śpiewników (tylko gdy coś się zmieniło)
+      // 2. PDF-y śpiewników – tylko przyciskiem „Przygotuj PDF-y” (zaznaczone i nieaktualne)
       const books = allBooks();
-      if (p.pdf) {
+      for (const b of books) { // PDF śpiewnika, w którym nie ma już nut – usuwamy (to szybkie)
+        if (p.pdfs[b.id] && !b.items.some(usable)) { await Drive.deleteFile(p.pdfs[b.id].id).catch(() => undefined); delete p.pdfs[b.id]; }
+      }
+      if (opts.pdfs) {
         const cache = new Map();
         const getBytes = async (fid) => {
           if (!cache.has(fid)) {
@@ -290,11 +295,7 @@ window.Publish = (() => {
         for (let bi = 0; bi < books.length; bi++) {
           const b = books[bi];
           const cur = p.pdfs[b.id];
-          if (held(b.id)) continue; // administrator wstrzymał aktualizację PDF – zostaje poprzedni
-          if (!b.items.some(usable)) {
-            if (cur) { await Drive.deleteFile(cur.id).catch(() => undefined); delete p.pdfs[b.id]; }
-            continue;
-          }
+          if (held(b.id) || !b.items.some(usable)) continue; // odznaczony – PDF zostaje taki, jaki jest
           const s = await sig(b);
           if (cur && cur.sig === s) continue;
           const base = 0.4 + 0.5 * (bi / books.length);
@@ -304,6 +305,7 @@ window.Publish = (() => {
           const up = await Drive.uploadFile(`${b.name}.pdf`, 'application/pdf', new Blob([res.bytes], { type: 'application/pdf' }), folder, cur && cur.id);
           p.pdfs[b.id] = { id: up.id, sig: s, size: res.bytes.length, pages: res.pages, at: new Date().toISOString() };
           problems.push(...res.problems.map((x) => `${b.name}: ${x}`));
+          pdfDone.push(b.name);
           A.changed();
         }
       }
@@ -334,19 +336,23 @@ window.Publish = (() => {
       step('Zapisywanie spisów dla chórzystów…', 0.96);
       await writeCatalog(folder);
       markPublished();
+      status = await computeStatus();
       const summary = (opts.others ? `Zaktualizowano „${OTHERS_NAME}”${opts.othersPdf ? ' (z PDF)' : ''}. ` : '') +
-        (updated.length ? `Zaktualizowano: ${updated.join(', ')}.` : opts.others ? '' : 'Nic nie wymagało aktualizacji.') +
-        (same.length ? ` Bez zmian (pominięte): ${same.join(', ')}.` : '') +
-        (status.removed.length ? ` Usunięto u chórzystów: ${status.removed.length}.` : '');
+        (opts.pdfs ? (pdfDone.length ? `Nowe PDF-y: ${pdfDone.join(', ')}. ` : 'Żaden PDF nie wymagał przygotowania. ') : '') +
+        (updated.length ? `Listy pieśni zaktualizowane: ${updated.join(', ')}.` : opts.others || opts.pdfs ? '' : 'Listy pieśni nie wymagały aktualizacji.') +
+        (same.length && !opts.pdfs ? ` Bez zmian: ${same.join(', ')}.` : '') +
+        (status.removed.length ? ` Usunięto u chórzystów: ${status.removed.length}.` : '') +
+        (!opts.pdfs && status.pdfOff ? ` PDF-y do przygotowania: ${status.pdfOff} – chórzyści widzą przy nich „PDF może być nieaktualny”.` : '');
       step(summary, 1);
       A.toast(problems.length
         ? `Gotowe. Do PDF nie udało się dołączyć ${problems.length} ${A.plural(problems.length, 'pozycji', 'pozycji', 'pozycji')} – lista poniżej.`
         : opts.others ? `Zaktualizowano „${OTHERS_NAME}” u chórzystów${opts.othersPdf ? ' razem z PDF' : ''}.`
-          : updated.length ? `Zaktualizowano dla chórzystów: ${updated.join(', ')}.` : 'Gotowe.', problems.length > 0);
+          : opts.pdfs ? (pdfDone.length ? `Gotowe PDF-y: ${pdfDone.join(', ')}.` : 'Gotowe.')
+            : updated.length ? `Zaktualizowano listy pieśni: ${updated.join(', ')}.` : 'Gotowe.', problems.length > 0);
     } catch (e) {
       A.changed();
       A.handleError(e);
-      step('Przerwano – kliknij „Opublikuj” ponownie, aplikacja dokończy od miejsca przerwania.');
+      step('Przerwano – kliknij przycisk ponownie, aplikacja dokończy od miejsca przerwania.');
     } finally {
       busy = false;
       render();
@@ -378,38 +384,57 @@ window.Publish = (() => {
   }
 
   const STATE_LABEL = {
-    ok: '<span class="pub-state ok">✓ aktualny</span>',
+    ok: '<span class="pub-state ok">✓ aktualna</span>',
     changed: '<span class="pub-state changed">● są zmiany – do aktualizacji</span>',
-    new: '<span class="pub-state new">● nowy – jeszcze nie opublikowany</span>',
+    new: '<span class="pub-state new">● nowa – jeszcze nie opublikowana</span>',
   };
+  const day = (iso) => new Date(iso).toLocaleDateString('pl-PL');
+
+  function pdfCell(b, st) {
+    const pdf = P().pdfs[b.id];
+    const info = pdf ? `${pdf.pages} str., ${(pdf.size / 1048576).toFixed(1)} MB, z ${day(pdf.at)}` : '';
+    if (!st) return info ? `<span class="muted small">${info}</span>` : '';
+    if (st.pdf === 'none') return '<span class="muted small">— brak nut, PDF niepotrzebny</span>';
+    if (st.pdf === 'ok') return `<span class="pub-state ok">✓ aktualny</span><span class="muted small">${info}</span>`;
+    const label = st.pdf === 'missing' ? '<span class="pub-state new">● brak PDF</span>'
+      : `<span class="pub-state changed">● nieaktualny</span><span class="muted small">${info} – chórzyści widzą „PDF może być nieaktualny”</span>`;
+    return `${label}<label class="check small" title="Zaznaczone PDF-y przygotujesz przyciskiem „Przygotuj PDF-y”.">
+      <input type="checkbox" data-hold${st.held ? '' : ' checked'}${busy ? ' disabled' : ''}> przygotuj ten PDF</label>`;
+  }
 
   function paint() {
     const p = P();
     if (document.activeElement !== $('pub-pin')) $('pub-pin').value = p.pin;
-    $('pub-pdf').checked = !!p.pdf;
     const all = allBooks();
+    const head = '<li class="pub-head"><span>Śpiewnik / program</span><span>Lista w aplikacji</span><span>PDF</span></li>';
     $('pub-books').innerHTML = all.length
-      ? all.map((b) => {
+      ? head + all.map((b) => {
         const songs = b.items.filter((it) => !it.section);
         const have = songs.filter(usable).length;
-        const pdf = p.pdfs[b.id];
-        const kind = b.subtitle ? `<span class="badge doc">PROGRAM</span> ` : '';
+        const kind = b.subtitle ? '<span class="badge doc">PROGRAM</span> ' : '';
         const st = status.books[b.id];
         const isBook = !b.subtitle;
-        const h = held(b.id);
-        return `<li data-id="${esc(b.id)}"><span class="pub-row"><strong>${kind}${esc(b.name)}${isBook && b.code ? ` <span class="muted" title="Identyfikator – zmienisz go w „Spisach pieśni”">[${esc(b.code)}]</span>` : ''}</strong>${st ? STATE_LABEL[st.state] : ''}${
-          st && st.stale ? '<span class="pub-state held">⏸ PDF wstrzymany – chórzyści widzą „może być nieaktualny”</span>' : ''}</span>
-          <span class="muted small">${b.subtitle ? esc(b.subtitle) + ' · ' : ''}${have} z ${songs.length} ${A.plural(songs.length, 'pozycji', 'pozycji', 'pozycji')} z nutami${
-          p.pdf && pdf ? ` · PDF: ${pdf.pages} str., ${(pdf.size / 1048576).toFixed(1)} MB, z ${new Date(pdf.at).toLocaleDateString('pl-PL')}` : ''}</span>
-          <span class="pub-opts">${p.pdf ? `<label class="check small" title="Odznacz, gdy często coś zmieniasz – PDF zostanie taki, jaki jest, a chórzyści zobaczą, że może być nieaktualny.">
-              <input type="checkbox" data-hold${h ? '' : ' checked'}${busy ? ' disabled' : ''}> aktualizuj PDF, jeśli trzeba</label>` : ''}</span></li>`;
+        return `<li data-id="${esc(b.id)}">
+          <span class="pub-cell"><strong>${kind}${esc(b.name)}${isBook && b.code ? ` <span class="muted" title="Identyfikator – zmienisz go w „Spisach pieśni”">[${esc(b.code)}]</span>` : ''}</strong>
+            <span class="muted small">${b.subtitle ? esc(b.subtitle) + ' · ' : ''}${have} z ${songs.length} ${A.plural(songs.length, 'pozycji', 'pozycji', 'pozycji')} z nutami</span></span>
+          <span class="pub-cell"><span class="lbl">Lista w aplikacji</span>${st ? STATE_LABEL[st.state] : ''}</span>
+          <span class="pub-cell"><span class="lbl">PDF</span>${pdfCell(b, st)}</span></li>`;
       }).join('')
-      : '<li class="muted">Brak spisów i programów – wczytaj spis w zakładce „Spisy pieśni” albo utwórz program w „Uroczystościach”.</li>';
+      : '<li class="muted pub-empty">Brak spisów i programów – wczytaj spis w zakładce „Spisy pieśni” albo utwórz program w „Uroczystościach”.</li>';
     $('pub-books').insertAdjacentHTML('beforeend', othersRow());
-    const upToDate = !!p.catalogId && !status.any && Object.keys(status.books).length === all.length;
+    const known = Object.keys(status.books).length === all.length;
+    const listTodo = Object.values(status.books).filter((x) => x.state !== 'ok').length + status.removed.length;
+    const upToDate = !!p.catalogId && !status.any && known;
     $('pub-go').disabled = busy || !all.length || upToDate;
-    $('pub-go').textContent = !p.catalogId ? 'Opublikuj dla chórzystów' : upToDate ? '✓ Wszystko aktualne' : 'Aktualizuj dla chórzystów';
+    $('pub-go').textContent = !p.catalogId ? 'Opublikuj listy dla chórzystów' : upToDate ? '✓ Listy aktualne' : `Aktualizuj listy (${listTodo})`;
     $('pub-force').hidden = !upToDate || busy;
+    $('pub-list-sum').innerHTML = !known ? '' : !p.catalogId ? '<span class="warn-text">Jeszcze nic nie opublikowano.</span>'
+      : listTodo ? `<span class="warn-text">Do aktualizacji: ${listTodo}</span>` : '<span class="ok-text">✓ Chórzyści mają aktualne listy</span>';
+    $('pub-pdf-go').disabled = busy || !known || !status.pdfTodo;
+    $('pub-pdf-go').textContent = !known ? 'Przygotuj PDF-y' : status.pdfOff ? `Przygotuj zaznaczone PDF-y (${status.pdfTodo})` : '✓ PDF-y aktualne';
+    $('pub-pdf-sum').innerHTML = !known ? '' : status.pdfOff
+      ? `<span class="warn-text">Nieaktualne lub brakujące: ${status.pdfOff}</span>${status.pdfOff > status.pdfTodo ? ` <span class="muted small">(zaznaczone: ${status.pdfTodo})</span>` : ''}`
+      : '<span class="ok-text">✓ Wszystkie PDF-y aktualne</span>';
     $('pub-pin-save').disabled = busy;
     $('pub-progress').hidden = !busy && !$('pub-status').textContent;
     $('pub-bar').parentElement.hidden = !busy;
@@ -421,9 +446,7 @@ window.Publish = (() => {
     $('pub-preview').hidden = !p.catalogId;
     if (p.catalogId) {
       $('pub-link').value = link();
-      const changed = Object.values(status.books).filter((x) => x.state !== 'ok').length + status.removed.length;
-      $('pub-info').innerHTML = `Ostatnia publikacja: ${new Date(p.at).toLocaleString('pl-PL')}.` +
-        (changed || status.other ? ' <b class="warn-text">Są zmiany – kliknij „Aktualizuj”, żeby chórzyści je zobaczyli.</b>' : ' Chórzyści mają aktualną wersję.');
+      $('pub-info').textContent = `Ostatnia publikacja: ${new Date(p.at).toLocaleString('pl-PL')}.`;
     }
   }
 
@@ -458,10 +481,10 @@ window.Publish = (() => {
     if (P().catalogId) publish({ others: true }); // zmiana widoczności = od razu aktualizacja u chórzystów
     else paint();
   });
-  $('pub-force').addEventListener('click', publish);
+  $('pub-force').addEventListener('click', () => publish());
+  $('pub-pdf-go').addEventListener('click', () => publish({ pdfs: true }));
   $('pub-pin-save').addEventListener('click', savePin);
   $('pub-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') savePin(); });
-  $('pub-pdf').addEventListener('change', (e) => { P().pdf = e.target.checked; A.changed(); render(); });
   $('pub-copy').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText($('pub-link').value);
