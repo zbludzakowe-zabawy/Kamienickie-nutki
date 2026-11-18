@@ -78,7 +78,7 @@ przy połączeniu wygrywa nowszy `updatedAt`):
 { app, v, updatedAt, scannedAt, newAt,
   roots: [{id, name}],                      // wybrane foldery
   nodes: {id: {id, name, parent, folder?, kind:'pdf'|'img', size, modified, md5, added}},  // klucz = id pliku (dla skrótów – id celu)
-  meta:  {fileId: {title, rot, page}},      // własne nazwy; rot = obrót 90/180/270°; page = kolejność strony (⇅) – tylko w aplikacji
+  meta:  {fileId: {title, rot, page, notNotes, ignore}},  // własne nazwy; rot = obrót 90/180/270°; page = kolejność strony (⇅); notNotes = „to nie nuty”; ignore = „nieistotne” (też dla folderów) – tylko w aplikacji
   songbooks: [{id, name, code, source, importedAt,   // code = identyfikator do 3 znaków (Z, N…), nowe: A01, A02… (App.nextCode)
                items: [{no, title, alt?:[tytuły alternatywne], state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
   programs: [{id, name, date:'YYYY-MM-DD', createdAt,
@@ -118,6 +118,14 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
 „Kopiuj” tworzy kopię bez daty. Puste części są ukryte u chórzystów i w PDF. PDF programu = pseudo-śpiewnik z wierszami `section`.
 
 ## Porządkowanie: duplikaty i „Pozostałe nuty”
+
+- **„To nie nuty” i „nieistotne”** (decyzja użytkownika): `meta[id].notNotes` (ikona skreślonej nutki, `#i-nonote` w index.html) i `meta[id].ignore`
+  (👻; plik albo folder – dziedziczą wszystkie pliki w środku). `Catalog.flagOf(nodes, meta, id)` → `'notes'|'ignore'|'ignoreDir'|''`.
+  Pomijane: `Matcher.candidates` (automatyczne dopasowanie; ręczny wybór `candidates(…, true)` pomija tylko „to nie nuty”), `Dups.files()`
+  (duplikaty i „Pozostałe nuty”), filtr „nieprzypisane”. Pliki zostają w drzewie (wyszarzone, tag) – filtr „Oznaczone”, żeby odznaczyć.
+  „To nie nuty” niedostępne dla pliku używanego w śpiewniku (`ok`/`auto`) albo programie (`usedIn`). Po zmianie: `afterFlags()` = rematch + `Dups.detect(true)`.
+  UI: przy pliku ✎ → okno `#edit-dlg` (`App.openEdit`: nazwa, „⟳ Obróć…” → `#rot-dlg`, oba oznaczenia; wykluczają się) – w drzewie i w duplikatach.
+  Przy folderze 👻 (`data-ghost`, widoczny po najechaniu jak ↻; włączony – zawsze). Osobnego ⟳ w drzewie już nie ma.
 
 - **Szukaj duplikatów** (przycisk obok „Skanuj Dysk”, tylko po skanowaniu) – grupy: `m:<md5>` identyczna treść (md5 z Dysku, pobierane
   od tej wersji przy skanowaniu – starsze skany go nie mają), `n:<klucz nazwy>` ta sama nazwa (Twoja albo pliku, bez numerów stron i „kopia”)
