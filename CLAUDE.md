@@ -178,7 +178,7 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
 
 **Zgłoszenia od chórzystów** (`js/reports.js`, `window.Reports`; decyzja użytkownika: Formularz Google): chórzysta nie ma zapisu na Dysku,
    więc ⚠ w podglądzie nut (`#g-report` → `#g-report-dlg`: powody `REASONS` jako przełączniki, komentarz, imię w `kn-guest-name`)
-   wysyła `fetch(no-cors, POST)` na `formResponse` Formularza Google dyrygenta – jedno pole „Akapit” z JSON-em
+   wysyła `fetch(no-cors, POST)` na `formResponse` Formularza Google dyrygenta – jedno pole „Długa odpowiedź” (dawniej „Akapit”) z JSON-em
    `{v, at, kind:'s'|'p', book, bookName, i, no, part, title, files:[id kopii], page, reasons, note, name}`. Adres i pole (`report:{url, entry}`)
    są w zaszyfrowanym katalogu (tylko gdy ustawione). Odpowiedzi idą do arkusza dyrygenta → `Drive.exportCsv(sheetId)` → `data.reports.list`.
    Ustawienia: `data.reports.form` z linku „wstępnie wypełnionego” (`parseForm`) i linku arkusza; zapis = od razu `Publish.saveCatalog()`.
