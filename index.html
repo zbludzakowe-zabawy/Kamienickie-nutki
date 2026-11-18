@@ -40,7 +40,7 @@
     <button role="tab" data-tab="files">Nuty na Dysku</button>
     <button role="tab" data-tab="songs">Spisy pieśni</button>
     <button role="tab" data-tab="events">Uroczystości</button>
-    <button role="tab" data-tab="choir">Dla chórzystów</button>
+    <button role="tab" data-tab="choir">Dla chórzystów <span class="tab-badge" id="rep-badge" hidden title="Nowe zgłoszenia od chórzystów"></span></button>
   </nav>
 
   <section class="card lock" id="admin-lock">
@@ -202,6 +202,38 @@
    </div>
 
    <div data-panel="choir" class="panel" hidden>
+    <section class="card" id="rep-card">
+      <div class="card-head"><h2>⚠ Zgłoszenia od chórzystów</h2><span class="small" id="rep-state"></span></div>
+      <p class="muted small" style="margin-top:0">Chórzyści przy otwartych nutach mogą kliknąć „⚠ Zgłoś problem” (np. nie te nuty, trzeba obrócić, nieczytelne).
+        Zgłoszenia dotyczące tego samego pliku są połączone. ✎ przy pliku otwiera edycję (nazwa, obrót, „to nie nuty”, „nieistotne”).</p>
+      <div class="rep-bar">
+        <button class="btn" id="rep-fetch">↻ Sprawdź zgłoszenia</button>
+        <label class="check small"><input type="checkbox" id="rep-showdone"> pokaż też załatwione</label>
+        <span class="muted small" id="rep-info"></span>
+      </div>
+      <div id="rep-list" class="rep-list"></div>
+      <details class="rep-setup" id="rep-setup">
+        <summary>Ustawienia zgłoszeń (Formularz Google)</summary>
+        <ol class="rep-howto small">
+          <li>Wejdź na <a href="https://forms.google.com" target="_blank" rel="noopener">forms.google.com</a> → <b>Pusty formularz</b>. Tytuł np. „Zgłoszenia – Kamienickie Nutki”.</li>
+          <li>Pierwsze pytanie: typ <b>Akapit</b>, treść „Zgłoszenie”. Innych pytań nie dodawaj.</li>
+          <li>Zakładka <b>Ustawienia → Odpowiedzi</b>: „Zbieraj adresy e-mail” – <b>Nie zbieraj</b>; „Ogranicz do 1 odpowiedzi” – <b>wyłączone</b>
+            (inaczej chórzyści musieliby się logować).</li>
+          <li>Zakładka <b>Odpowiedzi → Połącz z Arkuszami</b> → „Utwórz nowy arkusz”. Otwórz arkusz i skopiuj jego adres z paska przeglądarki – wklej poniżej.</li>
+          <li>W formularzu menu <b>⋮ → Pobierz link do wstępnie wypełnionego formularza</b>. W polu wpisz „x”, kliknij <b>Pobierz link → Kopiuj link</b> – wklej poniżej.</li>
+          <li>Kliknij <b>Zapisz</b>, potem <b>Wyślij zgłoszenie testowe</b> i <b>↻ Sprawdź zgłoszenia</b> – powinno pojawić się „Zgłoszenie testowe”.</li>
+        </ol>
+        <label class="ed-field"><span>Link do wstępnie wypełnionego formularza</span>
+          <input id="rep-form" type="url" placeholder="https://docs.google.com/forms/d/e/…/viewform?usp=pp_url&entry.…=x" autocomplete="off"></label>
+        <label class="ed-field"><span>Link do arkusza z odpowiedziami</span>
+          <input id="rep-sheet" type="url" placeholder="https://docs.google.com/spreadsheets/d/…/edit" autocomplete="off"></label>
+        <div class="actions">
+          <button class="btn primary" id="rep-save">Zapisz</button>
+          <button class="btn" id="rep-test">Wyślij zgłoszenie testowe</button>
+        </div>
+        <p class="muted small">Link do formularza trafia tylko do zaszyfrowanego katalogu – zgłaszać mogą osoby, które znają PIN.</p>
+      </details>
+    </section>
     <section class="card">
       <div class="card-head"><h2>Dla chórzystów</h2></div>
       <p>Chórzyści otwierają aplikację na telefonie <b>bez logowania</b>. Po wpisaniu PIN-u widzą wszystkie spisy pieśni,
@@ -355,12 +387,31 @@
         <span id="g-vpos"></span>
         <button type="button" class="g-icon" id="g-next" aria-label="Następna strona">›</button>
       </div>
+      <button type="button" class="g-icon g-report" id="g-report" aria-label="Zgłoś problem z nutami" title="Zgłoś problem z nutami" hidden>⚠</button>
       <a class="g-icon" id="g-open" target="_blank" rel="noopener" aria-label="Otwórz w Dysku Google" title="Otwórz w Dysku Google">↗</a>
       <button type="button" class="g-icon" id="g-full" aria-label="Pełny ekran" title="Pełny ekran">⛶</button>
     </div>
     <p class="g-offline" id="g-offline" hidden>Brak internetu – nuty otworzą się po połączeniu.</p>
     <iframe id="g-frame" title="Nuty" allow="fullscreen"></iframe>
   </div>
+
+  <dialog id="g-report-dlg" aria-labelledby="gr-title">
+    <form class="picker" method="dialog" id="gr-form">
+      <h2 id="gr-title">Zgłoś problem z nutami</h2>
+      <p style="margin:0"><b id="gr-song"></b><br><span class="muted small" id="gr-src"></span></p>
+      <p class="muted small" style="margin:0">Co jest nie tak? (możesz zaznaczyć kilka)</p>
+      <div class="gr-reasons" id="gr-reasons"></div>
+      <label class="ed-field"><span>Komentarz <span class="muted small">(nieobowiązkowy)</span></span>
+        <textarea id="gr-note" rows="2" maxlength="500" placeholder="np. brakuje drugiej zwrotki"></textarea></label>
+      <label class="ed-field"><span>Twoje imię <span class="muted small">(nieobowiązkowe)</span></span>
+        <input id="gr-name" type="text" maxlength="60" autocomplete="given-name"></label>
+      <p class="small" id="gr-msg" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button class="btn" type="button" id="gr-cancel">Anuluj</button>
+        <button class="btn primary" type="submit" id="gr-send">Wyślij do dyrygenta</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="chooser" aria-labelledby="chooser-title">
     <div class="picker">
@@ -422,6 +473,7 @@
   <script src="js/pdfbuild.js"></script>
   <script src="js/programs.js"></script>
   <script src="js/publish.js"></script>
+  <script src="js/reports.js"></script>
   <script src="js/guest.js"></script>
   <script src="js/pwa.js"></script>
 </body>

@@ -833,6 +833,7 @@
     document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== name; });
     try { localStorage.setItem(TAB_KEY, name); } catch (e) { /* trudno */ }
     if (name === 'choir' && window.Publish) Publish.render();
+    if (name === 'choir' && window.Reports) Reports.autoFetch();
     if (name === 'events' && window.Programs) Programs.render();
   }
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
@@ -843,7 +844,7 @@
     get data() { return data; },
     get idx() { return idx; },
     changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt, cleanCode, nextCode,
-    orderFiles, openOrder, songKey, openRotate, openEdit,
+    orderFiles, openOrder, songKey, openRotate, openEdit, showTab,
   };
 
   // ---------- zdarzenia ----------

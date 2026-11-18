@@ -176,6 +176,16 @@ albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty
    których podpis nie obejmuje). Po aktualizacji komunikat: „Zaktualizowano: … Bez zmian (pominięte): …”.
    Gałęzi roboczej nie nadpisujemy (`push -f` zablokowane) – po scaleniu PR dołączamy `main` zwykłym `git merge origin/main`.
 
+**Zgłoszenia od chórzystów** (`js/reports.js`, `window.Reports`; decyzja użytkownika: Formularz Google): chórzysta nie ma zapisu na Dysku,
+   więc ⚠ w podglądzie nut (`#g-report` → `#g-report-dlg`: powody `REASONS` jako przełączniki, komentarz, imię w `kn-guest-name`)
+   wysyła `fetch(no-cors, POST)` na `formResponse` Formularza Google dyrygenta – jedno pole „Akapit” z JSON-em
+   `{v, at, kind:'s'|'p', book, bookName, i, no, part, title, files:[id kopii], page, reasons, note, name}`. Adres i pole (`report:{url, entry}`)
+   są w zaszyfrowanym katalogu (tylko gdy ustawione). Odpowiedzi idą do arkusza dyrygenta → `Drive.exportCsv(sheetId)` → `data.reports.list`.
+   Ustawienia: `data.reports.form` z linku „wstępnie wypełnionego” (`parseForm`) i linku arkusza; zapis = od razu `Publish.saveCatalog()`.
+   Karta `#rep-card` na górze „Dla chórzystów”, licznik `#rep-badge` na zakładce; `autoFetch` przy wejściu w zakładkę (co ≥2 min).
+   Grupowanie po oryginałach (kopia → oryginał z `publish.copies`), ✎ = `App.openEdit`, „Pokaż w spisie” = `Songs.reveal(book, i)`,
+   „✓ Załatwione” = `data.reports.done[key]`. „Wyślij zgłoszenie testowe” sprawdza konfigurację.
+
 Chórzysta: `Drive.publicText(catalogId)` (klucz API) → PIN → katalog; kopia koperty w localStorage (`kn-guest-env`), PIN w `kn-guest-pin`.
 Nuty: `<iframe src="https://drive.google.com/file/d/<id>/preview">` (nowa ramka na każdy plik, żeby nie psuć historii „wstecz”).
 PDF: `https://drive.google.com/uc?export=download&id=<pdfId>`.

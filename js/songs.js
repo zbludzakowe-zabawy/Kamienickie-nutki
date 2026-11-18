@@ -544,5 +544,16 @@ window.Songs = (() => {
     });
   });
 
-  return { render, rematchAll };
+  // przejście do pozycji spisu (np. ze zgłoszenia chórzysty)
+  function reveal(bookId, i) {
+    if (!books().find((b) => b.id === bookId)) return false;
+    setCurrent(bookId);
+    $('sb-q').value = '';
+    render();
+    const row = $('sb-list').querySelector(`.song[data-i="${i}"]`);
+    if (row) { row.scrollIntoView({ block: 'center' }); row.classList.add('flash'); }
+    return true;
+  }
+
+  return { render, rematchAll, reveal };
 })();

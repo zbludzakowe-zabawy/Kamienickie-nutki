@@ -130,6 +130,8 @@ window.Publish = (() => {
           })),
         };
       }).concat(othersCatalog()),
+      // formularz zgłoszeń od chórzystów (adres wysyłki i pole) – tylko gdy ustawiony
+      ...(window.Reports && Reports.target() ? { report: Reports.target() } : {}),
       programs: programs().map((pr) => {
         const pdf = p.pdfs[pr.id];
         return {
@@ -496,5 +498,14 @@ window.Publish = (() => {
   });
   $('pub-preview').addEventListener('click', () => Guest.enter(P().catalogId));
 
-  return { render };
+  // zapis samego katalogu (np. po ustawieniu formularza zgłoszeń) – chórzyści dostają zmianę od razu
+  async function saveCatalog() {
+    const p = P();
+    if (!p.catalogId) return false;
+    if (!(await A.ensureConnected())) return false;
+    await writeCatalog(p.folderId);
+    return true;
+  }
+
+  return { render, saveCatalog };
 })();
