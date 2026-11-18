@@ -62,7 +62,7 @@ window.Catalog = (() => {
                 if (mime === Drive.FOLDER) {
                   if (visited.has(id)) {
                     const n = nodes[id];
-                    if (!viaShortcut && n && n.viaShortcut && n.parent !== null) { n.parent = parent; n.name = f.name; delete n.viaShortcut; }
+                    if (!viaShortcut && n && n.viaShortcut && n.parent !== null) { n.parent = parent; n.name = f.name; delete n.viaShortcut; delete n.real; delete n.realName; }
                     continue; // ten sam folder w kilku miejscach / pętla skrótów
                   }
                   visited.add(id);
@@ -101,7 +101,52 @@ window.Catalog = (() => {
     for (const n of Object.values(nodes)) {
       if (n.folder && n.parent !== null && !idx.counts[n.id]) delete nodes[n.id];
     }
+    onProgress && onProgress({ folders, files, shortcuts: true });
+    await resolveShortcuts(nodes);
     return { nodes, scannedAt: now, files };
+  }
+
+  // Skróty, których cel leży poza wybranymi folderami: pytamy Dysk o prawdziwe położenie (n.real = „Mój dysk / Muzyka / …”)
+  // i uzupełniamy rozmiar, datę i „odcisk” (md5) pliku. Pliki z prawdziwym położeniem w skanie nie mają viaShortcut.
+  async function resolveShortcuts(nodes) {
+    const names = {};
+    const folderName = async (id) => {
+      if (!(id in names)) {
+        try {
+          const f = await Drive.meta(id, 'name,parents');
+          names[id] = { name: f.parents && f.parents.length ? f.name : f.name === 'My Drive' ? 'Mój dysk' : f.name, parent: f.parents && f.parents[0] };
+        } catch (e) {
+          if (e instanceof Drive.AuthError) throw e;
+          names[id] = { name: '(folder niedostępny)', parent: null };
+        }
+      }
+      return names[id];
+    };
+    const pathFrom = async (pid) => {
+      const parts = [];
+      for (let g = 0; pid && g < 30; g++) {
+        const f = await folderName(pid);
+        parts.unshift(f.name);
+        pid = f.parent;
+      }
+      return parts.join(' / ');
+    };
+    for (const n of Object.values(nodes)) {
+      if (!n.viaShortcut || n.parent === null) continue;
+      try {
+        const f = await Drive.meta(n.id, n.folder ? 'name,parents' : 'name,parents,size,modifiedTime,md5Checksum');
+        n.real = f.parents && f.parents.length ? await pathFrom(f.parents[0]) : 'udostępniony innej osoby';
+        n.realName = f.name;
+        if (!n.folder) {
+          n.size = Number(f.size) || 0;
+          n.modified = f.modifiedTime || null;
+          n.md5 = f.md5Checksum || null;
+        }
+      } catch (e) {
+        if (e instanceof Drive.AuthError) throw e;
+        n.real = '(brak dostępu do oryginału)';
+      }
+    }
   }
 
   // Odświeża jeden folder (z podfolderami) – reszta listy zostaje bez zmian.

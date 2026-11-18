@@ -565,6 +565,8 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .dup-main a:hover { text-decoration: underline; }
 .dup-tag { font-size: .7rem; font-weight: 700; border-radius: 999px; padding: 0 7px; border: 1px solid currentColor; white-space: nowrap; }
 .dup-tag.keep { color: var(--ok); }
+.sc-tag { font-size: .72rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 999px; padding: 0 8px; align-self: flex-start; margin-top: 2px; overflow-wrap: anywhere; }
+.row.folder .sc-tag { margin: 0 6px; align-self: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dup-tag.del { color: var(--pdf); }
 .names .dup-tag { align-self: flex-start; margin-top: 2px; }
 .dup-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
