@@ -208,6 +208,11 @@ window.Drive = (() => {
     return (await api(`${API}/files/${encodeURIComponent(id)}/export?mimeType=text/plain`)).text();
   }
 
+  // arkusz Google jako CSV (odpowiedzi z formularza zgłoszeń)
+  async function exportCsv(id) {
+    return (await api(`${API}/files/${encodeURIComponent(id)}/export?mimeType=text/csv`)).text();
+  }
+
   async function listSharedDrives() {
     try {
       const r = await (await api(`${API}/drives?${qs({ pageSize: 100, fields: 'drives(id,name)' })}`)).json();
@@ -360,7 +365,7 @@ window.Drive = (() => {
   return {
     FOLDER, SHORTCUT, AuthError,
     init, connect, disconnect, isConnected, onChange, rememberEmail,
-    about, meta, listChildren, listFolders, listFoldersAndDocs, listSharedDrives, download, exportText,
+    about, meta, listChildren, listFolders, listFoldersAndDocs, listSharedDrives, download, exportText, exportCsv,
     findDataFile, readJson, createJson, updateJson, ensureAppFolder, moveInto,
     ensurePublicFolder, makePublic, copyFile, uploadFile, deleteFile, publicText,
   };

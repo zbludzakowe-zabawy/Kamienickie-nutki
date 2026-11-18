@@ -4,7 +4,7 @@ window.Guest = (() => {
   const cfg = window.KN_CONFIG;
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-  const K = { mode: 'kn-mode', id: 'kn-guest-id', pin: 'kn-guest-pin', env: 'kn-guest-env', only: 'kn-guest-only' };
+  const K = { mode: 'kn-mode', id: 'kn-guest-id', pin: 'kn-guest-pin', env: 'kn-guest-env', only: 'kn-guest-only', name: 'kn-guest-name' };
   const get = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const put = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* trudno */ } };
 
@@ -104,6 +104,8 @@ window.Guest = (() => {
   // program jako płaska lista pieśni (do przechodzenia ⏮ ⏭ w kolejności uroczystości)
   const flat = (pr) => ({
     id: pr.id,
+    name: pr.name,
+    kind: 'p',
     base: `#/p/${encodeURIComponent(pr.id)}`,
     items: pr.parts.flatMap((pt) => pt.items.map((it) => ({ ...it, part: pt.name }))),
   });
@@ -246,6 +248,7 @@ window.Guest = (() => {
     $('g-vname').textContent = it.note ? `${it.title} – ${it.note}` : it.title;
     const base = b.base || `#/s/${encodeURIComponent(b.id)}`;
     showFile();
+    $('g-report').hidden = !(catalog && catalog.report);
     // poprzednia/następna pieśń z nutami
     const prev = findSong(b, i, -1);
     const next = findSong(b, i, 1);
@@ -292,8 +295,57 @@ window.Guest = (() => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
   }
 
+  // ---------- zgłoszenie problemu (Formularz Google dyrygenta, bez logowania) ----------
+  const REASONS = ['nie te nuty', 'trzeba obrócić', 'nieczytelne', 'brakuje strony', 'złe miejsce w spisie', 'inne'];
+  let reportFor = null;
+  function openReport() {
+    if (!viewer || !catalog || !catalog.report) return;
+    const b = viewer.b;
+    const it = b.items[viewer.i];
+    reportFor = { b, i: viewer.i, it, page: viewer.f + 1 };
+    $('gr-song').textContent = (it.no ? it.no + '. ' : '') + it.title;
+    $('gr-src').textContent = b.kind === 'p' ? `Uroczystość „${b.name}”${it.part ? ' · ' + it.part : ''}` : `Śpiewnik „${b.name}”`;
+    $('gr-reasons').innerHTML = REASONS.map((r) => `<label><input type="checkbox" value="${esc(r)}">${esc(r)}</label>`).join('');
+    $('gr-note').value = '';
+    $('gr-name').value = get(K.name) || '';
+    $('gr-msg').textContent = '';
+    $('gr-msg').className = 'small';
+    $('gr-send').disabled = false;
+    $('g-report-dlg').showModal();
+  }
+  async function sendReport(e) {
+    e.preventDefault();
+    const x = reportFor;
+    if (!x) return;
+    const reasons = [...$('gr-reasons').querySelectorAll('input:checked')].map((c) => c.value);
+    const note = $('gr-note').value.trim();
+    if (!reasons.length && !note) { $('gr-msg').textContent = 'Zaznacz, co jest nie tak, albo dopisz komentarz.'; $('gr-msg').className = 'small warn-text'; return; }
+    const name = $('gr-name').value.trim();
+    put(K.name, name || null);
+    const payload = {
+      v: 1, at: new Date().toISOString(), kind: x.b.kind === 'p' ? 'p' : 's', book: x.b.id, bookName: x.b.name,
+      i: x.i, no: x.it.no || '', part: x.it.part || '', title: x.it.title, files: x.it.files, page: x.page, reasons, note, name,
+    };
+    $('gr-send').disabled = true;
+    $('gr-msg').textContent = 'Wysyłanie…';
+    $('gr-msg').className = 'small';
+    try {
+      await fetch(catalog.report.url, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ [catalog.report.entry]: JSON.stringify(payload) }) });
+      $('gr-msg').textContent = '✓ Dziękujemy! Dyrygent zobaczy zgłoszenie.';
+      $('gr-msg').className = 'small ok-text';
+      setTimeout(() => $('g-report-dlg').close(), 1400);
+    } catch (err) {
+      $('gr-send').disabled = false;
+      $('gr-msg').textContent = navigator.onLine ? 'Nie udało się wysłać – spróbuj za chwilę.' : 'Brak internetu – wyślij, gdy połączysz się z siecią.';
+      $('gr-msg').className = 'small warn-text';
+    }
+  }
+
   // ---------- zdarzenia ----------
   if (mode === 'guest') {
+    $('g-report').addEventListener('click', openReport);
+    $('gr-form').addEventListener('submit', sendReport);
+    $('gr-cancel').addEventListener('click', () => $('g-report-dlg').close());
     $('g-close').addEventListener('click', () => {
       const m = location.hash.match(/^#\/([sp])\/([^/]+)/);
       if (history.length > 1 && /\/\d+$/.test(location.hash)) history.back();

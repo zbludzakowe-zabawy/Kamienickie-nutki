@@ -91,6 +91,10 @@ Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/
     Dopóki PDF jest nieaktualny, chórzyści widzą przy nim „PDF może być nieaktualny (stan na …)”.
 
   Przy każdym śpiewniku i programie widać osobno stan listy i stan PDF. Oryginalne pliki zostają prywatne, kopiowane są tylko nowe i zmienione nuty.
+- **Zgłoszenia od chórzystów**: przy otwartych nutach chórzysta klika **⚠** i zaznacza, co jest nie tak (nie te nuty, trzeba obrócić, nieczytelne,
+  brakuje strony, złe miejsce w spisie, inne), może dopisać komentarz i imię. Zgłoszenia trafiają do Formularza Google dyrygenta
+  (jednorazowa konfiguracja – instrukcja w zakładce „Dla chórzystów”), a administrator widzi je w karcie **„Zgłoszenia od chórzystów”**
+  z plikiem do poprawienia (✎), miejscem, z którego przyszło zgłoszenie, i przyciskiem „✓ Załatwione”.
 - **Link dla chórzystów** (z przyciskiem „Kopiuj”) wysyłasz SMS-em albo na grupę. Zmiana PIN-u działa od razu: chórzyści zostaną poproszeni o nowy.
 
 ## Następne etapy
