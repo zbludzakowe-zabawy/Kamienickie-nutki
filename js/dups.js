@@ -261,7 +261,7 @@ window.Dups = (() => {
     return `<label class="dup-file${remove.has(id) ? ' del' : ''}"><input type="checkbox" data-id="${esc(id)}"${g.status === 'resolved' && kept ? ' checked' : ''}>
       <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span>
       <span class="dup-main"><span><b>${esc((m && m.title) || n.name)}</b>${m && m.title ? ` <span class="muted small">${esc(n.name)}</span>` : ''} ${tag}${m && m.rot ? ` <span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}</span>
-        <span class="muted small"><a href="${folderUrl(n.parent)}" target="_blank" rel="noopener" title="${n.viaShortcut ? 'Folder ze skrótem do tego pliku (prawdziwy plik leży poza wybranymi folderami)' : 'Otwórz folder na Dysku'}">📁 ${esc(Catalog.pathOf(A.data.nodes, id) || 'Mój dysk')}${n.viaShortcut ? ' (przez skrót)' : ''}</a>
+        <span class="muted small"><a href="${folderUrl(n.parent)}" target="_blank" rel="noopener" title="${n.viaShortcut ? 'Folder ze skrótem do tego pliku (prawdziwy plik leży poza wybranymi folderami)' : 'Otwórz folder na Dysku'}">📁 ${esc(Catalog.pathOf(A.data.nodes, id) || 'Mój dysk')}${n.viaShortcut ? ' (przez skrót)' : ''}</a>${n.viaShortcut && n.real ? ` <span class="muted small">· oryginał: ${esc(n.real)}</span>` : ''}
         · ${fmtSize(n.size)}${n.modified ? ' · ' + new Date(n.modified).toLocaleDateString('pl-PL') : ''}${use[id] ? ' · używany: ' + esc(use[id].join(', ')) : ' · nieużywany'}</span></span>
       <button class="act" data-a="rotate" data-id="${esc(id)}" title="Obróć (np. nuty zapisane na leżąco)" aria-label="Obróć">⟳</button>
       <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="Otwórz plik na Dysku">↗</a></label>`;

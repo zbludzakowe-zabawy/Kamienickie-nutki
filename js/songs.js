@@ -214,7 +214,7 @@ window.Songs = (() => {
     const m = A.data.meta[id];
     const label = (m && m.title) || n.name;
     const path = Catalog.pathOf(A.data.nodes, id);
-    return `<a class="chip" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="${esc(path + ' / ' + n.name)}">
+    return `<a class="chip" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="${esc(n.viaShortcut ? `skrót w: ${path} · oryginał: ${n.real || 'poza wybranymi folderami'}` : path + ' / ' + n.name)}">
       <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span><span class="chip-name">${esc(label)}</span>${m && m.title ? `<span class="chip-orig">${esc(n.name)}</span>` : ''}</a>`;
   }
   const chips = (files) => files.map(chip).join('');

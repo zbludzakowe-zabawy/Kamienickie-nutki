@@ -266,6 +266,13 @@
     return n;
   }
 
+  // Skrót do pliku/folderu, którego oryginał leży poza wybranymi folderami – pokazujemy, gdzie jest naprawdę.
+  function shortcutTag(n) {
+    if (!n.viaShortcut || n.parent === null) return '';
+    const where = n.real ? `oryginał: ${n.real}` : 'oryginał poza wybranymi folderami (zeskanuj ponownie, żeby zobaczyć gdzie)';
+    return `<span class="sc-tag" title="Tu jest tylko skrót. ${esc(where)}">↪ skrót · ${esc(where)}</span>`;
+  }
+
   async function doScan() {
     if (!data.roots.length) return toast('Najpierw dodaj folder z nutami.');
     if (!(await ensureConnected())) return;
@@ -274,7 +281,7 @@
     $('scan-info').textContent = 'Skanowanie…';
     try {
       const res = await Catalog.scan(data.roots, data.nodes, (p) => {
-        $('scan-info').textContent = `Skanowanie… ${p.folders} ${plural(p.folders, 'folder', 'foldery', 'folderów')}, ${p.files} ${plural(p.files, 'plik', 'pliki', 'plików')} z nutami`;
+        $('scan-info').textContent = `Skanowanie… ${p.folders} ${plural(p.folders, 'folder', 'foldery', 'folderów')}, ${p.files} ${plural(p.files, 'plik', 'pliki', 'plików')} z nutami${p.shortcuts ? ' · sprawdzanie skrótów…' : ''}`;
       });
       data.nodes = res.nodes;
       data.scannedAt = res.scannedAt;
@@ -487,7 +494,7 @@
           <button class="act" data-act="save" title="Zapisz" aria-label="Zapisz nazwę">✓</button></div>`;
       }
       return `<div class="row file" data-id="${esc(n.id)}" style="--d:${d}">${badge}
-        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}${m && m.page ? `<span class="page-tag">str. ${m.page}</span>` : ''}</div>
+        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}${m && m.page ? `<span class="page-tag">str. ${m.page}</span>` : ''}${shortcutTag(n)}</div>
         ${(sib[n.id] || []).length > 1 ? `<button class="act" data-act="order" title="Kolejność stron tej pieśni (${sib[n.id].length} pliki w tym folderze)" aria-label="Kolejność stron">⇅</button>` : ''}
         <button class="act" data-act="edit" title="Nadaj własną nazwę" aria-label="Nadaj własną nazwę">✎</button>
         <button class="act" data-act="rotate" title="Obróć (np. nuty zapisane na leżąco)" aria-label="Obróć">⟳</button>
@@ -500,7 +507,7 @@
       const open = filtering || ui.expanded.has(n.id);
       const cnt = filtering ? visible[n.id] : idx.counts[n.id] || 0;
       let s = `<div class="row folder${open ? ' open' : ''}" data-id="${esc(n.id)}" style="--d:${d}" role="button" tabindex="0" aria-expanded="${open}">
-        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span><span class="cnt">${cnt}</span>
+        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span>${shortcutTag(n)}<span class="cnt">${cnt}</span>
         <button class="act refresh${ui.refreshing === n.id ? ' spin' : ''}" data-refresh="${esc(n.id)}" title="Odśwież tylko ten folder" aria-label="Odśwież folder ${esc(n.name)}"${ui.scanning ? ' disabled' : ''}>↻</button></div>`;
       if (open) s += (idx.children[n.id] || []).map((ch) => node(ch, d + 1)).join('');
       return s;

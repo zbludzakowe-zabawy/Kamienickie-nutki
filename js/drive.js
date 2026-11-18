@@ -197,6 +197,9 @@ window.Drive = (() => {
     return { folders: folders.sort(by), docs: docs.sort(by) };
   }
 
+  // metadane jednego pliku/folderu (np. prawdziwe położenie celu skrótu)
+  const meta = async (id, fields) => (await api(`${API}/files/${encodeURIComponent(id)}?${qs({ fields, supportsAllDrives: true })}`)).json();
+
   async function download(id) {
     return (await api(`${API}/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`)).arrayBuffer();
   }
@@ -357,7 +360,7 @@ window.Drive = (() => {
   return {
     FOLDER, SHORTCUT, AuthError,
     init, connect, disconnect, isConnected, onChange, rememberEmail,
-    about, listChildren, listFolders, listFoldersAndDocs, listSharedDrives, download, exportText,
+    about, meta, listChildren, listFolders, listFoldersAndDocs, listSharedDrives, download, exportText,
     findDataFile, readJson, createJson, updateJson, ensureAppFolder, moveInto,
     ensurePublicFolder, makePublic, copyFile, uploadFile, deleteFile, publicText,
   };

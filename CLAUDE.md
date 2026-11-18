@@ -41,6 +41,9 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
   **Skróty Dysku**: węzły kluczowane identyfikatorem celu, więc skrót i oryginał = jeden węzeł (nie ma duplikatów ze skrótów).
   Jeśli pierwszy trafiony był skrót, węzeł ma `viaShortcut: true` (folder skrótu jako `parent`, bez `md5`/rozmiaru); gdy potem trafimy
   na prawdziwe położenie, `parent`/nazwa/`md5` są poprawiane (także przy ↻ jednego folderu). Duplikaty pokazują „(przez skrót)”.
+  Gdy oryginał leży **poza wybranymi folderami** (zostaje `viaShortcut`), `resolveShortcuts` na końcu `scan` pyta Dysk (`Drive.meta`) o rodziców
+  → `n.real` = „Mój dysk / Muzyka / Śluby” (+ `realName`, rozmiar, data, md5). W drzewie tag „↪ skrót · oryginał: …” (`shortcutTag` w app.js),
+  w spisach w podpowiedzi chipa, w duplikatach obok ścieżki. Przypadek użytkownika: „Wielkie są dzieła” w folderze „Ślub Magdy…” był tylko skrótem.
 - `js/zip.js` + `js/songlist.js` – odczyt spisu z .odt/.docx/.txt/Dokumentu Google; parsowanie „nr<tab>tytuł”, dedup po numerze.
   **Tabele** (.odt `table:table-row`, .docx `w:tr`): wiersz = komórki połączone tabulatorem („35<tab>Tytuł”). Ten sam numer + tytuł z tych
   samych słów (`sameSong`, ≥60% wspólnych słów, np. „A (B)” i „B (A)”) = **tytuł alternatywny** `alt`; różne pieśni z tym samym numerem
