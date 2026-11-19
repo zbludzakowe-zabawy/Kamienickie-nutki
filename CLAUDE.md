@@ -116,6 +116,13 @@ Pieśń ze spisu ma `src` → przy publikacji bierzemy **aktualne** dopasowanie 
 albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty” przy pieśni (`openPicker(pi, ii)`) podmienia tylko
 `files`/`src` – tytuł i uwaga zostają. `src.i` = indeks pozycji w spisie (pewniejsze niż sam numer, zwłaszcza w spisach bez numerów). Program z datą w przeszłości = archiwum (u administratora i chórzysty), nadal widoczny, dopóki nie usunięty.
 „Kopiuj” tworzy kopię bez daty. Puste części są ukryte u chórzystów i w PDF. PDF programu = pseudo-śpiewnik z wierszami `section`.
+**Wczytaj z pliku…** (`#ev-import`, `js/progimport.js` = czysty parser `ProgImport.parse(lines)`, testowalny w Node; linie z `SongList.linesOf(name, buf, true)`
+– `raw`: wiersz tabeli z pustymi komórkami). Przykład: `testoweTriduum.odt` (5 dni, tabela „część | (pusta) | pieśń | .”). Reguły (ustalone z użytkownikiem):
+wiersz z jedną treścią węższy niż kolumna tytułów albo w innej kolumnie = nagłówek dnia; dzień bez pieśni = nazwa zestawu („Triduum 2026”) dopisywana
+„Wielki Czwartek – Triduum 2026”; pusta lewa kolumna = ta sama część; skróty `partName` (We/We2→Wejście, OF, Kom, Uw, Wy, Agnus, Ps01→Psalm 1, Chwała→Alleluja lub Chwała);
+„/” i „+” poza nawiasami = **osobne pieśni do wyboru**; uwagi: „(!)”→„!”, „?”/„(?)”→„?”, „[1]”→„[1]”, „(ew)”→„ewentualnie”; kropki prowadzące usuwane;
+„0”/„.” pomijane, puste części znikają; Męka/Sekwencja/Litania/Potrójne Amen bez etykiety = własna część + pieśń (`LITURGY`). Wątpliwe pozycje lepiej dodać „bez nut” (użytkownik).
+Dopasowanie (`songMatcher` w programs.js): pozycja spisu (`Matcher.score`, ≥ SURE i przewaga 0.05) → `src`; inaczej plik (`Matcher.rank`); inaczej bez nut. Daty puste.
 
 ## Porządkowanie: duplikaty i „Pozostałe nuty”
 

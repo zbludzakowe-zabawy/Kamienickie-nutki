@@ -124,7 +124,78 @@ window.Programs = (() => {
     const past = all.filter(isPast).sort((a, b) => b.date.localeCompare(a.date));
     $('ev-list').innerHTML = (next.length ? `<h3 class="sub">Nadchodzące</h3>${next.map(card).join('')}` : '') +
       (past.length ? `<h3 class="sub">Archiwum <span class="muted small">(chórzyści nadal je widzą, dopóki ich nie usuniesz)</span></h3>${past.map(card).join('')}` : '') +
-      (all.length ? '' : '<p class="muted">Nie ma jeszcze żadnego programu. Kliknij „+ Nowy program”.</p>');
+      (all.length ? '' : '<p class="muted">Nie ma jeszcze żadnego programu. Kliknij „+ Nowy program” albo „📄 Wczytaj z pliku…”.</p>');
+  }
+
+  // ---------- wczytanie programów z pliku (np. „Triduum” – kilka dni w jednym dokumencie) ----------
+  // Pieśń łączymy z pozycją spisu (pewne dopasowanie tytułu), a gdy jej tam nie ma – z plikiem na Dysku.
+  function songMatcher() {
+    const books = [];
+    for (const b of A.data.songbooks) {
+      b.items.forEach((it, i) => {
+        if (!usable(it)) return;
+        for (const t of [it.title, ...(it.alt || [])]) {
+          const s = Matcher.split(t);
+          books.push({ b, it, i, key: [...it.files].sort().join('|'), all: [...s.main, ...s.extra] });
+        }
+      });
+    }
+    const files = Matcher.candidates(A.data.nodes, A.data.meta, A.idx);
+    const sure = (list) => {
+      const [best, second] = list;
+      return best && best.score >= Matcher.SURE && !(second && second.key !== best.key && best.score - second.score < 0.05) ? best : null;
+    };
+    return (title) => {
+      const t = Matcher.split(title);
+      const scored = books.map((c) => ({ ...c, score: Matcher.score(t, c) })).filter((c) => c.score >= Matcher.MAYBE)
+        .sort((a, b) => b.score - a.score);
+      const hit = sure(scored);
+      if (hit) return { files: [...hit.it.files], src: { book: hit.b.id, bookName: hit.b.name, no: hit.it.no, i: hit.i } };
+      const f = sure(Matcher.rank(title, files, 3).map((x) => ({ ...x, key: x.files.join('|') })));
+      if (f) return { files: A.orderFiles(f.files) };
+      return { files: [] };
+    };
+  }
+
+  async function importFile(file) {
+    let res;
+    try {
+      const lines = await SongList.linesOf(file.name, await file.arrayBuffer(), true);
+      res = ProgImport.parse(lines);
+    } catch (e) {
+      return A.toast('Nie udało się odczytać pliku: ' + e.message, true);
+    }
+    if (!res.days.length) return A.toast('Nie znalazłem w pliku żadnej uroczystości z pieśniami.', true);
+    const find = songMatcher();
+    let total = 0;
+    let fromBook = 0;
+    let fromFile = 0;
+    const made = res.days.map((d) => ({
+      id: 'pr' + uid(),
+      name: res.group ? `${d.name} – ${res.group}` : d.name,
+      date: '',
+      createdAt: new Date().toISOString(),
+      source: { kind: 'file', name: file.name },
+      parts: d.parts.map((pt) => ({
+        id: uid(),
+        name: pt.name,
+        items: pt.items.map((x) => {
+          const m = find(x.title);
+          total++;
+          if (m.src) fromBook++;
+          else if (m.files.length) fromFile++;
+          return { title: x.title, note: x.note || '', files: m.files, ...(m.src ? { src: m.src } : {}) };
+        }),
+      })),
+    }));
+    list().push(...made);
+    setOpen(null);
+    A.changed();
+    render();
+    const none = total - fromBook - fromFile;
+    A.toast(`Wczytano ${made.length} ${A.plural(made.length, 'uroczystość', 'uroczystości', 'uroczystości')}${res.group ? ` („${res.group}”)` : ''}: ` +
+      `${total} ${A.plural(total, 'pieśń', 'pieśni', 'pieśni')} – ze spisów ${fromBook}, z plików ${fromFile}, bez nut ${none}. ` +
+      'Ustaw daty i sprawdź dopasowania (♪ Dołącz nuty / Zmień nuty).');
   }
 
   // ---------- edycja programu ----------
@@ -268,6 +339,12 @@ window.Programs = (() => {
 
   // ---------- zdarzenia ----------
   $('ev-new').addEventListener('click', create);
+  $('ev-import').addEventListener('click', () => $('ev-file').click());
+  $('ev-file').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (f) importFile(f);
+  });
   $('ev-list').addEventListener('click', (e) => {
     const b = e.target.closest('[data-a]');
     const row = e.target.closest('.ev-row');
