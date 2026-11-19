@@ -178,9 +178,12 @@
    </div>
    <div data-panel="events" class="panel" hidden>
     <section class="card" id="ev-list-card">
-      <div class="card-head"><h2>Uroczystości</h2><button class="btn primary" id="ev-new">+ Nowy program</button></div>
+      <div class="card-head"><h2>Uroczystości</h2><span class="ev-head-btns"><button class="btn" id="ev-import" title="Np. Triduum: kilka dni w jednym pliku .odt / .docx / .txt">📄 Wczytaj z pliku…</button><button class="btn primary" id="ev-new">+ Nowy program</button></span></div>
+      <input type="file" id="ev-file" accept=".odt,.docx,.txt" hidden>
       <p class="muted small">Program na konkretną uroczystość: pieśni ułożone według części mszy, z krótkimi uwagami.
         Po aktualizacji w zakładce „Dla chórzystów” chórzyści zobaczą go na telefonie i pobiorą PDF.</p>
+      <p class="muted small">„📄 Wczytaj z pliku…” – dokument z tabelą: wiersz z nazwą dnia (np. „Wielki Czwartek”), potem wiersze „część mszy | pieśń”
+        (pusta część = ta sama co wyżej; „/” = pieśni do wyboru; „(!)”, „?”, „[1]”, „(ew)” trafiają do uwag). Z jednego pliku powstaje osobny program na każdy dzień.</p>
       <div id="ev-list"></div>
     </section>
     <section class="card" id="ev-editor" hidden>
@@ -474,6 +477,7 @@
   <script src="js/dups.js"></script>
   <script src="js/crypto.js"></script>
   <script src="js/pdfbuild.js"></script>
+  <script src="js/progimport.js"></script>
   <script src="js/programs.js"></script>
   <script src="js/publish.js"></script>
   <script src="js/reports.js"></script>

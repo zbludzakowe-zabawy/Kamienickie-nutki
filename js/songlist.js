@@ -8,7 +8,8 @@ window.SongList = (() => {
 
   // Akapity z .odt – z tabulatorami i spacjami tak jak w dokumencie.
   // Wiersz tabeli = jedna linijka: komórki połączone tabulatorem (np. „35<tab>Asperges me”).
-  function odtLines(xml) {
+  // raw = true: wiersz tabeli zachowuje puste komórki (np. pusta kolumna „część mszy” = ta sama część co wyżej)
+  function odtLines(xml, raw) {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     const lines = [];
     const textOf = (el) => {
@@ -40,8 +41,9 @@ window.SongList = (() => {
     const walk = (el) => {
       for (const ch of el.children) {
         if (ch.namespaceURI === NS_TABLE && ch.localName === 'table-row') {
-          const cells = [...ch.children].filter((c) => c.namespaceURI === NS_TABLE && c.localName === 'table-cell').map(cellText).filter(Boolean);
-          if (cells.length) lines.push(cells.join('\t'));
+          const all = [...ch.children].filter((c) => c.namespaceURI === NS_TABLE && c.localName === 'table-cell').map(cellText);
+          const cells = raw ? all : all.filter(Boolean);
+          if (cells.some(Boolean)) lines.push(cells.join('\t'));
         } else if (ch.namespaceURI === NS_TEXT && (ch.localName === 'p' || ch.localName === 'h')) lines.push(...textOf(ch).split('\n'));
         else walk(ch);
       }
@@ -51,7 +53,7 @@ window.SongList = (() => {
   }
 
   // .docx: akapity; wiersz tabeli (w:tr) = jedna linijka z komórkami połączonymi tabulatorem
-  function docxLines(xml) {
+  function docxLines(xml, raw) {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     const lines = [];
     const paraText = (p) => {
@@ -73,8 +75,9 @@ window.SongList = (() => {
       for (const ch of el.children) {
         if (ch.namespaceURI !== NS_W) continue;
         if (ch.localName === 'tr') {
-          const cells = [...ch.children].filter((c) => c.namespaceURI === NS_W && c.localName === 'tc').map(cellText).filter(Boolean);
-          if (cells.length) lines.push(cells.join('\t'));
+          const all = [...ch.children].filter((c) => c.namespaceURI === NS_W && c.localName === 'tc').map(cellText);
+          const cells = raw ? all : all.filter(Boolean);
+          if (cells.some(Boolean)) lines.push(cells.join('\t'));
         } else if (ch.localName === 'p') lines.push(...paraText(ch).split('\n'));
         else walk(ch);
       }
@@ -147,24 +150,27 @@ window.SongList = (() => {
     return { items, duplicates: dup, aliases };
   }
 
-  // name – nazwa pliku (rozszerzenie decyduje o formacie); content – ArrayBuffer albo tekst
-  async function fromFile(name, content) {
+  // Linijki dokumentu (wiersz tabeli = komórki połączone tabulatorem; raw – z pustymi komórkami)
+  async function linesOf(name, content, raw) {
     const ext = (String(name).match(/\.([a-z0-9]+)$/i) || [])[1];
-    let lines;
-    if (typeof content === 'string') lines = content.split(/\r?\n/);
-    else if (/^odt$/i.test(ext)) {
+    if (typeof content === 'string') return content.split(/\r?\n/);
+    if (/^odt$/i.test(ext)) {
       const xml = await Zip.readEntry(content, 'content.xml');
       if (!xml) throw new Error('W pliku .odt nie ma treści.');
-      lines = odtLines(xml);
-    } else if (/^docx$/i.test(ext)) {
+      return odtLines(xml, raw);
+    }
+    if (/^docx$/i.test(ext)) {
       const xml = await Zip.readEntry(content, 'word/document.xml');
       if (!xml) throw new Error('W pliku .docx nie ma treści.');
-      lines = docxLines(xml);
-    } else if (/^(txt|csv|md)$/i.test(ext) || !ext) {
-      lines = new TextDecoder('utf-8').decode(content).split(/\r?\n/);
-    } else {
-      throw new Error('Obsługiwane formaty spisu: .odt, .docx, .txt i Dokumenty Google.');
+      return docxLines(xml, raw);
     }
+    if (/^(txt|csv|md)$/i.test(ext) || !ext) return new TextDecoder('utf-8').decode(content).split(/\r?\n/);
+    throw new Error('Obsługiwane formaty: .odt, .docx, .txt i Dokumenty Google.');
+  }
+
+  // name – nazwa pliku (rozszerzenie decyduje o formacie); content – ArrayBuffer albo tekst
+  async function fromFile(name, content) {
+    const lines = await linesOf(name, content, false);
     const res = parse(lines);
     if (!res.items.length) throw new Error('Nie znalazłem w pliku żadnych pozycji spisu.');
     return res;
@@ -173,5 +179,5 @@ window.SongList = (() => {
   const SUPPORTED = /\.(odt|docx|txt)$/i;
   const GDOC = 'application/vnd.google-apps.document';
 
-  return { fromFile, parse, parseLine, sameSong, SUPPORTED, GDOC };
+  return { fromFile, linesOf, parse, parseLine, sameSong, SUPPORTED, GDOC };
 })();
