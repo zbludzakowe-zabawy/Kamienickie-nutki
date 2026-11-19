@@ -259,3 +259,13 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 - Nuty offline u chórzysty (kopie w pamięci telefonu) – teraz podgląd wymaga internetu.
 - Własne PDF-y z wybranych pozycji (np. „na niedzielę”) – pdfbuild.js już umie składać.
 - Ponowne wczytanie zmienionego spisu z zachowaniem dopasowań.
+
+### Do przemyślenia (zapisane na prośbę użytkownika, 2026-11-19)
+
+- **Katalog wszystkich nut** – osobna strona/zakładka ze wszystkimi nutami z repozytorium (Dysku), nie tylko z spisów,
+  z możliwością katalogowania i filtrowania: po rodzaju (np. liturgiczne, maryjne, kolędy, okolicznościowe), po autorze/kompozytorze
+  albo innych cechach (do ustalenia). Wymagałoby nowych pól w `meta` (np. `kind`, `author`, tagi) i pytania, czy widzą to też chórzyści.
+- **Nagrania** – czy i gdzie udostępniać nagrania (np. ćwiczeniowe dla głosów): pliki audio na Dysku obok nut, linki (YouTube itp.),
+  odtwarzanie w aplikacji chórzysty? Do omówienia.
+- **Przesyłanie nut przez chórzystów** – raczej **nie** (wstępne zdanie użytkownika). Chórzysta nie ma zapisu na Dysku;
+  ewentualnie wystarczą zgłoszenia (`js/reports.js`) z prośbą/linkiem.
