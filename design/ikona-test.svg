@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <clipPath id="r"><rect width="512" height="512" rx="112"/></clipPath>
+  <g clip-path="url(#r)">
+  <rect width="512" height="512" fill="#24476b"/>
+  <!-- okładka pod kartkami -->
+  <path d="M256 168 C 200 136, 128 132, 64 150 L 64 392 C 128 376, 200 382, 256 414 C 312 382, 384 376, 448 392 L 448 150 C 384 132, 312 136, 256 168 Z" fill="#142c45"/>
+  <!-- kartki -->
+  <path d="M252 160 C 204 130, 136 124, 82 138 L 82 372 C 136 360, 204 366, 252 394 Z" fill="#fbf6ec"/>
+  <path d="M260 160 C 308 130, 376 124, 430 138 L 430 372 C 376 360, 308 366, 260 394 Z" fill="#f3ead9"/>
+  <path d="M256 162 V 396" stroke="#c9b48f" stroke-width="5"/>
+  <!-- pięciolinie -->
+  <g stroke="#cdb894" stroke-width="5" stroke-linecap="round">
+    <path d="M104 206 H 232 M104 228 H 232 M104 250 H 232 M104 272 H 232 M104 294 H 232"/>
+    <path d="M280 206 H 408 M280 228 H 408 M280 250 H 408 M280 272 H 408 M280 294 H 408"/>
+  </g>
+  <!-- nuty -->
+  <g fill="#3a2a26">
+    <ellipse cx="150" cy="284" rx="20" ry="15" transform="rotate(-20 150 284)"/>
+    <rect x="164" y="184" width="8" height="98"/>
+    <path d="M172 184 c 14 12, 32 22, 28 50 c -6 -14, -16 -22, -28 -24 Z"/>
+    <ellipse cx="312" cy="294" rx="20" ry="15" transform="rotate(-20 312 294)"/>
+    <ellipse cx="376" cy="272" rx="20" ry="15" transform="rotate(-20 376 272)"/>
+    <rect x="326" y="200" width="8" height="92"/>
+    <rect x="390" y="178" width="8" height="92"/>
+    <path d="M326 200 L 398 178 L 398 196 L 326 218 Z"/>
+  </g>
+  <!-- pasek „TEST” – wersja testowa aplikacji -->
+  <rect x="0" y="404" width="512" height="80" fill="#f08c00"/>
+  <text x="256" y="463" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="60" letter-spacing="10" fill="#ffffff">TEST</text>
+  </g>
+</svg>

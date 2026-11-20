@@ -841,6 +841,43 @@
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   try { const t = localStorage.getItem(TAB_KEY); showTab(['catalog', 'songs', 'events', 'choir'].includes(t) ? t : 'files'); } catch (e) { showTab('files'); }
 
+  // ---------- wersja testowa (KN_CONFIG.env) ----------
+  // Pasek „WERSJA TESTOWA” i kopiowanie danych z produkcji. Plik produkcji tylko CZYTAMY –
+  // zapis idzie zawsze do własnego pliku testowego (cfg.dataFileName), w folderze testowym.
+  async function copyFromProd() {
+    if (!(await ensureConnected())) return;
+    try {
+      const f = await Drive.findDataFile(cfg.prodDataFileName);
+      if (!f) return toast(`Nie znaleziono na Dysku pliku „${cfg.prodDataFileName}” głównej aplikacji.`, true);
+      const when = f.modifiedTime ? new Date(f.modifiedTime).toLocaleString('pl-PL') : '?';
+      if (!confirm(`Zastąpić dane wersji testowej kopią danych z głównej aplikacji (zapisanych ${when})?\n\n` +
+        'Obecne dane testowe zostaną nadpisane. Główna aplikacja i jej plik zostają bez zmian.\n' +
+        'Publikacja dla chórzystów zaczyna się w teście od nowa (osobny folder i katalog), PIN zostaje.')) return;
+      const d = normalize(await Drive.readJson(f.id));
+      // z publikacji zostaje tylko to, co nie wskazuje na pliki produkcji (folder, katalog, kopie, PDF-y)
+      const p = d.publish || {};
+      d.publish = { pin: p.pin, hold: p.hold || {}, ...(p.others ? { others: { enabled: p.others.enabled } } : {}) };
+      // zgłoszenia z testu nie mogą trafiać do prawdziwego formularza
+      if (d.reports) d.reports = { ...d.reports, form: {} };
+      d.owner = (user && user.emailAddress) || d.owner;
+      d.updatedAt = Date.now();
+      data = d;
+      sync.dirty = true;
+      persist();
+      rebuild();
+      renderAll();
+      scheduleSync(300);
+      toast('Skopiowano dane z głównej aplikacji do wersji testowej.');
+    } catch (e) {
+      handleError(e);
+    }
+  }
+  if (cfg.env) {
+    $('test-bar').hidden = false;
+    if (cfg.prodUrl) $('test-prod').href = cfg.prodUrl;
+    $('test-copy').addEventListener('click', copyFromProd);
+  }
+
   // wspólne funkcje dla pozostałych modułów (spisy pieśni)
   window.App = {
     get data() { return data; },

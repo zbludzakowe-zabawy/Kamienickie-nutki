@@ -8,6 +8,14 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
 - **Sposób pracy**: zmiany na gałęzi roboczej → push → **PR do `main`**. **Scala (wprowadza do `main`) wyłącznie użytkownik** –
   nigdy nie pushuj do `main` ani nie scalaj PR-ów. Wcześniej scalaliśmy bezpośrednio, ale od etapu 3 użytkownik prosi o PR.
   Równolegle może pracować inny wątek (gałąź `claude/funny-shannon-…`) – przed PR zawsze `git fetch` + `git merge origin/main`.
+- **Wersja testowa**: gałąź `test` → https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/test/ (pasek „WERSJA TESTOWA”, ikona TEST).
+  Zmiany: gałąź robocza → **PR do `test`** → scalam go **ja, ale tylko na prośbę użytkownika** → użytkownik sprawdza ręcznie → PR do `main` (scala użytkownik).
+  Osobne dane: `tools/test-env/config.test.js` doklejany do `config.js` przy publikacji (`tools/build-test.mjs`): `env:'test'`, plik
+  `KamienickieNutki-TEST.json`, foldery ze znacznikiem `kn=test-app`/`test-public`, klucze localStorage z przedrostkiem `test~`, baza
+  IndexedDB `kamienickie-nutki-test`, schowki SW `test-kamienickie-nutki-`. „Skopiuj dane z produkcji” (`copyFromProd` w app.js) tylko
+  CZYTA plik produkcji i czyści `publish` (zostaje PIN) oraz `reports.form`. SW produkcji pomija `test/` (`SKIP`). Workflow publikuje zawsze
+  z `main` (push do `test` zleca `gh workflow run`), składa obie gałęzie. Przepis ogólny: `docs/srodowisko-testowe.md`.
+  Nowe miejsca pamięci / zapisu na Dysku → pamiętaj o rozdzieleniu dla `cfg.env`.
 - Skill `pwa-na-telefon` to przepis użytkownika na PWA (manifest, SW, banery) – projekt jest według niego zrobiony.
 
 ## Dwa tryby
