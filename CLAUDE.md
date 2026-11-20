@@ -81,7 +81,7 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 ## Dane
 
 Wszystko w jednym obiekcie `data` (IndexedDB + `Kamienickie Nutki/KamienickieNutki.json` na Dysku administratora;
-przy połączeniu wygrywa nowszy `updatedAt`):
+synchronizacja – patrz „Synchronizacja z Dyskiem” niżej):
 
 ```
 { app, v, updatedAt, scannedAt, newAt,
@@ -98,6 +98,15 @@ przy połączeniu wygrywa nowszy `updatedAt`):
   catalog: {tags: [{id, name}], works: {id: {id, title, ownTitle?, lyrics, music, tags:[tagId], files:[fileId], manual?, at}}},
   owner }
 ```
+
+**Synchronizacja z Dyskiem** (poprawione 2026-11-20 po zgłoszeniu „zniknął spis Adwent”): dawniej wygrywał cały plik z nowszym `updatedAt`,
+więc urządzenie ze starymi danymi (wystarczyło, że katalog przeliczył się przy starcie i podbił `updatedAt`) nadpisywało plik na Dysku i znikały
+nowe spisy. Teraz `sync.baseAt` = `updatedAt` wersji z Dysku, którą urządzenie ostatnio wczytało/zapisało, `sync.remoteMod` = jej `modifiedTime`.
+Przy połączeniu: brak niezapisanych zmian → obowiązuje Dysk; zmiany tylko tutaj (Dysk = `baseAt`) → zapis; zmiany tu i tam → `mergeRemote`
+(`js/datamerge.js`, `DataMerge.merge`: spisy/programy/meta/cechy/utwory łączone po id, przy różnicy w tym samym obiekcie wygrywa Dysk, a wersja z urządzenia
+idzie do kopii `KamienickieNutki-kopia-z-urzadzenia-….json` w folderze aplikacji; publikacja/duplikaty/drzewo – z nowszej strony). Przed każdym zapisem
+`guardRemote` sprawdza `modifiedTime` pliku (inne urządzenie otwarte równolegle). **„Odzyskaj…”** (pasek konta, `#hist-dlg`): przegląda wersje pliku
+na Dysku (`Drive.revisions`/`readRevision`) i pozwala przywrócić spisy i programy, których teraz brakuje (`DataMerge.missing`).
 
 **Kolejność stron** (jedno miejsce: `meta[id].page`): okno `#order-dlg` (`App.openOrder(ids, title)`) z przyciskami ⇅ w drzewie
 (pliki tej samej pieśni w jednym folderze – `songKey`/`siblingsMap`), w spisach (pozycja z ≥2 plikami), w programach i w duplikatach
