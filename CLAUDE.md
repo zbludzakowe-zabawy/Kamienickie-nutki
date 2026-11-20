@@ -16,7 +16,7 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
 |---|---|---|
 | Logowanie | Google OAuth (GIS token client) | brak – tylko PIN |
 | Dostęp do Dysku | `drive.readonly` + `drive.file` | klucz API (`?key=`) do plików publicznych |
-| Widzi | zakładki: Nuty na Dysku / Spisy pieśni / Uroczystości / Dla chórzystów | uroczystości + śpiewniki → lista pieśni → nuty na cały ekran, PDF |
+| Widzi | zakładki: Nuty na Dysku / Katalog / Spisy pieśni / Uroczystości / Dla chórzystów | uroczystości + śpiewniki → lista pieśni → nuty na cały ekran, PDF |
 
 Tryb wybiera `js/mode.js` (w `<head>`, przed narysowaniem): `?chor=<id katalogu>` → chórzysta (zapamiętane w localStorage
 `kn-mode`, `kn-guest-id`); `KN_CONFIG.publicCatalogId` jest ustawione (katalog chóru użytkownika), więc **domyślnie chórzysta**.
@@ -56,6 +56,7 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 - `js/songs.js` – zakładka „Spisy pieśni” (`window.Songs`)
 - `js/dups.js` – porządkowanie Dysku (`window.Dups`): „Szukaj duplikatów” (karta `#dups-card` w „Nutach na Dysku”) i lista
   „Pozostałe nuty” (`othersItems()`); szczegóły w sekcji „Porządkowanie” niżej
+- `js/works.js` – zakładka „Katalog” (`window.Works`): katalog wszystkich nut z cechami; szczegóły w sekcji „Katalog nut” niżej
 - `js/crypto.js` – AES-GCM + PBKDF2 z PIN-u (`KnCrypto.encrypt/decrypt`)
 - `js/pdfbuild.js` – PDF śpiewnika (pdf-lib z `js/vendor/`, spis treści rysowany na canvasie – polskie znaki bez fontów)
   + klikalny spis treści (`addLinks`: niewidoczne adnotacje Link nad wierszami, pozycje z `canvas.links`) i zakładki PDF
@@ -86,6 +87,7 @@ przy połączeniu wygrywa nowszy `updatedAt`):
   publish: {pin, pdf, hold:{id:true}, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt},
   dups: {at, hasMd5, groups: {gid: {type:'same'|'name'|'book', title, files:[id], entries?:[{book,i}], status:'open'|'kept'|'resolved', keep:[id], note, decidedAt, gone?}},
          cleanup: {fileId: {gid, manual?, title, name, own, path, parent, keep:[{id,name,path}], decidedAt, done, doneBy:'auto'|'manual', doneAt}}},
+  catalog: {tags: [{id, name}], works: {id: {id, title, ownTitle?, lyrics, music, tags:[tagId], files:[fileId], manual?, at}}},
   owner }
 ```
 
@@ -157,6 +159,27 @@ Dopasowanie (`songMatcher` w programs.js): pozycja spisu (`Matcher.score`, ≥ S
   i o tej samej nazwie = jedna pozycja, alfabetycznie. U administratora zawsze aktualne; chórzyści widzą **migawkę** (`publish.others.snapshot`)
   z ostatniego kliknięcia „Aktualizuj „Pozostałe nuty”” (zwykłe „Aktualizuj” jej nie zmienia); **PDF tylko przyciskiem „Utwórz PDF”**
   (`publish.others.pdf`, z datą „stan na”). Przełącznik „widoczny dla chórzystów”. W katalogu to śpiewnik `id:'others'`, `auto:true`.
+
+## Katalog nut (zakładka „Katalog”, `js/works.js`)
+
+Decyzje użytkownika: katalog **wszystkich** nut z Dysku; pozycja = utwór (tytuł, autor tekstu, muzyka – pojedyncze) + jeden albo kilka plików (strony)
++ **cechy wielokrotnego wyboru** edytowalne przez administratora (startowe: kolęda, wielkopostne, wielkanocne, eucharystyczne, ostinato,
+adwentowe, uwielbienie, alleluja; okno „🏷 Cechy…”: dodaj / zmień nazwę / kolejność / usuń – cechy mają stałe `id`, nazwa to etykieta).
+Oznaczanie **na tej samej stronie co wyszukiwanie**: zaznaczanie wielu pozycji → „+ Dodaj cechę / − Usuń cechę / ⧉ Połącz / 👻 Nieistotne / Przywróć / ⬇ CSV”
+(akcje dotyczą tylko zaznaczonych **widocznych** – ukryte filtrem nie biorą udziału); kliknięcie tytułu → okno `#work-dlg`
+(tytuł, autorzy z podpowiedziami `datalist`, cechy, nowa cecha, nieistotne, pliki: ↗, ✎ = `App.openEdit`, „Osobno” = wydziel plik jako nową pozycję, ⇅).
+- **Budowa** (`sync()`, przy każdym `render` widocznej zakładki; zapis tylko gdy coś się zmieniło): pieśni ze spisów (`ok`/`auto`) → utwór z tymi plikami
+  i tytułem ze spisu; reszta plików → grupy jak „Pozostałe nuty” (`Dups.nameKey`, ten sam folder). Plik należy do jednego utworu. Nowe strony pieśni ze spisu
+  dopisywane do utworu, który ma już jej pozostałe pliki. Utwór bez plików znika, chyba że ma dane użytkownika (wtedy „bez plików” + „Usuń pozycję”).
+- **Pomijane**: „to nie nuty” i pliki z listy „do sprzątnięcia” (`Dups.toRemove`). **Nieistotne są w katalogu**, domyślnie ukryte
+  (przełącznik „pokaż nieistotne”); oznaczenie zapisywane przy plikach (`meta.ignore`, to samo co w drzewie) → `App.afterFlags()`.
+- **Tytuł = tytuł ze spisu** (spójność). Dopóki `!ownTitle`, `sync` przepisuje tytuł z pozycji spisu (więc zmiana w „Spisach pieśni” przechodzi do katalogu).
+  Zmiana tytułu w katalogu → `confirm` „zmienić też w całym zbiorze?” z listą miejsc (pozycje spisów z tymi plikami + pozycje programów; `auto` → `ok`).
+  Utwór spoza spisów → pytanie o nazwę plików w aplikacji (`meta.title`). „Anuluj” = tylko w katalogu → `ownTitle: true` (przygotowane pod różne nazwy).
+- Filtry: tekst (tytuł, tytuły spisu i alt, autorzy, cechy, nazwy plików, „Z 12”), cechy (wszystkie zaznaczone naraz, liczniki), bez cech / bez autora tekstu /
+  bez kompozytora / spoza spisów / bez plików. Lista rysowana po 300 pozycji („Pokaż więcej”). Ustawienia filtrów w `localStorage['kn-cat-ui']`.
+- **Chórzyści – jeszcze nie** (użytkownik: „docelowo też, może podobnie jak admin, ale tylko wyszukiwanie”). Do katalogu dla chórzystów trzeba by
+  dodać utwory (kopie plików jak w śpiewnikach) – forma do ustalenia.
 
 ## Publikacja dla chórzystów
 
@@ -262,9 +285,7 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 
 ### Do przemyślenia (zapisane na prośbę użytkownika, 2026-11-19)
 
-- **Katalog wszystkich nut** – osobna strona/zakładka ze wszystkimi nutami z repozytorium (Dysku), nie tylko z spisów,
-  z możliwością katalogowania i filtrowania: po rodzaju (np. liturgiczne, maryjne, kolędy, okolicznościowe), po autorze/kompozytorze
-  albo innych cechach (do ustalenia). Wymagałoby nowych pól w `meta` (np. `kind`, `author`, tagi) i pytania, czy widzą to też chórzyści.
+- ~~Katalog wszystkich nut~~ – zrobione (zakładka „Katalog”). Zostało: katalog u chórzystów (forma do ustalenia).
 - **Nagrania** – czy i gdzie udostępniać nagrania (np. ćwiczeniowe dla głosów): pliki audio na Dysku obok nut, linki (YouTube itp.),
   odtwarzanie w aplikacji chórzysty? Do omówienia.
 - **Przesyłanie nut przez chórzystów** – raczej **nie** (wstępne zdanie użytkownika). Chórzysta nie ma zapisu na Dysku;
