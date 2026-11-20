@@ -3,7 +3,12 @@
  * dostaje skrót wszystkich plików, a ASSETS ich pełną listę. Nowa wersja czeka,
  * aż użytkownik stuknie „Odśwież” – bez niespodziewanych przeładowań. */
 const VERSION = 'dev';
-const CACHE = `kamienickie-nutki-${VERSION}`;
+// Wersja testowa (podfolder test/) podmienia przedrostek na 'test-kamienickie-nutki-' (tools/build-test.mjs) –
+// ten sam adres = wspólne schowki, a każdy service worker przy aktywacji kasuje stare schowki ze swoim przedrostkiem.
+const PREFIX = 'kamienickie-nutki-';
+const CACHE = `${PREFIX}${VERSION}`;
+// Podfoldery z osobną aplikacją (wersja testowa) – ten service worker ich nie obsługuje.
+const SKIP = ['test/'].map((p) => new URL(p, self.registration.scope).pathname);
 const ASSETS = [
   './',
   './index.html',
@@ -43,7 +48,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('kamienickie-nutki-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith(PREFIX) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -54,7 +59,9 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (SKIP.some((p) => url.pathname.startsWith(p))) return;
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const hit = await cache.match(req, { ignoreSearch: true });

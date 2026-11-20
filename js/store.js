@@ -1,7 +1,9 @@
 // Zapis lokalny (IndexedDB, awaryjnie localStorage) – dane przetrwają zamknięcie aplikacji.
 window.Store = (() => {
   'use strict';
-  const DB = 'kamienickie-nutki';
+  // wersja testowa (KN_CONFIG.env) ma osobną bazę – ten sam adres co produkcja, więc inaczej by się mieszały
+  const ENV = (window.KN_CONFIG || {}).env;
+  const DB = 'kamienickie-nutki' + (ENV ? '-' + ENV : '');
   const OS = 'kv';
   let dbp = null;
 

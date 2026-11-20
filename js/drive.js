@@ -227,9 +227,10 @@ window.Drive = (() => {
     return (await api(`${API}/about?fields=user(displayName,emailAddress,photoLink)`)).json();
   }
 
-  async function findDataFile() {
+  // name – inny plik (wersja testowa czyta tak plik produkcji, tylko do odczytu)
+  async function findDataFile(name) {
     const files = await listAll({
-      q: `name='${esc(cfg.dataFileName)}' and 'me' in owners and trashed=false`,
+      q: `name='${esc(name || cfg.dataFileName)}' and 'me' in owners and trashed=false`,
       orderBy: 'modifiedTime desc',
       corpora: 'user',
     }, 'id,name,modifiedTime,parents');
@@ -242,6 +243,7 @@ window.Drive = (() => {
   // więc zmiana nazwy czy przeniesienie im nie szkodzi.
   const tagged = {};
   async function ensureTaggedFolder(tag, name, parentId, description) {
+    if (cfg.env) tag = cfg.env + '-' + tag; // wersja testowa: własne foldery (kn=test-app, kn=test-public)
     if (tagged[tag]) return tagged[tag];
     const found = await listAll({
       q: `appProperties has { key='kn' and value='${tag}' } and mimeType='${FOLDER}' and trashed=false`,

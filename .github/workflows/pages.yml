@@ -1,35 +1,72 @@
 name: Publikacja na GitHub Pages
 
+# Jedna strona, dwie aplikacje:
+#   gałąź main → https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/        (produkcja)
+#   gałąź test → https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/test/   (wersja testowa)
+# Publikuje zawsze przebieg z gałęzi main (środowisko github-pages domyślnie wpuszcza tylko ją).
+# Push do test tylko zleca publikację z main, a ta pobiera obie gałęzie.
+
 on:
   push:
-    branches: [main]
+    branches: [main, test]
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  actions: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # push do test → uruchom publikację z main (GITHUB_TOKEN może zlecić workflow_dispatch)
+  forward:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Zleć publikację z main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "${{ github.repository }}" --ref main
+
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+      - name: Czy jest gałąź test?
+        id: test
+        run: |
+          if git -C main ls-remote --exit-code --heads origin test >/dev/null; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        if: steps.test.outputs.exists == 'true'
+        with:
+          ref: test
+          path: test
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Przygotuj katalog strony
+      - name: Przygotuj stronę główną
         run: |
           mkdir _site
-          cp -r index.html style.css manifest.webmanifest sw.js js icons _site/
-          node tools/build-sw.mjs _site
+          (cd main && cp -r index.html style.css manifest.webmanifest sw.js js icons ../_site/)
+          node main/tools/build-sw.mjs _site
+      - name: Przygotuj wersję testową (test/)
+        if: steps.test.outputs.exists == 'true'
+        run: |
+          mkdir _site/test
+          (cd test && cp -r index.html style.css manifest.webmanifest sw.js js icons ../_site/test/)
+          node test/tools/build-test.mjs _site/test
+          node test/tools/build-sw.mjs _site/test
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

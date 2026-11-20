@@ -724,3 +724,14 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .tg-n { min-width: 2.5em; text-align: right; }
 #wk-form .dialog-actions { position: sticky; bottom: -16px; margin: 0 -16px -16px; padding: 10px 16px 16px; background: var(--panel); border-top: 1px solid var(--line); }
 #cat-sel { display: inline-block; min-width: 7.5em; white-space: nowrap; } /* stała szerokość – lista nie skacze po pierwszym zaznaczeniu */
+
+/* ---------- wersja testowa (KN_CONFIG.env = 'test') ---------- */
+html[data-env="test"] { --accent: #24476b; --accent-soft: #e1e9f2; }
+.test-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+  padding: 6px 16px; background: #f08c00; color: #1d1200; font-size: 14px;
+}
+.test-bar[hidden] { display: none; }
+.test-bar strong { letter-spacing: .08em; }
+.test-bar a { color: inherit; margin-left: auto; }
+.test-bar .btn { padding: 3px 10px; font-size: 13px; }
