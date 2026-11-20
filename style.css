@@ -686,9 +686,9 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .cat-ign { margin: 0; align-self: center; white-space: nowrap; align-items: center; }
 .toolbar .cat-ign input { flex: none; min-height: 0; width: 18px; height: 18px; padding: 0; margin: 0; }
 .cat-tagfilter { margin-top: 6px; }
-.cat-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 4px; border-top: 1px solid var(--line); }
+.cat-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 4px; border-top: 1px solid var(--line); }
 .cat-bulk .check { margin: 0; }
-.cat-bulk-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat-bulk-acts { display: contents; } /* przyciski zawijają się pojedynczo, „zaznacz” zostaje w linijce z pierwszymi */
 .cat-bulk-acts select { min-height: 34px; padding: 4px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
 .cat-bulk-acts select:disabled { opacity: .5; }
 .works { border-top: 1px solid var(--line); }
@@ -723,3 +723,4 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .tg-name:hover, .tg-name:focus { border-color: var(--line); background: var(--bg); }
 .tg-n { min-width: 2.5em; text-align: right; }
 #wk-form .dialog-actions { position: sticky; bottom: -16px; margin: 0 -16px -16px; padding: 10px 16px 16px; background: var(--panel); border-top: 1px solid var(--line); }
+#cat-sel { display: inline-block; min-width: 7.5em; white-space: nowrap; } /* stała szerokość – lista nie skacze po pierwszym zaznaczeniu */
