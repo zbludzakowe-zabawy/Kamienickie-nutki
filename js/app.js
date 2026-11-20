@@ -47,7 +47,7 @@
   };
 
   let data = emptyData();
-  let sync = { fileId: null, dirty: false, syncedAt: null };
+  let sync = { fileId: null, dirty: false, syncedAt: null, baseAt: null, remoteMod: null };
   let idx = Catalog.buildIndex({});
   let user = null;
   const ui = { expanded: new Set(), expandedLoaded: false, query: '', filter: 'all', editing: null, scanning: false };
@@ -98,28 +98,70 @@
     if (Drive.isConnected()) syncTimer = setTimeout(pushNow, delay);
   }
 
+  // Ochrona przed nadpisaniem: sync.baseAt = updatedAt wersji z Dysku, którą to urządzenie ostatnio wczytało albo zapisało,
+  // sync.remoteMod = modifiedTime tego pliku. Jeśli plik na Dysku zmienił się w międzyczasie (inne urządzenie, druga karta),
+  // nie nadpisujemy go, tylko łączymy (DataMerge) – wcześniej wygrywał cały plik z nowszą datą i znikały np. nowe spisy.
+  const backupName = () => cfg.dataFileName.replace(/\.json$/i, '') + '-kopia-z-urzadzenia-' +
+    new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-') + '.json';
+
+  async function mergeRemote(remote) {
+    const local = data;
+    const r = DataMerge.merge(local, remote);
+    if (r.conflicts) { // ta sama rzecz zmieniona tu i tam – wygrał Dysk, wersję z urządzenia zachowujemy w kopii
+      try { await Drive.createJson(backupName(), JSON.stringify(local), await Drive.ensureAppFolder()); } catch (e) { console.warn('Nie udało się zapisać kopii', e); }
+    }
+    const d = normalize(r.data);
+    const seen = new Set(); // identyfikatory spisów muszą być unikalne
+    d.songbooks.forEach((b) => { if (seen.has(b.code)) b.code = ''; else seen.add(b.code); });
+    ensureCodes(d);
+    d.updatedAt = Date.now();
+    data = d;
+    sync.baseAt = remote.updatedAt || 0;
+    sync.dirty = true;
+    persist();
+    rebuild();
+    renderAll();
+    toast('Na Dysku były zmiany z innego urządzenia – połączyłem je ze zmianami z tego urządzenia' +
+      (r.conflicts ? '. Gdzie to samo zmieniono w obu miejscach, została wersja z Dysku (wersja z tego urządzenia jest w kopii w folderze aplikacji).' : '.'));
+  }
+
+  // przed zapisem: czy ktoś nie zmienił pliku na Dysku od naszego ostatniego odczytu/zapisu
+  async function guardRemote() {
+    let m;
+    try { m = await Drive.meta(sync.fileId, 'modifiedTime,trashed'); } catch (e) { if (e.status === 404) return; throw e; }
+    if (m.trashed) return;
+    if (sync.remoteMod && m.modifiedTime === sync.remoteMod) return;
+    const remote = normalize(await Drive.readJson(sync.fileId));
+    const ru = remote.updatedAt || 0;
+    if (ru !== sync.baseAt && ru !== data.updatedAt && ru) await mergeRemote(remote);
+    else sync.baseAt = ru === data.updatedAt ? ru : sync.baseAt;
+    sync.remoteMod = m.modifiedTime;
+  }
+
   async function pushNow() {
     if (syncing) return scheduleSync();
     if (!sync.dirty || !Drive.isConnected()) return;
     syncing = true;
     syncError = false;
     renderSync();
-    const snapshot = data.updatedAt;
     try {
+      if (sync.fileId) await guardRemote();
+      const snapshot = data.updatedAt;
       const text = JSON.stringify(data);
-      let saved = false;
+      let saved = null;
       if (sync.fileId) {
         try {
-          await Drive.updateJson(sync.fileId, text);
-          saved = true;
+          saved = await Drive.updateJson(sync.fileId, text);
         } catch (e) {
           if (e.status !== 404) throw e;
         }
       }
       if (!saved) {
-        const f = await Drive.createJson(cfg.dataFileName, text, await Drive.ensureAppFolder());
-        sync.fileId = f.id;
+        saved = await Drive.createJson(cfg.dataFileName, text, await Drive.ensureAppFolder());
+        sync.fileId = saved.id;
       }
+      sync.baseAt = snapshot;
+      sync.remoteMod = saved.modifiedTime || null;
       if (data.updatedAt === snapshot) sync.dirty = false;
       sync.syncedAt = Date.now();
       Store.set('sync', sync);
@@ -142,7 +184,7 @@
       // dane w urządzeniu należą do innego konta → nie mieszamy, wczytamy dane tego konta z Dysku
       if (email && data.owner && data.owner !== email) {
         data = emptyData();
-        sync = { fileId: null, dirty: false, syncedAt: null };
+        sync = { fileId: null, dirty: false, syncedAt: null, baseAt: null, remoteMod: null };
         rebuild();
         renderAll();
       }
@@ -156,15 +198,24 @@
         Drive.ensureAppFolder()
           .then((fid) => ((f.parents || []).includes(fid) ? null : Drive.moveInto(f.id, fid, f.parents)))
           .catch((e) => console.warn('Nie udało się przenieść pliku z danymi', e));
-        if ((remote.updatedAt || 0) > (data.updatedAt || 0)) {
+        const ru = remote.updatedAt || 0;
+        const lu = data.updatedAt || 0;
+        if (ru === lu) {
+          sync.baseAt = ru; // ta sama wersja
+        } else if (!sync.dirty || !lu) {
+          // w urządzeniu nie ma niezapisanych zmian → obowiązuje Dysk (także gdy jest „starszy”, np. przywrócona wersja)
           data = remote;
           sync.dirty = false;
+          sync.baseAt = ru;
           rebuild();
           renderAll();
           toast('Wczytano Twoje dane z Dysku.');
-        } else if ((data.updatedAt || 0) > (remote.updatedAt || 0)) {
-          sync.dirty = true;
+        } else if (sync.baseAt === ru || !ru) {
+          // zmiany tylko w tym urządzeniu – Dysk się od tamtej pory nie zmienił
+        } else {
+          await mergeRemote(remote); // zmiany i tu, i na Dysku (albo starsze urządzenie bez śladu wersji)
         }
+        sync.remoteMod = f.modifiedTime || null;
       } else {
         sync.fileId = null;
         if (data.updatedAt) sync.dirty = true;
@@ -840,6 +891,84 @@
   }
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   try { const t = localStorage.getItem(TAB_KEY); showTab(['catalog', 'songs', 'events', 'choir'].includes(t) ? t : 'files'); } catch (e) { showTab('files'); }
+
+  // ---------- odzyskiwanie z historii pliku na Dysku ----------
+  // Przegląda starsze wersje pliku z danymi (od najnowszej) i zbiera spisy/programy, których teraz nie ma –
+  // każdy w najnowszej wersji, w jakiej występował.
+  let histFound = [];
+  async function openHistory() {
+    if (!(await ensureConnected())) return;
+    const dlg = $('hist-dlg');
+    const st = $('hs-status');
+    const list = $('hs-list');
+    histFound = [];
+    list.innerHTML = '';
+    $('hs-ok').disabled = true;
+    st.textContent = 'Sprawdzam historię pliku…';
+    dlg.showModal();
+    try {
+      if (sync.dirty) await pushNow();
+      if (!sync.fileId) { st.textContent = 'Na Dysku nie ma jeszcze pliku z danymi.'; return; }
+      const revs = (await Drive.revisions(sync.fileId)).sort((a, b) => String(b.modifiedTime).localeCompare(String(a.modifiedTime)));
+      const seen = new Set();
+      for (let i = 0; i < revs.length && dlg.open; i++) {
+        st.textContent = `Przeglądam wersje z Dysku… ${i + 1} z ${revs.length}`;
+        let old;
+        try { old = await Drive.readRevision(sync.fileId, revs[i].id); } catch (e) { if (e instanceof Drive.AuthError) throw e; continue; }
+        const m = DataMerge.missing(data, old || {});
+        m.songbooks.forEach((b) => { if (!seen.has(b.id)) { seen.add(b.id); histFound.push({ kind: 'book', obj: b, at: revs[i].modifiedTime }); } });
+        m.programs.forEach((p) => { if (!seen.has(p.id)) { seen.add(p.id); histFound.push({ kind: 'prog', obj: p, at: revs[i].modifiedTime }); } });
+        paintHistory();
+      }
+      if (!dlg.open) return;
+      st.textContent = histFound.length
+        ? `Przejrzano ${revs.length} ${plural(revs.length, 'wersję', 'wersje', 'wersji')} pliku. Zaznacz, co przywrócić:`
+        : `Przejrzano ${revs.length} ${plural(revs.length, 'wersję', 'wersje', 'wersji')} pliku – nie znalazłem spisów ani programów, których teraz brakuje.`;
+    } catch (e) {
+      st.textContent = 'Nie udało się odczytać historii pliku.';
+      handleError(e);
+    }
+  }
+  function paintHistory() {
+    const off = new Set([...$('hs-list').querySelectorAll('input:not(:checked)')].map((x) => x.value));
+    $('hs-list').innerHTML = histFound.map((h, i) => {
+      const o = h.obj;
+      const n = h.kind === 'book' ? (o.items || []).length : (o.parts || []).reduce((s, p) => s + (p.items || []).length, 0);
+      const what = h.kind === 'book' ? `spis pieśni${o.code ? ' ' + esc(o.code) : ''} · ${n} ${plural(n, 'pozycja', 'pozycje', 'pozycji')}`
+        : `program uroczystości${o.date ? ' · ' + esc(o.date) : ''} · ${n} ${plural(n, 'pieśń', 'pieśni', 'pieśni')}`;
+      return `<li><label><input type="checkbox" value="${i}"${off.has(String(i)) ? '' : ' checked'}>
+        <span><b>${esc(o.name || '(bez nazwy)')}</b><span class="muted small">${what} · ostatnio w wersji z ${esc(fmtDate(h.at))}</span></span></label></li>`;
+    }).join('');
+    $('hs-ok').disabled = !histFound.length;
+  }
+  function restoreHistory() {
+    const pick = [...$('hs-list').querySelectorAll('input:checked')].map((x) => histFound[+x.value]).filter(Boolean);
+    if (!pick.length) return;
+    let books = 0;
+    let progs = 0;
+    for (const h of pick) {
+      if (h.kind === 'book') {
+        if (data.songbooks.some((b) => b.id === h.obj.id)) continue;
+        const b = h.obj;
+        if (!b.code || data.songbooks.some((x) => x.code === b.code)) b.code = nextCode(data.songbooks);
+        data.songbooks.push(b);
+        books++;
+      } else if (!data.programs.some((p) => p.id === h.obj.id)) {
+        data.programs.push(h.obj);
+        progs++;
+      }
+    }
+    $('hist-dlg').close();
+    changed();
+    renderAll();
+    const parts = [];
+    if (books) parts.push(`${books} ${plural(books, 'spis', 'spisy', 'spisów')}`);
+    if (progs) parts.push(`${progs} ${plural(progs, 'program', 'programy', 'programów')}`);
+    toast(`Przywrócono: ${parts.join(' i ') || 'nic (już są)'}.`);
+  }
+  $('btn-history').addEventListener('click', openHistory);
+  $('hs-cancel').addEventListener('click', () => $('hist-dlg').close());
+  $('hs-ok').addEventListener('click', restoreHistory);
 
   // ---------- wersja testowa (KN_CONFIG.env) ----------
   // Pasek „WERSJA TESTOWA” i kopiowanie danych z produkcji. Plik produkcji tylko CZYTAMY –

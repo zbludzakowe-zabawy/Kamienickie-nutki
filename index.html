@@ -36,6 +36,7 @@
       <button class="btn light" id="btn-connect">Połącz z Dyskiem</button>
       <div class="account" id="account" hidden>
         <span class="who" id="who"></span>
+        <button class="btn ghost" id="btn-history" title="Odzyskaj spisy i programy uroczystości ze starszych wersji danych zapisanych na Dysku">Odzyskaj…</button>
         <button class="btn ghost" id="btn-disconnect" title="Rozłącz z Dyskiem Google (tryb administratora zostaje otwarty)">Rozłącz</button>
       </div>
       <button class="btn ghost" id="btn-to-guest" title="Zobacz aplikację tak jak chórzyści">Widok chórzysty</button>
@@ -376,6 +377,20 @@
     </div>
   </dialog>
 
+  <dialog id="hist-dlg" aria-labelledby="hs-head">
+    <div class="picker">
+      <h2 id="hs-head">Odzyskaj spisy i programy</h2>
+      <p class="muted small" style="margin:0">Dysk Google przechowuje starsze wersje pliku z danymi aplikacji (zwykle z ostatnich 30 dni).
+        Szukam w nich spisów pieśni i programów uroczystości, których teraz nie ma. Zaznaczone wrócą razem z dopasowanymi nutami.</p>
+      <p id="hs-status" class="small"></p>
+      <ul class="hs-list" id="hs-list"></ul>
+      <div class="dialog-actions">
+        <button class="btn" type="button" id="hs-cancel">Zamknij</button>
+        <button class="btn primary" type="button" id="hs-ok" disabled>Przywróć zaznaczone</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="reload-dlg" aria-labelledby="rl-head">
     <div class="picker">
       <h2 id="rl-head">Wczytaj ponownie spis</h2>
@@ -559,6 +574,7 @@
   <script src="js/zip.js"></script>
   <script src="js/songlist.js"></script>
   <script src="js/matcher.js"></script>
+  <script src="js/datamerge.js"></script>
   <script src="js/app.js"></script>
   <script src="js/songs.js"></script>
   <script src="js/dups.js"></script>
