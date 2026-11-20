@@ -820,6 +820,7 @@
     if (window.Dups) Dups.render();
     if (window.Programs) Programs.render();
     if (window.Publish) Publish.render();
+    if (window.Works) Works.render();
   }
 
   // ---------- zakładki ----------
@@ -835,16 +836,17 @@
     if (name === 'choir' && window.Publish) Publish.render();
     if (name === 'choir' && window.Reports) Reports.autoFetch();
     if (name === 'events' && window.Programs) Programs.render();
+    if (name === 'catalog' && window.Works) Works.render();
   }
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
-  try { const t = localStorage.getItem(TAB_KEY); showTab(['songs', 'events', 'choir'].includes(t) ? t : 'files'); } catch (e) { showTab('files'); }
+  try { const t = localStorage.getItem(TAB_KEY); showTab(['catalog', 'songs', 'events', 'choir'].includes(t) ? t : 'files'); } catch (e) { showTab('files'); }
 
   // wspólne funkcje dla pozostałych modułów (spisy pieśni)
   window.App = {
     get data() { return data; },
     get idx() { return idx; },
     changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt, cleanCode, nextCode,
-    orderFiles, openOrder, songKey, openRotate, openEdit, showTab,
+    orderFiles, openOrder, songKey, openRotate, openEdit, showTab, afterFlags, setMeta, flagTag, renderAll,
   };
 
   // ---------- zdarzenia ----------

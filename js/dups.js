@@ -529,5 +529,5 @@ ${body || '<p>Nic do sprzątania.</p>'}</body></html>`;
     if (e.key === 'Enter' && e.target.classList.contains('dup-name')) { e.preventDefault(); decide(e.target.closest('.dup').dataset.g, 'name', e.target.closest('.dup')); }
   });
 
-  return { render, detect, othersItems, toRemove };
+  return { render, detect, othersItems, toRemove, titleOf, baseTitle, nameKey };
 })();

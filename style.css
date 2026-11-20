@@ -245,6 +245,10 @@ dialog::backdrop { background: rgba(20, 10, 10, .45); }
 }
 .tabs button.active { background: var(--panel); color: var(--accent); border-color: var(--accent); box-shadow: var(--shadow); }
 .tabs + main { padding-top: 12px; }
+@media (max-width: 600px) {
+  .tabs { flex-wrap: wrap; }
+  .tabs button { flex: 1 1 auto; min-width: 0; padding: 4px 10px; font-size: .9rem; }
+}
 .panel { display: flex; flex-direction: column; gap: 16px; }
 .small { font-size: .85rem; }
 .badge.doc { background: #3f6a3a; }
@@ -677,3 +681,45 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 #gr-note { min-height: 60px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font: inherit; resize: vertical; font-weight: 400; }
 
 .ev-head-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- katalog nut ---------- */
+.cat-ign { margin: 0; align-self: center; white-space: nowrap; align-items: center; }
+.toolbar .cat-ign input { flex: none; min-height: 0; width: 18px; height: 18px; padding: 0; margin: 0; }
+.cat-tagfilter { margin-top: 6px; }
+.cat-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 4px; border-top: 1px solid var(--line); }
+.cat-bulk .check { margin: 0; }
+.cat-bulk-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat-bulk-acts select { min-height: 34px; padding: 4px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
+.cat-bulk-acts select:disabled { opacity: .5; }
+.works { border-top: 1px solid var(--line); }
+.work { display: flex; align-items: flex-start; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+.work.on { background: var(--accent-soft); }
+.work.ign { opacity: .6; }
+.work .wsel { width: 18px; height: 18px; margin-top: 4px; flex: none; accent-color: var(--accent); }
+.work-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.work-title.linklike { padding: 0; font-size: 1rem; font-weight: 600; color: var(--ink); text-decoration: none; text-align: left; overflow-wrap: anywhere; }
+.work-title.linklike:hover { color: var(--accent); text-decoration: underline; }
+.work-people { color: var(--muted); }
+.work-meta { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.wtag { font-size: .75rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.wref { font-size: .72rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+#work-dlg { width: min(640px, calc(100vw - 24px)); }
+#wk-form { overflow-y: auto; }
+.wk-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 520px) { .wk-two { grid-template-columns: 1fr; } }
+.wk-tags { display: flex; flex-wrap: wrap; gap: 6px; font-weight: 400; }
+.wk-tags .fchip { min-height: 32px; padding: 2px 12px; }
+.wk-newtag { display: flex; gap: 6px; margin-top: 6px; font-weight: 400; }
+.wk-newtag input { flex: 1; min-width: 0; min-height: 34px; padding: 4px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.wk-files { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; font-weight: 400; }
+.wk-files li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.wk-files li:last-child { border-bottom: none; }
+#wk-books { overflow-wrap: anywhere; }
+#wk-books .linklike { padding: 0 2px; }
+.tg-list { list-style: none; margin: 0; padding: 0; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+.tg-list li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.tg-list li:last-child { border-bottom: none; }
+.tg-name { flex: 1; min-width: 0; min-height: 36px; padding: 4px 10px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--ink); font-size: 1rem; }
+.tg-name:hover, .tg-name:focus { border-color: var(--line); background: var(--bg); }
+.tg-n { min-width: 2.5em; text-align: right; }
+#wk-form .dialog-actions { position: sticky; bottom: -16px; margin: 0 -16px -16px; padding: 10px 16px 16px; background: var(--panel); border-top: 1px solid var(--line); }
