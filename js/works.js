@@ -192,7 +192,7 @@ window.Works = (() => {
       `<button class="fchip${ui.tags.has(t.id) ? ' active' : ''}" data-t="${esc(t.id)}" aria-pressed="${ui.tags.has(t.id)}">${esc(t.name)} <b>${counts.tags[t.id] || 0}</b></button>`).join('') +
       (ui.tags.size ? '<button class="fchip" data-t="">✕ wyczyść</button>' : '');
     const n = out.filter((x) => ui.sel.has(x.w.id)).length;
-    $('cat-sel').textContent = n ? `zaznaczone: ${n}` : 'zaznacz widoczne';
+    $('cat-sel').textContent = n ? `zaznaczone: ${n}` : 'zaznacz';
     $('cat-all').checked = out.length > 0 && out.every((x) => ui.sel.has(x.w.id));
     $('cat-all').indeterminate = n > 0 && !$('cat-all').checked;
     $('cat-bulk-acts').querySelectorAll('select, button').forEach((b) => { b.disabled = !n && b.id !== 'cat-export'; });
