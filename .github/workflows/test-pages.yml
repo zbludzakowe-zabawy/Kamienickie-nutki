@@ -1,0 +1,52 @@
+name: Publikacja wersji testowej
+
+# Gałąź test → https://zbludzakowe-zabawy.github.io/Kamienickie-nutki-test/
+# Osobny adres (nie podfolder produkcji), żeby telefon traktował test jako osobną aplikację.
+# Gotowa strona trafia do gałęzi gh-pages repozytorium zbludzakowe-zabawy/Kamienickie-nutki-test
+# (tam Pages: „Deploy from a branch” → gh-pages). Potrzebny sekret TEST_PAGES_TOKEN:
+# token z prawem Contents: Read and write tylko do repozytorium Kamienickie-nutki-test.
+
+on:
+  push:
+    branches: [test]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-pages
+  cancel-in-progress: true
+
+env:
+  TARGET: zbludzakowe-zabawy/Kamienickie-nutki-test
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/test'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Przygotuj wersję testową
+        run: |
+          mkdir _site
+          cp -r index.html style.css manifest.webmanifest sw.js js icons _site/
+          node tools/build-test.mjs _site
+          node tools/build-sw.mjs _site
+          touch _site/.nojekyll
+      - name: Wyślij do repozytorium strony testowej
+        env:
+          TOKEN: ${{ secrets.TEST_PAGES_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "::error::Brak sekretu TEST_PAGES_TOKEN (Settings → Secrets and variables → Actions)"; exit 1; fi
+          cd _site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Wersja testowa z ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${TOKEN}@github.com/${TARGET}.git" gh-pages
+          echo "Opublikowano: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki-test/"
