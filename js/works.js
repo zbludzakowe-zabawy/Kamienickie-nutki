@@ -162,7 +162,7 @@ window.Works = (() => {
         ${people ? `<span class="work-people small">${people}</span>` : ''}
         <span class="work-meta">${tagPills(w)}${refs}
           <span class="muted small">${nf ? `${nf} ${A.plural(nf, 'plik', 'pliki', 'plików')}` : '<span class="warn-text">bez plików</span>'}</span>
-          ${x.ign ? '<span class="flag-tag">👻 nieistotne</span>' : ''}</span>
+          ${x.ign ? `<span class="flag-tag">${A.GHOST(true)} nieistotne</span>` : ''}</span>
       </div>
       ${nf ? `<a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(w.files[0])}/view" target="_blank" rel="noopener" title="Otwórz na Dysku">↗</a>` : ''}
     </div>`;
@@ -295,7 +295,7 @@ window.Works = (() => {
     $('wk-ign').disabled = !ids.length || dirAll;
     $('wk-del').hidden = ids.length > 0;
     $('wk-ign-why').hidden = !dirAll;
-    $('wk-ign-why').textContent = dirAll ? 'Cały folder jest oznaczony jako nieistotny (👻 przy folderze w „Nutach na Dysku”).' : '';
+    $('wk-ign-why').textContent = dirAll ? 'Cały folder jest oznaczony jako nieistotny (duszek przy folderze w „Nutach na Dysku”).' : '';
     if (!ids.length && w) $('wk-ign').checked = false;
   }
   function openWork(id) {

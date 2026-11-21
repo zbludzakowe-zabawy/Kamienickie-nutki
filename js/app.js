@@ -318,11 +318,13 @@
   }
 
   // ---------- „to nie nuty” i „nieistotne” ----------
+  // Duszek „nieistotne”: same kontury = nieoznaczone, biały wypełniony (klasa on) = oznaczone
+  const GHOST = (on) => `<svg class="ico-ghost${on ? ' on' : ''}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg>`;
   const NONOTE = '<svg class="ico-nonote" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-nonote"/></svg>';
   function flagTag(fl) {
     if (fl === 'notes') return `<span class="flag-tag">${NONOTE} to nie nuty</span>`;
-    if (fl === 'ignore') return '<span class="flag-tag">👻 nieistotne</span>';
-    if (fl === 'ignoreDir') return '<span class="flag-tag" title="Cały folder jest oznaczony jako nieistotny">👻 w nieistotnym folderze</span>';
+    if (fl === 'ignore') return `<span class="flag-tag">${GHOST(true)} nieistotne</span>`;
+    if (fl === 'ignoreDir') return `<span class="flag-tag" title="Cały folder jest oznaczony jako nieistotny">${GHOST(true)} w nieistotnym folderze</span>`;
     return '';
   }
   // ustaw/usuń pole w meta (puste meta znika)
@@ -347,15 +349,25 @@
     changed();
     renderAll();
   }
-  function toggleIgnoreFolder(id) {
+  // duszek przy folderze albo pliku w drzewie
+  function toggleIgnore(id) {
     const n = data.nodes[id];
     if (!n) return;
     const on = !(data.meta[id] && data.meta[id].ignore);
     setMeta(id, 'ignore', on);
+    if (on) setMeta(id, 'notNotes', false);
     afterFlags();
-    toast(on ? `Folder „${n.name}” oznaczony jako nieistotny – jego nuty są pomijane przy dopasowaniu, w duplikatach i „Pozostałych nutach”.`
-      : `Folder „${n.name}” znów jest brany pod uwagę.`);
+    if (n.folder) {
+      toast(on ? `Folder „${n.name}” oznaczony jako nieistotny – jego nuty są pomijane przy dopasowaniu, w duplikatach i „Pozostałych nutach”.`
+        : `Folder „${n.name}” znów jest brany pod uwagę.`);
+    } else toast(on ? 'Oznaczono jako nieistotne.' : 'Usunięto oznaczenie „nieistotne”.');
   }
+  // przycisk duszka w drzewie: inDir = leży w folderze oznaczonym jako nieistotny (wtedy tylko podgląd)
+  const ghostBtn = (id, on, inDir, folder) => inDir
+    ? `<span class="act ghost on dim" title="W folderze oznaczonym jako nieistotny – zmień to przy folderze">${GHOST(true)}</span>`
+    : `<button class="act ghost${on ? ' on' : ''}" data-ghost="${esc(id)}" aria-pressed="${on}" aria-label="${folder ? 'Nieistotny folder' : 'Nieistotny plik'}" title="${on
+      ? (folder ? 'Folder oznaczony jako nieistotny – kliknij, żeby cofnąć' : 'Oznaczony jako nieistotny – kliknij, żeby cofnąć')
+      : (folder ? 'Oznacz folder jako nieistotny (nuty niepotrzebne chórzystom)' : 'Oznacz jako nieistotne (nuty niepotrzebne chórzystom)')}">${GHOST(on)}</button>`;
 
   let edId = null;
   function paintEdRot() {
@@ -382,7 +394,7 @@
     $('ed-ignore').checked = !!m.ignore || dirIgn;
     $('ed-ignore').disabled = dirIgn;
     $('ed-ignore-why').hidden = !dirIgn;
-    $('ed-ignore-why').textContent = dirIgn ? 'Cały folder jest oznaczony jako nieistotny (👻 przy folderze w „Nutach na Dysku”).' : '';
+    $('ed-ignore-why').textContent = dirIgn ? 'Cały folder jest oznaczony jako nieistotny (duszek przy folderze w „Nutach na Dysku”).' : '';
     $('edit-dlg').showModal();
     $('ed-name').focus();
   }
@@ -641,6 +653,7 @@
       return `<div class="row file${fl ? ' flagged' : ''}" data-id="${esc(n.id)}" style="--d:${d}">${badge}
         <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}${m && m.page ? `<span class="page-tag">str. ${m.page}</span>` : ''}${flagTag(fl)}${shortcutTag(n)}</div>
         ${(sib[n.id] || []).length > 1 ? `<button class="act" data-act="order" title="Kolejność stron tej pieśni (${sib[n.id].length} pliki w tym folderze)" aria-label="Kolejność stron">⇅</button>` : ''}
+        ${fl === 'notes' ? '<span class="act ghost-gap"></span>' : ghostBtn(n.id, fl === 'ignore', fl === 'ignoreDir', false)}
         <button class="act" data-act="edit" title="Edytuj: nazwa, obrót, „to nie nuty”, „nieistotne”" aria-label="Edytuj plik">✎</button>
         <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(n.id)}/view" target="_blank" rel="noopener" title="Otwórz na Dysku" aria-label="Otwórz na Dysku">↗</a></div>`;
     };
@@ -653,8 +666,8 @@
       const ign = !!(data.meta[n.id] && data.meta[n.id].ignore);
       const inIgn = !ign && Catalog.flagOf(data.nodes, data.meta, n.id) === 'ignoreDir';
       let s = `<div class="row folder${open ? ' open' : ''}${ign || inIgn ? ' flagged' : ''}" data-id="${esc(n.id)}" style="--d:${d}" role="button" tabindex="0" aria-expanded="${open}">
-        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span>${ign ? '<span class="flag-tag">👻 nieistotny</span>' : ''}${shortcutTag(n)}<span class="cnt">${cnt}</span>
-        ${n.parent !== null && !inIgn ? `<button class="act ghost${ign ? ' on' : ''}" data-ghost="${esc(n.id)}" title="${ign ? 'Folder oznaczony jako nieistotny – kliknij, żeby cofnąć' : 'Oznacz folder jako nieistotny (nuty niepotrzebne chórzystom)'}" aria-label="Nieistotny folder" aria-pressed="${ign}">👻</button>` : ''}
+        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span>${ign ? `<span class="flag-tag">${GHOST(true)} nieistotny</span>` : ''}${shortcutTag(n)}<span class="cnt">${cnt}</span>
+        ${n.parent !== null ? ghostBtn(n.id, ign, inIgn, true) : ''}
         <button class="act refresh${ui.refreshing === n.id ? ' spin' : ''}" data-refresh="${esc(n.id)}" title="Odśwież tylko ten folder" aria-label="Odśwież folder ${esc(n.name)}"${ui.scanning ? ' disabled' : ''}>↻</button></div>`;
       if (open) s += (idx.children[n.id] || []).map((ch) => node(ch, d + 1)).join('');
       return s;
@@ -1012,7 +1025,7 @@
     get data() { return data; },
     get idx() { return idx; },
     changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt, cleanCode, nextCode,
-    orderFiles, openOrder, songKey, openRotate, openEdit, showTab, afterFlags, setMeta, flagTag, renderAll,
+    orderFiles, openOrder, songKey, openRotate, openEdit, showTab, afterFlags, setMeta, flagTag, renderAll, GHOST,
   };
 
   // ---------- zdarzenia ----------
@@ -1082,7 +1095,7 @@
   };
   tree.addEventListener('click', (e) => {
     const gh = e.target.closest('[data-ghost]');
-    if (gh) return toggleIgnoreFolder(gh.dataset.ghost);
+    if (gh) return toggleIgnore(gh.dataset.ghost);
     const rf = e.target.closest('[data-refresh]');
     if (rf) return refreshFolder(rf.dataset.refresh);
     const row = e.target.closest('.row');

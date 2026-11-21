@@ -151,7 +151,10 @@ Dopasowanie (`songMatcher` w programs.js): pozycja spisu (`Matcher.score`, ≥ S
   (duplikaty i „Pozostałe nuty”), filtr „nieprzypisane”. Pliki zostają w drzewie (wyszarzone, tag) – filtr „Oznaczone”, żeby odznaczyć.
   „To nie nuty” niedostępne dla pliku używanego w śpiewniku (`ok`/`auto`) albo programie (`usedIn`). Po zmianie: `afterFlags()` = rematch + `Dups.detect(true)`.
   UI: przy pliku ✎ → okno `#edit-dlg` (`App.openEdit`: nazwa, „⟳ Obróć…” → `#rot-dlg`, oba oznaczenia; wykluczają się) – w drzewie i w duplikatach.
-  Przy folderze 👻 (`data-ghost`, widoczny po najechaniu jak ↻; włączony – zawsze). Osobnego ⟳ w drzewie już nie ma.
+  **Duszek** (ikonka SVG `#i-ghost` w index.html, `App.GHOST(on)`; wybrany przez użytkownika „klasyczny”: okrągła głowa, falisty dół, buzia „o”):
+  nieoznaczone = same kontury, przygaszony; oznaczone = biały na ciemnym kółku (`--ghost-bg`). Przycisk `data-ghost` przy **każdym folderze**
+  (zawsze widoczny) i **każdym pliku** w drzewie (`toggleIgnore`); w nieistotnym folderze – wyszarzony, bez klikania; przy „to nie nuty” – brak.
+  W oknach edycji (plik, pozycja katalogu) ikonka zmienia się po zaznaczeniu pola (`.ed-flag:has(input:checked)`). Osobnego ⟳ w drzewie już nie ma.
 
 - **Szukaj duplikatów** (przycisk obok „Skanuj Dysk”, tylko po skanowaniu) – grupy: `m:<md5>` identyczna treść (md5 z Dysku, pobierane
   od tej wersji przy skanowaniu – starsze skany go nie mają), `n:<klucz nazwy>` ta sama nazwa (Twoja albo pliku, bez numerów stron i „kopia”)

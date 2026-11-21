@@ -331,9 +331,8 @@ dialog::backdrop { background: rgba(20, 10, 10, .45); }
 .act.refresh.spin, .act.refresh.spin:disabled { opacity: 1; color: var(--accent); animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (hover: hover) {
-  .row.folder .act.refresh, .row.folder .act.ghost:not(.on) { opacity: 0; }
-  .row.folder:hover .act.refresh, .row.folder .act.refresh:focus-visible,
-  .row.folder:hover .act.ghost, .row.folder .act.ghost:focus-visible { opacity: 1; }
+  .row.folder .act.refresh { opacity: 0; }
+  .row.folder:hover .act.refresh, .row.folder .act.refresh:focus-visible { opacity: 1; }
   .row.folder .act.refresh:disabled:not(.spin) { opacity: 0; }
 }
 
@@ -632,8 +631,23 @@ html.admin-locked[data-mode="admin"] #admin-lock { display: block; }
 .hs-list .muted { display: block; }
 
 /* „to nie nuty” i „nieistotne” */
-.act.ghost { width: 32px; height: 32px; font-size: .95rem; filter: grayscale(1); }
-.act.ghost.on { filter: none; background: var(--bg); }
+/* duszek „nieistotne”: same kontury (lekki) → po oznaczeniu biały, wyraźny */
+.ico-ghost { width: 1.2em; height: 1.2em; flex: none; vertical-align: -.25em; --gfill: none; }
+:root { --ghost-bg: #7d6f66; }
+@media (prefers-color-scheme: dark) { :root { --ghost-bg: #120e0d; } }
+.ico-ghost.on, .ed-flag:has(input:checked) .ico-ghost { --gfill: #fff; color: #3a2e2b; }
+.act.ghost { width: 32px; height: 32px; font-size: 1.05rem; color: var(--muted); opacity: .55; }
+.act.ghost:hover:not(.dim) { opacity: 1; color: var(--ink); }
+/* oznaczone: biały duszek na ciemnym kółku – wyraźny także na jasnym tle */
+.act.ghost.on { opacity: 1; background: var(--ghost-bg); }
+.act.ghost.on:hover { background: var(--ghost-bg); filter: brightness(1.15); }
+.act.ghost.dim { opacity: .4; cursor: default; display: inline-flex; align-items: center; justify-content: center; }
+.act.ghost-gap { width: 32px; visibility: hidden; }
+.ed-flag .ico-ghost { color: var(--muted); box-sizing: content-box; padding: 3px; border-radius: 8px; vertical-align: -.4em; }
+.ed-flag:has(input:checked) .ico-ghost { background: var(--ghost-bg); }
+.flag-tag .ico-ghost { width: 1.25em; height: 1.25em; }
+.names .flag-tag { white-space: normal; max-width: 100%; }
+#cat-ign .ico-ghost { color: var(--muted); }
 .row.flagged .title, .row.flagged .fname, .row.flagged .badge { opacity: .55; }
 .row.flagged .title { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
 .row.folder.flagged .fname { text-decoration: none; }
@@ -740,3 +754,4 @@ html[data-env="test"] { --accent: #24476b; --accent-soft: #e1e9f2; }
 .test-bar strong { letter-spacing: .08em; }
 .test-bar a { color: inherit; margin-left: auto; }
 .test-bar .btn { padding: 3px 10px; font-size: 13px; }
+.hint .ico-ghost.on { background: var(--ghost-bg); border-radius: 4px; }
