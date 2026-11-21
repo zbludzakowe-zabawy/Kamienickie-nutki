@@ -10,7 +10,7 @@ Object.assign(window.KN_CONFIG, {
   // plik produkcji – tylko do ODCZYTU przyciskiem „Skopiuj dane z produkcji”
   prodDataFileName: 'KamienickieNutki.json',
   // adres produkcji (link na pasku testowym)
-  prodUrl: '../',
+  prodUrl: '/Kamienickie-nutki/',
   // bez katalogu chóru: zwykły adres otwiera tryb administratora; chórzystę testujemy linkiem ?chor=<id testowy>
   publicCatalogId: '',
 });
