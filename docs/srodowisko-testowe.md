@@ -8,39 +8,44 @@ dane w przeglądarce i/lub na Dysku Google.
 
 | | Produkcja | Test |
 |---|---|---|
-| Gałąź | `main` | `test` |
-| Adres | `https://<konto>.github.io/<repo>/` | `https://<konto>.github.io/<repo>/test/` |
+| Gałąź (kod) | `main` | `test` (w tym samym repozytorium) |
+| Adres | `https://<konto>.github.io/<repo>/` | `https://<konto>.github.io/<repo>-test/` |
+| Gdzie leży gotowa strona | Pages repozytorium z kodem | gałąź `gh-pages` osobnego, pustego repozytorium `<repo>-test` |
 | Kto wprowadza zmiany | właściciel scala PR do `main` | PR do `test`, scalany na prośbę właściciela |
 | Wygląd | normalny | pomarańczowy pasek „WERSJA TESTOWA”, inny kolor, ikona z napisem TEST |
 | Dane | prawdziwe | osobne (kopia z produkcji na przycisk) |
 
 Praca: gałąź robocza → PR do `test` → ręczne sprawdzenie pod adresem testowym → PR do `main`.
 
-## Dlaczego podfolder `/test/`, a nie osobna domena czy osobne repozytorium
+## Dlaczego osobne repozytorium na stronę testową (a NIE podfolder `/test/`)
 
-- **Jedno repozytorium, jedna publikacja.** GitHub Pages ma jedną stronę na repozytorium, ale workflow może
-  do jednej paczki włożyć dwie gałęzie: `main` do katalogu głównego, `test` do `test/`.
-- **To samo „źródło” (origin), więc logowanie Google działa bez zmian.** Klient OAuth i klucz API mają wpisane
-  `https://<konto>.github.io` (z `/*`). Ścieżka się nie liczy, więc w Google Cloud nie trzeba nic dopisywać.
-  Przy innej domenie (Netlify, Cloudflare Pages) trzeba by dopisać nowe źródło i odsyłacz.
-- Wada tego samego originu: **wspólna pamięć przeglądarki** (localStorage, IndexedDB, Cache Storage, service worker).
-  Trzeba ją rozdzielić. To najważniejsza część przepisu, niżej.
+Pierwsza wersja leżała w podfolderze produkcji (`/<repo>/test/`). **Na telefonie to nie działa:** zakres PWA produkcji
+(`scope: ./` = `/<repo>/`) obejmuje wszystko pod spodem, więc Android traktuje test jako część zainstalowanej produkcji.
+Nie da się zainstalować drugiej ikonki, test otwiera się w oknie produkcji, a ikonka otwiera to, co było ostatnio.
+Zakresu nie da się „wyciąć”. Test musi mieć adres **obok**, nie w środku.
+
+- `https://<konto>.github.io/<repo>-test/` jest obok (`/<repo>-test/` nie zaczyna się od `/<repo>/`). To osobna aplikacja na telefonie.
+- **Ta sama domena, więc logowanie Google działa bez zmian.** Klient OAuth i klucz API mają `https://<konto>.github.io` (z `/*`),
+  więc w Google Cloud nic nie trzeba dopisywać. Przy innej domenie (Netlify, Cloudflare Pages) trzeba by dopisać źródło i odsyłacz.
+- Wada tej samej domeny: **wspólna pamięć przeglądarki** (localStorage, IndexedDB, Cache Storage). Trzeba ją rozdzielić (punkty 2–4).
+- Kod zostaje w jednym repozytorium (gałąź `test`). Drugie repozytorium jest tylko „półką” na gotową stronę.
 
 ## Elementy
 
-### 1. Workflow (`.github/workflows/pages.yml`)
+### 1. Publikacja
 
-- Uruchamia się przy pushu do `main` i `test`.
-- **Publikuje zawsze przebieg z `main`.** Środowisko `github-pages` domyślnie pozwala publikować tylko z gałęzi
-  domyślnej. Push do `test` uruchamia więc tylko krótkie zadanie, które zleca publikację z `main`:
-  `gh workflow run pages.yml --ref main` (z `permissions: actions: write`). `GITHUB_TOKEN` nie może wywoływać
-  innych workflow, ale `workflow_dispatch` jest wyjątkiem. Dzięki temu nie trzeba nic zmieniać w ustawieniach repozytorium.
-- Przebieg z `main` pobiera obie gałęzie (`actions/checkout` z `ref` i `path`). Najpierw sprawdza, czy `test` istnieje
-  (`git ls-remote --exit-code --heads origin test`). Potem składa:
-  1. `main` → `_site/` i `build-sw.mjs _site` (**przed** dodaniem `test/`, żeby pliki testu nie trafiły do listy
-     plików service workera produkcji),
-  2. `test` → `_site/test/`, potem `build-test.mjs _site/test` i `build-sw.mjs _site/test`.
-- Skrypty dla testu są brane **z gałęzi `test`** (`node test/tools/...`), więc zmiany w samym mechanizmie też da się najpierw przetestować.
+**Produkcja** (`.github/workflows/pages.yml`): jak zwykle, push do `main` → GitHub Pages (Actions). Dodatkowo pod starym adresem
+`/<repo>/test/` leży mała strona z przekierowaniem na nowy adres.
+
+**Test** (`.github/workflows/test-pages.yml`): push do `test` → budowa (`build-test.mjs`, `build-sw.mjs`, `.nojekyll`) →
+`git push -f` całej strony do gałęzi `gh-pages` repozytorium `<repo>-test`. Tam Pages: „Deploy from a branch” → `gh-pages` / `(root)`.
+
+Jednorazowe ustawienia (robi właściciel):
+1. Puste **publiczne** repozytorium `<repo>-test` (bez README).
+2. Token fine-grained (GitHub → Settings → Developer settings → Fine-grained tokens): dostęp **tylko** do `<repo>-test`,
+   uprawnienie *Contents: Read and write*. Ma datę ważności, więc trzeba go odnawiać (przy wygaśnięciu publikacja testu zgłosi błąd).
+3. W repozytorium z kodem: Settings → Secrets and variables → Actions → sekret `TEST_PAGES_TOKEN` = token.
+4. Po pierwszej publikacji: w `<repo>-test` Settings → Pages → Source „Deploy from a branch”, gałąź `gh-pages`, folder `/ (root)`.
 
 ### 2. Ustawienia testu doklejane przy publikacji (`tools/test-env/config.test.js`)
 
@@ -69,13 +74,10 @@ W kodzie aplikacji nie ma osobnej kopii dla testu. `tools/build-test.mjs` doklej
 ### 4. Service worker (`sw.js`)
 
 Dwa problemy przy wspólnym originie:
-- **Zasięg:** SW produkcji (zasięg `/<repo>/`) obejmuje też `/<repo>/test/` i podsuwałby tam stronę produkcji ze schowka.
-  Rozwiązanie: `SKIP = ['test/']` względem `registration.scope`. Zapytania z tych ścieżek SW produkcji puszcza bez obsługi.
-  Test ma własny SW (`/test/sw.js`, zasięg `/test/`), a węższy zasięg wygrywa.
+- **Zasięg:** przy osobnym adresie (`/<repo>-test/`) zasięgi się nie nakładają. `SKIP = ['test/']` w SW produkcji zostało tylko po to,
+  żeby stary adres `/<repo>/test/` (przekierowanie) nie był podmieniany stroną produkcji ze schowka.
 - **Schowki:** Cache Storage jest wspólne dla originu, a każdy SW przy aktywacji kasuje „stare” schowki ze swoim przedrostkiem.
   Przedrostek jest więc w stałej `PREFIX`. `build-test.mjs` zmienia go na `test-…`, który **nie zaczyna się** od przedrostka produkcji.
-- Uwaga przy pierwszym wdrożeniu: urządzenia z **wcześniejszym** SW produkcji (bez `SKIP`) do czasu odświeżenia
-  („Dostępna nowa wersja” → Odśwież) mogą pod `/test/` pokazywać produkcję.
 
 ### 5. Wygląd i instalacja (`tools/build-test.mjs`)
 
@@ -97,7 +99,8 @@ Dwa problemy przy wspólnym originie:
 3. Wypisz rzeczy **„dla innych ludzi”** (publiczne linki, powiadomienia, formularze): w teście wyłącz albo skieruj na osobne.
 4. Ustawienia testu trzymaj w jednym pliku doklejanym przy publikacji. Kod produkcji ma tylko proste `if (cfg.env)`.
 5. Wyraźnie odróżnij wygląd: pasek, kolor, nazwa, ikona.
-6. Workflow: jedna paczka z obu gałęzi, publikacja zawsze z `main`, push do `test` zleca publikację.
-7. Sprawdź lokalnie: zbuduj `_site` jak workflow, uruchom `python3 -m http.server` w katalogu **nad** `_site`
-   przemianowanym na nazwę repo (żeby ścieżki były jak na Pages), otwórz `/<repo>/` i `/<repo>/test/`.
+6. Adres testu **obok** produkcji, nie w jej podfolderze (zakres PWA). Na GitHub Pages: osobne repozytorium `<repo>-test` + token + sekret.
+7. Linki z testu do produkcji pisz ścieżką bezwzględną (`/<repo>/`), bo `../` z `/<repo>-test/` prowadzi do korzenia domeny.
+8. Sprawdź lokalnie: zbuduj obie strony jak workflow, w jednym katalogu jako `<repo>/` i `<repo>-test/`, uruchom `python3 -m http.server`
+   w katalogu nad nimi i otwórz obie.
    Sprawdź, że klucze testu mają przedrostek i że produkcja nie widzi danych testu.
