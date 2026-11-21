@@ -651,7 +651,7 @@
       }
       const fl = Catalog.flagOf(data.nodes, data.meta, n.id);
       return `<div class="row file${fl ? ' flagged' : ''}" data-id="${esc(n.id)}" style="--d:${d}">${badge}
-        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}${m && m.page ? `<span class="page-tag">str. ${m.page}</span>` : ''}${flagTag(fl)}${shortcutTag(n)}</div>
+        <div class="names" data-act="edit"><span class="title${title ? '' : ' plain'}">${esc(title || n.name)}</span>${title ? `<span class="orig">${esc(n.name)}</span>` : ''}${isNew(n) ? '<span class="new">nowy</span>' : ''}${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}${toRemoveSet && toRemoveSet.has(n.id) ? '<span class="dup-tag del">duplikat – do usunięcia</span>' : ''}${m && m.page ? `<span class="page-tag">str. ${m.page}</span>` : ''}${fl === 'notes' ? flagTag(fl) : ''}${shortcutTag(n)}</div>
         ${(sib[n.id] || []).length > 1 ? `<button class="act" data-act="order" title="Kolejność stron tej pieśni (${sib[n.id].length} pliki w tym folderze)" aria-label="Kolejność stron">⇅</button>` : ''}
         ${fl === 'notes' ? '<span class="act ghost-gap"></span>' : ghostBtn(n.id, fl === 'ignore', fl === 'ignoreDir', false)}
         <button class="act" data-act="edit" title="Edytuj: nazwa, obrót, „to nie nuty”, „nieistotne”" aria-label="Edytuj plik">✎</button>
@@ -666,7 +666,7 @@
       const ign = !!(data.meta[n.id] && data.meta[n.id].ignore);
       const inIgn = !ign && Catalog.flagOf(data.nodes, data.meta, n.id) === 'ignoreDir';
       let s = `<div class="row folder${open ? ' open' : ''}${ign || inIgn ? ' flagged' : ''}" data-id="${esc(n.id)}" style="--d:${d}" role="button" tabindex="0" aria-expanded="${open}">
-        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span>${ign ? `<span class="flag-tag">${GHOST(true)} nieistotny</span>` : ''}${shortcutTag(n)}<span class="cnt">${cnt}</span>
+        <span class="tw" aria-hidden="true"></span><span class="fico" aria-hidden="true"></span><span class="fname">${esc(n.name)}</span>${shortcutTag(n)}<span class="cnt">${cnt}</span>
         ${n.parent !== null ? ghostBtn(n.id, ign, inIgn, true) : ''}
         <button class="act refresh${ui.refreshing === n.id ? ' spin' : ''}" data-refresh="${esc(n.id)}" title="Odśwież tylko ten folder" aria-label="Odśwież folder ${esc(n.name)}"${ui.scanning ? ' disabled' : ''}>↻</button></div>`;
       if (open) s += (idx.children[n.id] || []).map((ch) => node(ch, d + 1)).join('');

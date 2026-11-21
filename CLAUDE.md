@@ -154,6 +154,7 @@ Dopasowanie (`songMatcher` w programs.js): pozycja spisu (`Matcher.score`, ≥ S
   **Duszek** (ikonka SVG `#i-ghost` w index.html, `App.GHOST(on)`; wybrany przez użytkownika „klasyczny”: okrągła głowa, falisty dół, buzia „o”):
   nieoznaczone = same kontury, przygaszony; oznaczone = biały na ciemnym kółku (`--ghost-bg`). Przycisk `data-ghost` przy **każdym folderze**
   (zawsze widoczny) i **każdym pliku** w drzewie (`toggleIgnore`); w nieistotnym folderze – wyszarzony, bez klikania; przy „to nie nuty” – brak.
+  W drzewie **bez napisu „nieistotny”** (decyzja użytkownika – wystarczy duszek; napis zostaje w katalogu i „to nie nuty” w drzewie).
   W oknach edycji (plik, pozycja katalogu) ikonka zmienia się po zaznaczeniu pola (`.ed-flag:has(input:checked)`). Osobnego ⟳ w drzewie już nie ma.
 
 - **Szukaj duplikatów** (przycisk obok „Skanuj Dysk”, tylko po skanowaniu) – grupy: `m:<md5>` identyczna treść (md5 z Dysku, pobierane
