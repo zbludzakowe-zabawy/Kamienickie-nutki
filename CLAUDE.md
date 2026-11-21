@@ -81,7 +81,7 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 ## Dane
 
 Wszystko w jednym obiekcie `data` (IndexedDB + `Kamienickie Nutki/KamienickieNutki.json` na Dysku administratora;
-przy połączeniu wygrywa nowszy `updatedAt`):
+synchronizacja – patrz „Synchronizacja z Dyskiem” niżej):
 
 ```
 { app, v, updatedAt, scannedAt, newAt,
@@ -98,6 +98,15 @@ przy połączeniu wygrywa nowszy `updatedAt`):
   catalog: {tags: [{id, name}], works: {id: {id, title, ownTitle?, lyrics, music, tags:[tagId], files:[fileId], manual?, at}}},
   owner }
 ```
+
+**Synchronizacja z Dyskiem** (poprawione 2026-11-20 po zgłoszeniu „zniknął spis Adwent”): dawniej wygrywał cały plik z nowszym `updatedAt`,
+więc urządzenie ze starymi danymi (wystarczyło, że katalog przeliczył się przy starcie i podbił `updatedAt`) nadpisywało plik na Dysku i znikały
+nowe spisy. Teraz `sync.baseAt` = `updatedAt` wersji z Dysku, którą urządzenie ostatnio wczytało/zapisało, `sync.remoteMod` = jej `modifiedTime`.
+Przy połączeniu: brak niezapisanych zmian → obowiązuje Dysk; zmiany tylko tutaj (Dysk = `baseAt`) → zapis; zmiany tu i tam → `mergeRemote`
+(`js/datamerge.js`, `DataMerge.merge`: spisy/programy/meta/cechy/utwory łączone po id, przy różnicy w tym samym obiekcie wygrywa Dysk, a wersja z urządzenia
+idzie do kopii `KamienickieNutki-kopia-z-urzadzenia-….json` w folderze aplikacji; publikacja/duplikaty/drzewo – z nowszej strony). Przed każdym zapisem
+`guardRemote` sprawdza `modifiedTime` pliku (inne urządzenie otwarte równolegle). **„Odzyskaj…”** (pasek konta, `#hist-dlg`): przegląda wersje pliku
+na Dysku (`Drive.revisions`/`readRevision`) i pozwala przywrócić spisy i programy, których teraz brakuje (`DataMerge.missing`).
 
 **Kolejność stron** (jedno miejsce: `meta[id].page`): okno `#order-dlg` (`App.openOrder(ids, title)`) z przyciskami ⇅ w drzewie
 (pliki tej samej pieśni w jednym folderze – `songKey`/`siblingsMap`), w spisach (pozycja z ≥2 plikami), w programach i w duplikatach
@@ -142,7 +151,11 @@ Dopasowanie (`songMatcher` w programs.js): pozycja spisu (`Matcher.score`, ≥ S
   (duplikaty i „Pozostałe nuty”), filtr „nieprzypisane”. Pliki zostają w drzewie (wyszarzone, tag) – filtr „Oznaczone”, żeby odznaczyć.
   „To nie nuty” niedostępne dla pliku używanego w śpiewniku (`ok`/`auto`) albo programie (`usedIn`). Po zmianie: `afterFlags()` = rematch + `Dups.detect(true)`.
   UI: przy pliku ✎ → okno `#edit-dlg` (`App.openEdit`: nazwa, „⟳ Obróć…” → `#rot-dlg`, oba oznaczenia; wykluczają się) – w drzewie i w duplikatach.
-  Przy folderze 👻 (`data-ghost`, widoczny po najechaniu jak ↻; włączony – zawsze). Osobnego ⟳ w drzewie już nie ma.
+  **Duszek** (ikonka SVG `#i-ghost` w index.html, `App.GHOST(on)`; wybrany przez użytkownika „klasyczny”: okrągła głowa, falisty dół, buzia „o”):
+  nieoznaczone = same kontury, przygaszony; oznaczone = biały na ciemnym kółku (`--ghost-bg`). Przycisk `data-ghost` przy **każdym folderze**
+  (zawsze widoczny) i **każdym pliku** w drzewie (`toggleIgnore`); w nieistotnym folderze – wyszarzony, bez klikania; przy „to nie nuty” – brak.
+  W drzewie **bez napisu „nieistotny”** (decyzja użytkownika – wystarczy duszek; napis zostaje w katalogu i „to nie nuty” w drzewie).
+  W oknach edycji (plik, pozycja katalogu) ikonka zmienia się po zaznaczeniu pola (`.ed-flag:has(input:checked)`). Osobnego ⟳ w drzewie już nie ma.
 
 - **Szukaj duplikatów** (przycisk obok „Skanuj Dysk”, tylko po skanowaniu) – grupy: `m:<md5>` identyczna treść (md5 z Dysku, pobierane
   od tej wersji przy skanowaniu – starsze skany go nie mają), `n:<klucz nazwy>` ta sama nazwa (Twoja albo pliku, bez numerów stron i „kopia”)

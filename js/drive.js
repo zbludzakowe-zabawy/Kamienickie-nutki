@@ -343,6 +343,15 @@ window.Drive = (() => {
     return (await api(`${API}/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`)).json();
   }
 
+  // historia wersji pliku z danymi (Dysk trzyma starsze wersje ok. 30 dni / do 100 wersji)
+  async function revisions(id) {
+    const r = await (await api(`${API}/files/${encodeURIComponent(id)}/revisions?${qs({ fields: 'revisions(id,modifiedTime,size)', pageSize: 1000 })}`)).json();
+    return r.revisions || [];
+  }
+  async function readRevision(id, revId) {
+    return (await api(`${API}/files/${encodeURIComponent(id)}/revisions/${encodeURIComponent(revId)}?alt=media`)).json();
+  }
+
   async function createJson(name, text, parentId) {
     const boundary = 'kn' + Math.random().toString(36).slice(2);
     const body =
@@ -368,7 +377,7 @@ window.Drive = (() => {
     FOLDER, SHORTCUT, AuthError,
     init, connect, disconnect, isConnected, onChange, rememberEmail,
     about, meta, listChildren, listFolders, listFoldersAndDocs, listSharedDrives, download, exportText, exportCsv,
-    findDataFile, readJson, createJson, updateJson, ensureAppFolder, moveInto,
+    findDataFile, readJson, revisions, readRevision, createJson, updateJson, ensureAppFolder, moveInto,
     ensurePublicFolder, makePublic, copyFile, uploadFile, deleteFile, publicText,
   };
 })();
