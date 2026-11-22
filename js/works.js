@@ -118,7 +118,7 @@ window.Works = (() => {
   const visible = () => !document.querySelector('[data-panel="catalog"]').hidden;
   function haystack(w, refs) {
     const parts = [w.title, w.lyrics, w.music, ...w.tags.map(tagName)];
-    w.files.forEach((id) => { const n = A.data.nodes[id]; parts.push(titleOf(id), n ? n.name : ''); });
+    w.files.forEach((id) => { const n = A.data.nodes[id]; parts.push(titleOf(id), n ? A.stripExt(n.name) : ''); }); // nazwy plików bez rozszerzeń
     refs.forEach((r) => { parts.push(r.it.title, ...(r.it.alt || []), `${r.b.code} ${r.it.no}`); });
     return Catalog.norm(parts.join(' '));
   }
