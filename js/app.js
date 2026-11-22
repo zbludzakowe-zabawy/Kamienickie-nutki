@@ -618,7 +618,7 @@
       if (f === 'unnamed' && title) return false;
       if (f === 'new' && !isNew(n)) return false;
       if (words.length) {
-        const hay = Catalog.norm(n.name + ' ' + (title || ''));
+        const hay = Catalog.norm(stripExt(n.name) + ' ' + (title || '')); // bez rozszerzenia („jpg” nie znajduje wszystkich zdjęć)
         return words.every((w) => hay.includes(w));
       }
       return true;
