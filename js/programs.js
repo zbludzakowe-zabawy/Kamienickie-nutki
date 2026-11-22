@@ -276,7 +276,8 @@ window.Programs = (() => {
       for (const b of A.data.songbooks) {
         b.items.forEach((it, i) => {
           if (!usable(it)) return;
-          if (match(Catalog.norm(`${b.name} ${b.code || ''} ${it.no} ${it.title}`))) songs.push({ b, it, i });
+          // tytuł (też alternatywne) albo identyfikator + numer („N 34”); nazwa spisu nie – inaczej pokazuje wszystkie jego pieśni
+          if (match(Catalog.norm(`${b.code || ''} ${it.no} ${it.title} ${(it.alt || []).join(' ')}`))) songs.push({ b, it, i });
         });
       }
       const files = Object.values(A.data.nodes).filter((n) => !n.folder).filter((n) => {
