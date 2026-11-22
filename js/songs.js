@@ -327,7 +327,7 @@ window.Songs = (() => {
       const words = Catalog.norm(q).split(' ').filter(Boolean);
       ids = Object.values(A.data.nodes).filter((n) => !n.folder).filter((n) => {
         const m = A.data.meta[n.id];
-        const hay = Catalog.norm(A.stripExt(n.name) + ' ' + ((m && m.title) || '') + ' ' + Catalog.pathOf(A.data.nodes, n.id));
+        const hay = Catalog.norm(A.stripExt(n.name) + ' ' + ((m && m.title) || '')); // tylko nazwa – bez folderu i rozszerzenia
         return words.every((w) => hay.includes(w));
       }).slice(0, 150).map((n) => ({ id: n.id }));
     }

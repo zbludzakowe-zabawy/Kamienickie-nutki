@@ -281,7 +281,7 @@ window.Programs = (() => {
       }
       const files = Object.values(A.data.nodes).filter((n) => !n.folder).filter((n) => {
         const m = A.data.meta[n.id];
-        return match(Catalog.norm(`${A.stripExt(n.name)} ${(m && m.title) || ''} ${Catalog.pathOf(A.data.nodes, n.id)}`));
+        return match(Catalog.norm(`${A.stripExt(n.name)} ${(m && m.title) || ''}`)); // tylko nazwa – bez folderu i rozszerzenia
       });
       html += songs.slice(0, 60).map(({ b, it, i }) => `<li><button type="button" class="pick-item" data-kind="song" data-b="${esc(b.id)}" data-i="${i}">
         <span class="badge doc">SPIS</span><span><b>${esc(it.title)}</b><br><span class="muted small">${esc(b.name)}${b.code ? ' [' + esc(b.code) + ']' : ''}${it.no ? ' · nr ' + esc(it.no) : ''} · ${it.files.length} ${A.plural(it.files.length, 'plik', 'pliki', 'plików')}</span></span><span class="chev">${pickItem >= 0 ? 'Wybierz' : 'Dodaj'}</span></button></li>`).join('');
