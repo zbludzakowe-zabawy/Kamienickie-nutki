@@ -11,11 +11,15 @@ dane w przeglądarce i/lub na Dysku Google.
 | Gałąź (kod) | `main` | `test` (w tym samym repozytorium) |
 | Adres | `https://<konto>.github.io/<repo>/` | `https://<konto>.github.io/<repo>-test/` |
 | Gdzie leży gotowa strona | Pages repozytorium z kodem | gałąź `gh-pages` osobnego, pustego repozytorium `<repo>-test` |
-| Kto wprowadza zmiany | właściciel scala PR do `main` | PR do `test`, scalany na prośbę właściciela |
+| Kto wprowadza zmiany | właściciel scala PR do `main` | PR do `test`, scala Claude (domyślnie każda zmiana) |
 | Wygląd | normalny | pomarańczowy pasek „WERSJA TESTOWA”, inny kolor, ikona z napisem TEST |
 | Dane | prawdziwe | osobne (kopia z produkcji na przycisk) |
 
-Praca: gałąź robocza → PR do `test` → ręczne sprawdzenie pod adresem testowym → PR do `main`.
+Praca (ustalona z użytkownikiem):
+1. Każda zmiana domyślnie trafia na testy: gałąź robocza (od `main`) → PR do `test` → scala Claude → publikacja testu.
+2. Po każdej zmianie Claude przypomina: „zmiana jest na wersji testowej – jeśli ma być na produkcji, daj znać”.
+3. Na produkcję tylko na prośbę właściciela: PR tej samej gałęzi roboczej do `main`, scala właściciel.
+4. „Uaktualnij testy” = PR `main` → `test`, gdy na produkcję weszło coś z pominięciem testów.
 
 ## Dlaczego osobne repozytorium na stronę testową (a NIE podfolder `/test/`)
 
