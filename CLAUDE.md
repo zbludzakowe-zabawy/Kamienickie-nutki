@@ -4,13 +4,18 @@ Aplikacja (PWA, czysty HTML/JS bez buildu) do porządkowania nut chóru trzymany
 Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR-y po polsku.
 
 - Strona: https://zbludzakowe-zabawy.github.io/Kamienickie-nutki/ (repo `zbludzakowe-zabawy/Kamienickie-nutki`, **wielkie K** w adresie!)
-- Publikacja: GitHub Actions (`.github/workflows/pages.yml`) po każdym pushu do `main`.
-- **Sposób pracy**: zmiany na gałęzi roboczej → push → **PR do `main`**. **Scala (wprowadza do `main`) wyłącznie użytkownik** –
-  nigdy nie pushuj do `main` ani nie scalaj PR-ów. Wcześniej scalaliśmy bezpośrednio, ale od etapu 3 użytkownik prosi o PR.
-  Równolegle może pracować inny wątek (gałąź `claude/funny-shannon-…`) – przed PR zawsze `git fetch` + `git merge origin/main`.
+- Publikacja: produkcja = GitHub Actions (`.github/workflows/pages.yml`) po każdym pushu do `main`; wersja testowa = push do `test` (niżej).
+- **Sposób pracy (ustalony z użytkownikiem 2026-11-22 – „nasz sposób na środowisko testowe”):**
+  1. Gałąź robocza od aktualnego `main` (`git fetch` + `git merge origin/main`; równolegle mogą pracować inne wątki).
+  2. **Domyślnie każda zmiana idzie najpierw na testy**: PR gałęzi roboczej do `test` → **scalam go sam** (bez pytania) → sprawdzam,
+     że workflow „Publikacja wersji testowej” przeszedł.
+  3. **Po każdej zmianie przypominam użytkownikowi**: „Zmiana jest na wersji testowej (link). Jeśli ma trafić na produkcję – daj znać.”
+  4. Na produkcję **tylko na wyraźną prośbę użytkownika**: PR tej samej gałęzi roboczej do `main` (bez innych, niezatwierdzonych zmian z `test`)
+     → **scala wyłącznie użytkownik**. Nigdy nie pushuj do `main` ani nie scalaj PR-ów do `main`.
+  5. „Uaktualnij testy” = PR `main` → `test` i scalenie (gdy na produkcję weszło coś spoza testów, np. z innego wątku).
+  Zmiany w samym CLAUDE.md (notatki) działają w nowych sesjach dopiero po wejściu do `main` – przy takich zmianach od razu proponuj PR do `main`.
 - **Wersja testowa**: gałąź `test` → https://zbludzakowe-zabawy.github.io/Kamienickie-nutki-test/ (pasek „WERSJA TESTOWA”, ikona TEST).
-  Zmiany: gałąź robocza → **PR do `test`** → scalam go **ja, ale tylko na prośbę użytkownika** → użytkownik sprawdza ręcznie → PR do `main` (scala użytkownik).
-  „Uaktualnij testy” = PR `main` → `test` i scalenie. Publikacja: `.github/workflows/test-pages.yml` buduje i wypycha stronę do gałęzi `gh-pages`
+  Na telefonie i komputerze to osobna aplikacja (osobna ikonka) – sprawdzone przez użytkownika. Publikacja: `.github/workflows/test-pages.yml` buduje i wypycha stronę do gałęzi `gh-pages`
   repozytorium `zbludzakowe-zabawy/Kamienickie-nutki-test` (sekret `TEST_PAGES_TOKEN`, token z datą ważności!). **Nie podfolder `/test/` produkcji** –
   tam telefon widział test jako część zainstalowanej produkcji (jedna ikonka); pod starym `/Kamienickie-nutki/test/` jest teraz przekierowanie.
   Osobne dane: `tools/test-env/config.test.js` doklejany do `config.js` (`tools/build-test.mjs`): `env:'test'`, plik
