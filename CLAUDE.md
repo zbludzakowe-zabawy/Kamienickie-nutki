@@ -31,7 +31,7 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
 |---|---|---|
 | Logowanie | Google OAuth (GIS token client) | brak – tylko PIN |
 | Dostęp do Dysku | `drive.readonly` + `drive.file` | klucz API (`?key=`) do plików publicznych |
-| Widzi | zakładki: Nuty na Dysku / Katalog / Spisy pieśni / Uroczystości / Dla chórzystów | uroczystości + śpiewniki → lista pieśni → nuty na cały ekran, PDF |
+| Widzi | zakładki: Nuty na Dysku / Katalog / Spisy pieśni / Uroczystości / Dla chórzystów | start: Śpiewniki / Uroczystości / Katalog nut → lista pieśni → nuty na cały ekran, PDF |
 
 Tryb wybiera `js/mode.js` (w `<head>`, przed narysowaniem): `?chor=<id katalogu>` → chórzysta (zapamiętane w localStorage
 `kn-mode`, `kn-guest-id`); `KN_CONFIG.publicCatalogId` jest ustawione (katalog chóru użytkownika), więc **domyślnie chórzysta**.
@@ -79,7 +79,8 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
   **Po zmianie sposobu składania PDF podbij `PDF_FORMAT` w publish.js** (jest w podpisie) – inaczej istniejące PDF-y się nie przebudują.
 - `js/programs.js` – zakładka „Uroczystości” (`window.Programs`): programy mszy, części, wybór pieśni (`#song-picker`), `forPublish()`
 - `js/publish.js` – zakładka „Dla chórzystów” (`window.Publish`)
-- `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu `#/`, `#/s/<bookId>[/<i>]` (śpiewnik), `#/p/<programId>[/<i>]` (program; `i` = indeks w spłaszczonej liście pieśni)
+- `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu: `#/` = ekran startowy z trzema kafelkami (decyzja użytkownika 2026-11-22),
+  `#/spiewniki`, `#/uroczystosci` (nadchodzące + archiwum), `#/katalog[/<i>]` (katalog nut), `#/s/<bookId>[/<i>]` (śpiewnik), `#/p/<programId>[/<i>]` (program; `i` = indeks w spłaszczonej liście pieśni)
 - `js/pwa.js`, `sw.js`, `manifest.webmanifest`, `icons/` – PWA; `tools/build-sw.mjs` wpisuje wersję i listę plików przy publikacji
 - `design/ikona.svg` – źródło ikony (otwarty śpiewnik); PNG generuje `make-icons.js` ze skilla pwa-na-telefon
   **Po zmianie ikony podbij `?v=N`** we wszystkich odwołaniach (`index.html`, `manifest.webmanifest`, `guest.js`, `style.css`) –
@@ -206,8 +207,11 @@ Oznaczanie **na tej samej stronie co wyszukiwanie**: zaznaczanie wielu pozycji �
   Utwór spoza spisów → pytanie o nazwę plików w aplikacji (`meta.title`). „Anuluj” = tylko w katalogu → `ownTitle: true` (przygotowane pod różne nazwy).
 - Filtry: tekst (tytuł, tytuły spisu i alt, autorzy, cechy, nazwy plików, „Z 12”), cechy (wszystkie zaznaczone naraz, liczniki), bez cech / bez autora tekstu /
   bez kompozytora / spoza spisów / bez plików. Lista rysowana po 300 pozycji („Pokaż więcej”). Ustawienia filtrów w `localStorage['kn-cat-ui']`.
-- **Chórzyści – jeszcze nie** (użytkownik: „docelowo też, może podobnie jak admin, ale tylko wyszukiwanie”). Do katalogu dla chórzystów trzeba by
-  dodać utwory (kopie plików jak w śpiewnikach) – forma do ustalenia.
+- **Chórzyści** (2026-11-22): tylko wyszukiwanie (tytuł, alt, autorzy, cechy, „Z 12”) + filtr cech (wszystkie zaznaczone naraz, liczniki) → podgląd nut
+  i ⚠ zgłoszenie (`kind:'c'`). Publikacja: `publish.js` `worksNow()` (po `Works.sync()`; bez nieistotnych i „to nie nuty”) → w katalogu chórzystów
+  `works: {tags:[{id,name}], items:[{title, alt?, lyrics, music, tags, refs:['Z 12'], files:[kopie]}]}`; kopie plików jak w śpiewnikach (`neededIds`).
+  Wiersz „Katalog nut” w „Dla chórzystów” (przełącznik `publish.works.enabled`), stan w `status.works`, podpis w `publish.sigs.__works`;
+  aktualizowany razem z „Aktualizuj listy”, bez PDF. ⏮ ⏭ w podglądzie idą po liście po wyszukiwaniu/filtrze (`b.order`).
 
 ## Publikacja dla chórzystów
 
@@ -313,7 +317,7 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 
 ### Do przemyślenia (zapisane na prośbę użytkownika, 2026-11-19)
 
-- ~~Katalog wszystkich nut~~ – zrobione (zakładka „Katalog”). Zostało: katalog u chórzystów (forma do ustalenia).
+- ~~Katalog wszystkich nut~~ – zrobione (zakładka „Katalog”, także u chórzystów).
 - **Nagrania** – czy i gdzie udostępniać nagrania (np. ćwiczeniowe dla głosów): pliki audio na Dysku obok nut, linki (YouTube itp.),
   odtwarzanie w aplikacji chórzysty? Do omówienia.
 - **Przesyłanie nut przez chórzystów** – raczej **nie** (wstępne zdanie użytkownika). Chórzysta nie ma zapisu na Dysku;

@@ -755,3 +755,18 @@ html[data-env="test"] { --accent: #24476b; --accent-soft: #e1e9f2; }
 .test-bar a { color: inherit; margin-left: auto; }
 .test-bar .btn { padding: 3px 10px; font-size: 13px; }
 .hint .ico-ghost.on { background: var(--ghost-bg); border-radius: 4px; }
+
+/* ---------- chórzysta: ekran startowy i katalog nut ---------- */
+.g-homes { gap: 14px; margin-top: 16px; }
+.g-home { min-height: 92px; padding: 18px; }
+.g-home .g-book-text strong { font-size: 1.25rem; }
+.g-home .g-book-ico, .g-home .g-prog-ico { width: 52px; height: 52px; }
+.g-cat-ico { font-size: 1.6rem; }
+.g-h2 { margin-top: 22px; }
+.g-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.g-tags .fchip:not(.active) { color: var(--ink); }
+.g-wsum:empty { display: none; }
+.g-wsum { margin: 0 0 8px; }
+.g-wmeta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.g-more { text-align: center; }
+.g-more:empty { display: none; }
