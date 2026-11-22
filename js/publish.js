@@ -27,7 +27,89 @@ window.Publish = (() => {
     for (const b of allBooks()) for (const it of b.items) if (usable(it)) it.files.forEach((f) => { if (A.data.nodes[f]) ids.add(f); });
     const o = P().others;
     if (o && o.enabled !== false && o.snapshot) o.snapshot.forEach((it) => it.files.forEach((f) => { if (A.data.nodes[f]) ids.add(f); }));
+    if (W().enabled !== false) worksNow().forEach((w) => w.files.forEach((f) => ids.add(f)));
     return ids;
+  }
+
+  // ---------- katalog nut dla chórzystów ----------
+  // Utwory z zakładki „Katalog” (bez „nieistotnych” i „to nie nuty”) – chórzysta tylko wyszukuje, filtruje i ogląda nuty.
+  const WORKS_KEY = '__works';
+  const W = () => {
+    const p = P();
+    if (!p.works || typeof p.works !== 'object') p.works = { enabled: true };
+    return p.works;
+  };
+  const cmpPl = (a, b) => a.localeCompare(b, 'pl', { numeric: true, sensitivity: 'base' });
+  function worksNow() {
+    if (window.Works) Works.sync();
+    const c = A.data.catalog;
+    if (!c || !c.works) return [];
+    const nodes = A.data.nodes;
+    const fl = (id) => Catalog.flagOf(nodes, A.data.meta, id);
+    const ign = (id) => { const f = fl(id); return f === 'ignore' || f === 'ignoreDir'; };
+    const refs = {};
+    for (const b of A.data.songbooks) {
+      b.items.forEach((it) => {
+        if (it.state !== 'ok' && it.state !== 'auto') return;
+        (it.files || []).forEach((id) => { (refs[id] = refs[id] || []).push({ b, it }); });
+      });
+    }
+    const tagName = {};
+    (c.tags || []).forEach((t) => { tagName[t.id] = t.name; });
+    const out = [];
+    for (const w of Object.values(c.works)) {
+      const files = (w.files || []).filter((id) => nodes[id] && !nodes[id].folder && fl(id) !== 'notes');
+      if (!files.length || files.every(ign)) continue;
+      const seen = new Set();
+      const rs = [];
+      const alt = new Set();
+      files.forEach((id) => (refs[id] || []).forEach(({ b, it }) => {
+        const k = (b.code || b.name) + (it.no ? ' ' + it.no : '');
+        if (!seen.has(k)) { seen.add(k); rs.push(k); }
+        [it.title, ...(it.alt || [])].forEach((t) => { if (t && t !== w.title) alt.add(t); });
+      }));
+      out.push({
+        title: w.title || '(bez tytułu)',
+        ...(alt.size ? { alt: [...alt] } : {}),
+        lyrics: w.lyrics || '',
+        music: w.music || '',
+        tags: (w.tags || []).filter((t) => tagName[t]),
+        refs: rs,
+        files,
+      });
+    }
+    out.sort((a, b) => cmpPl(a.title, b.title));
+    return out;
+  }
+  const worksTags = (items) => {
+    const used = new Set(items.flatMap((w) => w.tags));
+    return ((A.data.catalog && A.data.catalog.tags) || []).filter((t) => used.has(t.id)).map((t) => ({ id: t.id, name: t.name }));
+  };
+  const worksSig = (items) => (W().enabled === false ? Promise.resolve('off') : hash(JSON.stringify([worksTags(items),
+    items.map((w) => [w.title, w.alt || [], w.lyrics, w.music, w.tags, w.refs, w.files.map((f) => [f, A.data.nodes[f] && A.data.nodes[f].modified, rotOf(f)])])])));
+  function worksCatalog() {
+    if (W().enabled === false) return null;
+    const p = P();
+    const items = worksNow();
+    return {
+      tags: worksTags(items),
+      items: items.map((w) => ({ ...w, files: w.files.map((f) => p.copies[f] && p.copies[f].id).filter(Boolean) })).filter((w) => w.files.length),
+    };
+  }
+  function worksRow() {
+    const off = W().enabled === false;
+    const n = off ? 0 : worksNow().length;
+    const st = status.works;
+    const label = !st ? '' : off ? (st.state === 'ok' ? '<span class="muted small">ukryty</span>' : '<span class="pub-state changed">● do ukrycia – kliknij „Aktualizuj listy”</span>')
+      : STATE_LABEL[st.state];
+    return `<li class="pub-others">
+      <span class="pub-cell"><strong><span class="badge doc">KATALOG</span> Katalog nut</strong>
+        <span class="muted small">Wszystkie nuty z zakładki „Katalog” (bez nieistotnych)${off ? '' : ` – teraz ${n} ${A.plural(n, 'utwór', 'utwory', 'utworów')}`}.
+          Chórzysta wyszukuje, filtruje po cechach i ogląda nuty. Aktualizujesz razem z listami.</span>
+        <label class="check small"><input type="checkbox" data-w="enabled"${off ? '' : ' checked'}${busy ? ' disabled' : ''}> widoczny dla chórzystów</label></span>
+      <span class="pub-cell"><span class="lbl">Lista w aplikacji</span>${label}</span>
+      <span class="pub-cell"><span class="lbl">PDF</span><span class="muted small">— bez PDF</span></span>
+    </li>`;
   }
 
   // ---------- śpiewnik „Pozostałe nuty” ----------
@@ -109,6 +191,7 @@ window.Publish = (() => {
 
   function catalog() {
     const p = P();
+    const works = worksCatalog();
     return {
       v: 1,
       at: new Date().toISOString(),
@@ -130,6 +213,7 @@ window.Publish = (() => {
           })),
         };
       }).concat(othersCatalog()),
+      ...(works ? { works } : {}),
       // formularz zgłoszeń od chórzystów (adres wysyłki i pole) – tylko gdy ustawiony
       ...(window.Reports && Reports.target() ? { report: Reports.target() } : {}),
       programs: programs().map((pr) => {
@@ -186,6 +270,10 @@ window.Publish = (() => {
       if (v !== 'ok') st.any = true;
       if (pdf === 'missing' || pdf === 'stale') { st.pdfOff++; if (!h) st.pdfTodo++; }
     }
+    const ws = await worksSig(W().enabled === false ? [] : worksNow());
+    const wprev = p.sigs && p.sigs[WORKS_KEY];
+    st.works = { sig: ws, state: !wprev ? (ws === 'off' ? 'ok' : 'new') : wprev !== ws ? 'changed' : 'ok' };
+    if (st.works.state !== 'ok') st.any = true;
     const ids = new Set(books.map((b) => b.id));
     st.removed = (p.published || []).filter((id) => !ids.has(id));
     if (st.removed.length || !p.catalogId) st.any = true;
@@ -206,6 +294,7 @@ window.Publish = (() => {
     p.at = new Date().toISOString();
     p.sigs = {};
     for (const [id, x] of Object.entries(status.books)) p.sigs[id] = x.sig;
+    if (status.works) p.sigs[WORKS_KEY] = status.works.sig;
     p.published = Object.keys(status.books);
     delete p.dataAt;
     A.changed();
@@ -218,7 +307,7 @@ window.Publish = (() => {
 
   async function publish(opts = {}) {
     if (busy) return;
-    if (!allBooks().length && !opts.others) return A.toast('Najpierw wczytaj spis pieśni albo utwórz program uroczystości.', true);
+    if (!allBooks().length && !opts.others && W().enabled === false) return A.toast('Najpierw wczytaj spis pieśni albo utwórz program uroczystości.', true);
     if (!(await A.ensureConnected())) return;
     busy = true;
     problems = [];
@@ -227,6 +316,7 @@ window.Publish = (() => {
     try {
       status = await computeStatus();
       const updated = Object.values(status.books).filter((x) => x.state !== 'ok').map((x) => x.name);
+      if (status.works && status.works.state !== 'ok') updated.push('Katalog nut');
       const same = Object.values(status.books).filter((x) => x.state === 'ok').map((x) => x.name);
       const pdfDone = [];
       step('Przygotowanie folderu dla chórzystów…', 0.02);
@@ -423,11 +513,11 @@ window.Publish = (() => {
           <span class="pub-cell"><span class="lbl">PDF</span>${pdfCell(b, st)}</span></li>`;
       }).join('')
       : '<li class="muted pub-empty">Brak spisów i programów – wczytaj spis w zakładce „Spisy pieśni” albo utwórz program w „Uroczystościach”.</li>';
-    $('pub-books').insertAdjacentHTML('beforeend', othersRow());
+    $('pub-books').insertAdjacentHTML('beforeend', worksRow() + othersRow());
     const known = Object.keys(status.books).length === all.length;
-    const listTodo = Object.values(status.books).filter((x) => x.state !== 'ok').length + status.removed.length;
+    const listTodo = Object.values(status.books).filter((x) => x.state !== 'ok').length + status.removed.length + (status.works && status.works.state !== 'ok' ? 1 : 0);
     const upToDate = !!p.catalogId && !status.any && known;
-    $('pub-go').disabled = busy || !all.length || upToDate;
+    $('pub-go').disabled = busy || (!all.length && !(status.works && status.works.state !== 'ok')) || upToDate;
     $('pub-go').textContent = !p.catalogId ? 'Opublikuj listy dla chórzystów' : upToDate ? '✓ Listy aktualne' : `Aktualizuj listy (${listTodo})`;
     $('pub-force').hidden = !upToDate || busy;
     $('pub-list-sum').innerHTML = !known ? '' : !p.catalogId ? '<span class="warn-text">Jeszcze nic nie opublikowano.</span>'
@@ -475,6 +565,11 @@ window.Publish = (() => {
       else P().hold[li.dataset.id] = true;
       A.changed();
       return render();
+    }
+    if (e.target.matches('[data-w="enabled"]')) {
+      W().enabled = e.target.checked;
+      A.changed();
+      return render(); // zmiana trafi do chórzystów po „Aktualizuj listy”
     }
     if (!e.target.matches('[data-o="enabled"]')) return;
     O().enabled = e.target.checked;

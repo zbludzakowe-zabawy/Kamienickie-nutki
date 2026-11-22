@@ -148,6 +148,7 @@ window.Reports = (() => {
       const pr = (A.data.programs || []).find((x) => x.id === p.book);
       return { text: `uroczystość „${pr ? pr.name : p.bookName || '?'}”${p.part ? ', ' + p.part : ''}`, prog: !!pr };
     }
+    if (p.kind === 'c') return { text: 'katalog nut' };
     if (p.book === 'others') return { text: '„Pozostałe nuty”' };
     const b = A.data.songbooks.find((x) => x.id === p.book);
     let i = p.i;
