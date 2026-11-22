@@ -761,8 +761,10 @@ html[data-env="test"] { --accent: #24476b; --accent-soft: #e1e9f2; }
 .g-home { min-height: 92px; padding: 18px; }
 .g-home .g-book-text strong { font-size: 1.25rem; }
 .g-home .g-book-ico, .g-home .g-prog-ico { width: 52px; height: 52px; }
+/* jak ikona „Śpiewniki”: jasny rysunek na pełnym kolorze akcentu – czytelne w jasnym i ciemnym motywie */
+.g-prog-ico.g-cat-ico { background: var(--accent); color: #fbf3e4; }
 .g-cat-ico svg { width: 84%; height: 84%; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.g-cat-ico .c { fill: var(--panel); }
+.g-cat-ico .c { fill: #ffffff2e; }
 .g-cat-ico .f { fill: currentColor; stroke: none; }
 .g-h2 { margin-top: 22px; }
 .g-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
