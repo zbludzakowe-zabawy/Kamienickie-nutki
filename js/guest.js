@@ -174,6 +174,11 @@ window.Guest = (() => {
     window.scrollTo(0, 0);
   };
 
+  // ikonka katalogu: lupa i nuta (wybór użytkownika 2026-11-22)
+  const CAT_ICO = `<span class="g-prog-ico g-cat-ico" aria-hidden="true"><svg viewBox="0 0 48 48"><circle class="c" cx="20" cy="20" r="13"/>
+    <path d="M29.5 29.5 42 42" stroke-width="4"/><ellipse class="f" cx="17" cy="25" rx="3.6" ry="2.8" transform="rotate(-20 17 25)"/>
+    <path d="M20.3 24V12.5l5 2.5" stroke-width="2.2"/></svg></span>`;
+
   // ekran startowy: wybór Śpiewniki / Uroczystości / Katalog
   function renderHome() {
     document.title = 'Kamienickie Nutki';
@@ -190,7 +195,7 @@ window.Guest = (() => {
       <div class="g-books g-homes">
         ${tile('#/spiewniki', '<span class="g-book-ico" aria-hidden="true"></span>', 'Śpiewniki', `${list.length} ${pl(list.length, 'śpiewnik', 'śpiewniki', 'śpiewników')}`)}
         ${tile('#/uroczystosci', '<span class="g-prog-ico" aria-hidden="true">✝</span>', 'Uroczystości', progSub + (next.length > 1 ? ` · nadchodzące: ${next.length}` : ''))}
-        ${catalog.works ? tile('#/katalog', '<span class="g-prog-ico g-cat-ico" aria-hidden="true">♫</span>', 'Katalog nut',
+        ${catalog.works ? tile('#/katalog', CAT_ICO, 'Katalog nut',
           `${works().length} ${pl(works().length, 'utwór', 'utwory', 'utworów')} · wyszukiwanie i cechy`) : ''}
       </div>
       <p class="muted small g-updated">Aktualizacja: ${new Date(catalog.at).toLocaleDateString('pl-PL')}</p>`);
