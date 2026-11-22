@@ -174,6 +174,11 @@ window.Guest = (() => {
     window.scrollTo(0, 0);
   };
 
+  // ikonka uroczystości: sztandar i świece (wybór użytkownika 2026-11-22)
+  const PROG_ICO = `<span class="g-prog-ico g-cat-ico" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 6v36"/>
+    <path class="c" d="M17 9h14v16l-7 4-7-4z"/><path d="M24 13v9M20.5 16.5h7" stroke-width="2"/>
+    <rect class="c" x="5" y="24" width="6" height="18" rx="1"/><rect class="c" x="37" y="24" width="6" height="18" rx="1"/>
+    <path class="f" d="M8 14c2 3 2.5 5.5 0 8-2.5-2.5-2-5 0-8zM40 14c2 3 2.5 5.5 0 8-2.5-2.5-2-5 0-8z"/><path d="M3 42h42"/></svg></span>`;
   // ikonka katalogu: lupa i nuta (wybór użytkownika 2026-11-22)
   const CAT_ICO = `<span class="g-prog-ico g-cat-ico" aria-hidden="true"><svg viewBox="0 0 48 48"><circle class="c" cx="20" cy="20" r="13"/>
     <path d="M29.5 29.5 42 42" stroke-width="4"/><ellipse class="f" cx="17" cy="25" rx="3.6" ry="2.8" transform="rotate(-20 17 25)"/>
@@ -194,7 +199,7 @@ window.Guest = (() => {
     setView('', `<h2 class="g-h">Co chcesz otworzyć?</h2>
       <div class="g-books g-homes">
         ${tile('#/spiewniki', '<span class="g-book-ico" aria-hidden="true"></span>', 'Śpiewniki', `${list.length} ${pl(list.length, 'śpiewnik', 'śpiewniki', 'śpiewników')}`)}
-        ${tile('#/uroczystosci', '<span class="g-prog-ico" aria-hidden="true">✝</span>', 'Uroczystości', progSub + (next.length > 1 ? ` · nadchodzące: ${next.length}` : ''))}
+        ${tile('#/uroczystosci', PROG_ICO, 'Uroczystości', progSub + (next.length > 1 ? ` · nadchodzące: ${next.length}` : ''))}
         ${catalog.works ? tile('#/katalog', CAT_ICO, 'Katalog nut',
           `${works().length} ${pl(works().length, 'utwór', 'utwory', 'utworów')} · wyszukiwanie i cechy`) : ''}
       </div>
@@ -218,7 +223,7 @@ window.Guest = (() => {
     const past = archived();
     const progCard = (p, first) => {
       const songs = p.parts.flatMap((pt) => pt.items);
-      return `<a class="g-book g-prog${first ? ' next' : ''}" href="#/p/${encodeURIComponent(p.id)}"><span class="g-prog-ico" aria-hidden="true">✝</span>
+      return `<a class="g-book g-prog${first ? ' next' : ''}" href="#/p/${encodeURIComponent(p.id)}">${PROG_ICO}
         <span class="g-book-text">${first ? '<span class="g-next">Najbliższa uroczystość</span>' : ''}<strong>${esc(p.name)}</strong>
         <span class="muted">${p.date ? esc(fmtDate(p.date)) + ' · ' : ''}${songs.length} pieśni</span></span><span class="chev">›</span></a>`;
     };
