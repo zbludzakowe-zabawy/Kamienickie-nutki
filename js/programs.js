@@ -105,6 +105,7 @@ window.Programs = (() => {
     const p = list().find((x) => x.id === id);
     if (!p || !confirm(`Usunąć program „${p.name}”?\n\nPo aktualizacji zniknie też chórzystom. Nuty na Dysku zostają nietknięte.`)) return;
     A.data.programs = list().filter((x) => x.id !== id);
+    A.markDeleted(id);
     if (openId === id) setOpen(null);
     A.changed();
     render();
@@ -114,7 +115,7 @@ window.Programs = (() => {
     const items = p.parts.flatMap((pt) => pt.items);
     const withNotes = items.filter((it) => resolve(it).length).length;
     return `<div class="ev-row" data-id="${esc(p.id)}">
-      <div class="ev-row-main"><strong>${esc(p.name)}</strong><span class="muted small">${esc(fmtDate(p.date))} · ${items.length} ${A.plural(items.length, 'pieśń', 'pieśni', 'pieśni')}${items.length ? `, z nutami: ${withNotes}` : ''}</span></div>
+      <div class="ev-row-main"><strong>${esc(p.name)}</strong><span class="muted small">${esc(fmtDate(p.date))} · ${items.length} ${A.plural(items.length, 'pieśń', 'pieśni', 'pieśni')}${items.length ? `, z nutami: ${withNotes}` : ''}${p.restoredAt ? ` · przywrócony z historii ${new Date(p.restoredAt).toLocaleDateString('pl-PL')}` : ''}</span></div>
       <div class="ev-tools"><button class="btn small primary" data-a="open">Otwórz</button><button class="btn small" data-a="copy">Kopiuj</button><button class="btn small" data-a="del">Usuń</button></div></div>`;
   }
 
