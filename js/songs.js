@@ -275,7 +275,7 @@ window.Songs = (() => {
     if (b) setCurrent(b.id);
     $('sb-empty').hidden = !!b;
     $('sb-content').hidden = !b;
-    $('sb-select').innerHTML = list.map((x) => `<option value="${esc(x.id)}"${b && x.id === b.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('');
+    $('sb-select').innerHTML = list.map((x) => `<option value="${esc(x.id)}"${b && x.id === b.id ? ' selected' : ''}>${esc(x.name)}${x.code ? ` [${esc(x.code)}]` : ''} · ${x.items.length} poz.${x.restoredAt ? ' · przywrócony' : ''}</option>`).join('');
     $('sb-select').hidden = list.length < 2;
     if (!b) return;
 
@@ -284,7 +284,8 @@ window.Songs = (() => {
     const autos = b.items.filter((it) => it.state === 'auto').length;
     $('sb-confirm-all').hidden = !autos;
     $('sb-confirm-all').textContent = `✓ Zatwierdź pewne (${autos})`;
-    $('sb-source').textContent = `${b.source && b.source.name ? 'Plik: ' + b.source.name + ' · ' : ''}wczytano ${new Date(b.importedAt).toLocaleDateString('pl-PL')}`;
+    $('sb-source').textContent = `${b.source && b.source.name ? 'Plik: ' + b.source.name + ' · ' : ''}wczytano ${new Date(b.importedAt).toLocaleDateString('pl-PL')}` +
+      (b.restoredAt ? ` · przywrócony z historii ${new Date(b.restoredAt).toLocaleDateString('pl-PL')}` : '');
 
     const n = { all: b.items.length, have: 0, check: 0, missing: 0 };
     b.items.forEach((it) => { n[group(it)]++; });
@@ -423,6 +424,7 @@ window.Songs = (() => {
     const b = book();
     if (!b || !confirm(`Usunąć spis „${b.name}” z aplikacji?\n\nPlik na Dysku i nuty zostaną nietknięte.`)) return;
     A.data.songbooks = books().filter((x) => x.id !== b.id);
+    A.markDeleted(b.id);
     setCurrent(null);
     A.changed();
     render();

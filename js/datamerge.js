@@ -28,11 +28,27 @@
     return out;
   }
   const time = (x) => (typeof x === 'number' ? x : Date.parse(x || '') || 0);
+  // kiedy spis/program powstał w tym kształcie (wczytany, utworzony, przywrócony z historii)
+  const born = (x) => Math.max(time(x && x.importedAt), time(x && x.createdAt), time(x && x.restoredAt));
 
-  function merge(local, remote) {
+  // Usunięte spisy i programy nie mogą wracać z drugiego urządzenia (np. druga przeglądarka ze starymi danymi).
+  // 1) `deleted` = {id: kiedy usunięto} – obiekt starszy niż usunięcie znika (przywrócony później – zostaje);
+  // 2) obiekt tylko w urządzeniu, który powstał przed ostatnim odczytem/zapisem Dysku (baseAt), był wtedy na Dysku –
+  //    skoro na Dysku go nie ma, ktoś go usunął na innym urządzeniu (dotyczy usunięć sprzed zapisywania `deleted`).
+  function dropDeleted(list, remoteIds, deleted, baseAt, stat) {
+    return list.filter((x) => {
+      const del = deleted[x.id];
+      if (del && time(del) >= born(x)) { stat.dropped++; return false; }
+      if (!remoteIds.has(x.id) && baseAt && born(x) && born(x) <= baseAt) { stat.dropped++; return false; }
+      return true;
+    });
+  }
+
+  function merge(local, remote, baseAt) {
     local = obj(local);
     remote = obj(remote);
-    const stat = { added: 0, conflicts: 0 };
+    baseAt = time(baseAt);
+    const stat = { added: 0, conflicts: 0, dropped: 0 };
     const d = { ...local, ...remote };
     d.roots = byId(remote.roots, local.roots, { added: 0, conflicts: 0 });
     // drzewo plików – z nowszego skanowania (musi być spójne)
@@ -41,6 +57,13 @@
     d.meta = byKey(remote.meta, local.meta, stat, (a, b) => !same(a, b));
     d.songbooks = byId(remote.songbooks, local.songbooks, stat, true);
     d.programs = byId(remote.programs, local.programs, stat, true);
+    const deleted = { ...obj(local.deleted), ...obj(remote.deleted) };
+    for (const [k, v] of Object.entries(obj(local.deleted))) if (time(v) > time(deleted[k])) deleted[k] = v;
+    d.songbooks = dropDeleted(d.songbooks, new Set(arr(remote.songbooks).map((x) => x && x.id)), deleted, baseAt, stat);
+    d.programs = dropDeleted(d.programs, new Set(arr(remote.programs).map((x) => x && x.id)), deleted, baseAt, stat);
+    const alive = new Set([...d.songbooks, ...d.programs].map((x) => x.id));
+    for (const k of Object.keys(deleted)) if (alive.has(k)) delete deleted[k]; // przywrócony później niż usunięty
+    d.deleted = deleted;
 
     if (local.catalog || remote.catalog) {
       const rc = obj(remote.catalog);
@@ -65,10 +88,12 @@
     if (local.reports || remote.reports) {
       const lr = obj(local.reports);
       const rr = obj(remote.reports);
-      d.reports = { ...lr, ...rr, done: { ...obj(lr.done), ...obj(rr.done) } };
+      // ustawienia formularza: wypełnione nie mogą zniknąć przez puste z drugiego urządzenia
+      const filled = (f) => !!(f && (f.url || f.sheetId || f.formLink || f.sheetLink));
+      d.reports = { ...lr, ...rr, done: { ...obj(lr.done), ...obj(rr.done) }, form: filled(rr.form) || !filled(lr.form) ? rr.form : lr.form };
     }
     d.owner = remote.owner || local.owner;
-    return { data: d, added: stat.added, conflicts: stat.conflicts };
+    return { data: d, added: stat.added, conflicts: stat.conflicts, dropped: stat.dropped };
   }
 
   // Spisy i programy obecne w starszej wersji danych, a brakujące teraz (odzyskiwanie z historii pliku).

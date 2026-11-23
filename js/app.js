@@ -106,8 +106,8 @@
 
   async function mergeRemote(remote) {
     const local = data;
-    const r = DataMerge.merge(local, remote);
-    if (r.conflicts) { // ta sama rzecz zmieniona tu i tam – wygrał Dysk, wersję z urządzenia zachowujemy w kopii
+    const r = DataMerge.merge(local, remote, sync.baseAt);
+    if (r.conflicts || r.dropped) { // ta sama rzecz zmieniona tu i tam – wygrał Dysk, wersję z urządzenia zachowujemy w kopii
       try { await Drive.createJson(backupName(), JSON.stringify(local), await Drive.ensureAppFolder()); } catch (e) { console.warn('Nie udało się zapisać kopii', e); }
     }
     const d = normalize(r.data);
@@ -905,6 +905,12 @@
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   try { const t = localStorage.getItem(TAB_KEY); showTab(['catalog', 'songs', 'events', 'choir'].includes(t) ? t : 'files'); } catch (e) { showTab('files'); }
 
+  // usunięty spis/program zapamiętujemy, żeby drugie urządzenie (inna przeglądarka) go nie przywróciło przy łączeniu danych
+  function markDeleted(id) {
+    if (!data.deleted || typeof data.deleted !== 'object') data.deleted = {};
+    data.deleted[id] = new Date().toISOString();
+  }
+
   // ---------- odzyskiwanie z historii pliku na Dysku ----------
   // Przegląda starsze wersje pliku z danymi (od najnowszej) i zbiera spisy/programy, których teraz nie ma –
   // każdy w najnowszej wersji, w jakiej występował.
@@ -942,34 +948,49 @@
       handleError(e);
     }
   }
+  // Do porównania: nazwa bez wielkości liter, polskich znaków i znaków przestankowych („Śpiewnik 2 - niebieski” = „Śpiewnik 2 Niebieski”)
+  const nameKey = (x) => Catalog.norm(x || '').replace(/[^a-z0-9]+/g, '');
+  const hasNotes = (it) => (it.state === 'ok' || it.state === 'auto') && (it.files || []).length > 0;
   function paintHistory() {
-    const off = new Set([...$('hs-list').querySelectorAll('input:not(:checked)')].map((x) => x.value));
+    const on = new Set([...$('hs-list').querySelectorAll('input:checked')].map((x) => x.value)); // domyślnie nic nie zaznaczone
+    const del = data.deleted || {};
     $('hs-list').innerHTML = histFound.map((h, i) => {
       const o = h.obj;
-      const n = h.kind === 'book' ? (o.items || []).length : (o.parts || []).reduce((s, p) => s + (p.items || []).length, 0);
-      const what = h.kind === 'book' ? `spis pieśni${o.code ? ' ' + esc(o.code) : ''} · ${n} ${plural(n, 'pozycja', 'pozycje', 'pozycji')}`
-        : `program uroczystości${o.date ? ' · ' + esc(o.date) : ''} · ${n} ${plural(n, 'pieśń', 'pieśni', 'pieśni')}`;
-      return `<li><label><input type="checkbox" value="${i}"${off.has(String(i)) ? '' : ' checked'}>
-        <span><b>${esc(o.name || '(bez nazwy)')}</b><span class="muted small">${what} · ostatnio w wersji z ${esc(fmtDate(h.at))}</span></span></label></li>`;
+      const isBook = h.kind === 'book';
+      const songs = isBook ? (o.items || []) : (o.parts || []).flatMap((p) => p.items || []);
+      const what = isBook
+        ? `spis pieśni${o.code ? ' ' + esc(o.code) : ''} · ${songs.length} ${plural(songs.length, 'pozycja', 'pozycje', 'pozycji')}, z nutami ${songs.filter(hasNotes).length}`
+        : `program uroczystości${o.date ? ' · ' + esc(o.date) : ''} · ${songs.length} ${plural(songs.length, 'pieśń', 'pieśni', 'pieśni')}`;
+      const now = (isBook ? data.songbooks : data.programs).filter((x) => nameKey(x.name) === nameKey(o.name));
+      const notes = [];
+      if (del[o.id]) notes.push(`<span class="warn-text">Usunięty w aplikacji ${esc(fmtDate(del[o.id]))} – raczej celowo.</span>`);
+      if (now.length) {
+        const x = now[0];
+        const xs = isBook ? (x.items || []) : (x.parts || []).flatMap((p) => p.items || []);
+        notes.push(`<span class="warn-text">⚠ Masz już ${isBook ? 'spis' : 'program'} o tej nazwie: „${esc(x.name)}”${isBook ? ` (${xs.length} poz., z nutami ${xs.filter(hasNotes).length})` : ''} – po przywróceniu będą dwa.</span>`);
+      }
+      return `<li><label><input type="checkbox" value="${i}"${on.has(String(i)) ? ' checked' : ''}>
+        <span><b>${esc(o.name || '(bez nazwy)')}</b><span class="muted small">${what} · ${isBook && o.importedAt ? `wczytany ${esc(fmtDate(o.importedAt))} · ` : ''}ostatnio w wersji z ${esc(fmtDate(h.at))}</span>
+        ${notes.map((n) => `<span class="small">${n}</span>`).join('')}</span></label></li>`;
     }).join('');
     $('hs-ok').disabled = !histFound.length;
   }
   function restoreHistory() {
     const pick = [...$('hs-list').querySelectorAll('input:checked')].map((x) => histFound[+x.value]).filter(Boolean);
-    if (!pick.length) return;
+    if (!pick.length) return toast('Zaznacz, co przywrócić.');
     let books = 0;
     let progs = 0;
+    const at = new Date().toISOString();
     for (const h of pick) {
+      const list = h.kind === 'book' ? data.songbooks : data.programs;
+      if (list.some((x) => x.id === h.obj.id)) continue;
+      const o = { ...h.obj, restoredAt: at }; // znacznik: widać w spisach, że przywrócony; łączenie danych go nie wyrzuci
       if (h.kind === 'book') {
-        if (data.songbooks.some((b) => b.id === h.obj.id)) continue;
-        const b = h.obj;
-        if (!b.code || data.songbooks.some((x) => x.code === b.code)) b.code = nextCode(data.songbooks);
-        data.songbooks.push(b);
+        if (!o.code || data.songbooks.some((x) => x.code === o.code)) o.code = nextCode(data.songbooks);
         books++;
-      } else if (!data.programs.some((p) => p.id === h.obj.id)) {
-        data.programs.push(h.obj);
-        progs++;
-      }
+      } else progs++;
+      list.push(o);
+      if (data.deleted) delete data.deleted[o.id];
     }
     $('hist-dlg').close();
     changed();
@@ -977,7 +998,7 @@
     const parts = [];
     if (books) parts.push(`${books} ${plural(books, 'spis', 'spisy', 'spisów')}`);
     if (progs) parts.push(`${progs} ${plural(progs, 'program', 'programy', 'programów')}`);
-    toast(`Przywrócono: ${parts.join(' i ') || 'nic (już są)'}.`);
+    toast(parts.length ? `Przywrócono: ${parts.join(' i ')}. Mają dopisek „przywrócony z historii” – jeśli to pomyłka, usuń je przyciskiem „Usuń spis” / „Usuń”.` : 'Nic nie przywrócono (już są).');
   }
   $('btn-history').addEventListener('click', openHistory);
   $('hs-cancel').addEventListener('click', () => $('hist-dlg').close());
@@ -1024,7 +1045,7 @@
   window.App = {
     get data() { return data; },
     get idx() { return idx; },
-    changed, toast, handleError, ensureConnected, openPicker, renderTree, esc, plural, stripExt, cleanCode, nextCode,
+    changed, toast, handleError, ensureConnected, markDeleted, openPicker, renderTree, esc, plural, stripExt, cleanCode, nextCode,
     orderFiles, openOrder, songKey, openRotate, openEdit, showTab, afterFlags, setMeta, flagTag, renderAll, GHOST,
   };
 
