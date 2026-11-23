@@ -115,6 +115,12 @@ Przy połączeniu: brak niezapisanych zmian → obowiązuje Dysk; zmiany tylko t
 idzie do kopii `KamienickieNutki-kopia-z-urzadzenia-….json` w folderze aplikacji; publikacja/duplikaty/drzewo – z nowszej strony). Przed każdym zapisem
 `guardRemote` sprawdza `modifiedTime` pliku (inne urządzenie otwarte równolegle). **„Odzyskaj…”** (pasek konta, `#hist-dlg`): przegląda wersje pliku
 na Dysku (`Drive.revisions`/`readRevision`) i pozwala przywrócić spisy i programy, których teraz brakuje (`DataMerge.missing`).
+**Usunięcia nie wracają** (2026-11-23, zgłoszenie: dwie przeglądarki na jednym komputerze – Opera ze starymi danymi przywracała usunięte spisy):
+usunięcie spisu/programu zapisuje `data.deleted[id] = ISO` (`App.markDeleted`); `DataMerge.merge(local, remote, sync.baseAt)` wyrzuca obiekty starsze
+niż usunięcie oraz obiekty tylko z urządzenia, które powstały (`importedAt`/`createdAt`/`restoredAt`) przed `baseAt` (były na Dysku, ktoś je usunął).
+Wyrzucenie = kopia wersji z urządzenia jak przy konflikcie. Ustawienia formularza zgłoszeń: wypełnione nie są zastępowane pustymi.
+„Odzyskaj…”: nic nie jest zaznaczone, przy pozycji ostrzeżenia „usunięty w aplikacji …” i „masz już spis o tej nazwie” (`nameKey` bez znaków),
+przywrócone mają `restoredAt` (dopisek w spisach/programach i na liście spisów, która pokazuje też `[kod] · N poz.`).
 
 **Kolejność stron** (jedno miejsce: `meta[id].page`): okno `#order-dlg` (`App.openOrder(ids, title)`) z przyciskami ⇅ w drzewie
 (pliki tej samej pieśni w jednym folderze – `songKey`/`siblingsMap`), w spisach (pozycja z ≥2 plikami), w programach i w duplikatach
