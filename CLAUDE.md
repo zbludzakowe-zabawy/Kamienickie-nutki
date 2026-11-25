@@ -161,6 +161,12 @@ wiersz z jedną treścią węższy niż kolumna tytułów albo w innej kolumnie 
 „/” i „+” poza nawiasami = **osobne pieśni do wyboru**; uwagi: „(!)”→„!”, „?”/„(?)”→„?”, „[1]”→„[1]”, „(ew)”→„ewentualnie”; kropki prowadzące usuwane;
 „0”/„.” pomijane, puste części znikają; Męka/Sekwencja/Litania/Potrójne Amen bez etykiety = własna część + pieśń (`LITURGY`). Wątpliwe pozycje lepiej dodać „bez nut” (użytkownik).
 Dopasowanie (`songMatcher` w programs.js): pozycja spisu (`Matcher.score`, ≥ SURE i przewaga 0.05) → `src`; inaczej plik (`Matcher.rank`); inaczej bez nut. Daty puste.
+**Zwykły tekst** (plik bez żadnego tabulatora – .txt albo dokument bez tabeli; `parsePlain`, przykład `tests/Pasterka2026.txt`, ustalone z użytkownikiem 2026-11-25):
+linijka = pieśń; tekst przed pierwszą pieśnią = nazwa („Pasterka2026” → „Pasterka 2026”); „we: tytuł” = etykieta z dwukropkiem (znana część albo jedno słowo);
+sama etykieta „KOLĘDOWANIE:” = nowa część („Kolędowanie”); „Kyrie - Missa Noel”, „Alleluja radosne”, „Modlitwa powszechna IV” = część z początku tytułu,
+**tytuł zostaje cały** – tylko gdy wypada dalej w kolejności mszy (`MASS`) niż bieżąca część (kolęda „Gloria…” w „Kolędowaniu” zostaje); linijka bez oznaczenia
+= ta sama część; linijka bez pieśni tuż przed „we: …” = następna uroczystość; „ - a cappella” / „(a cappella)” → uwaga; kompozytor w nawiasie zostaje w tytule.
+Testy parsera: `node tests/progimport.test.cjs` (folder `tests/` nie trafia na stronę).
 
 ## Porządkowanie: duplikaty i „Pozostałe nuty”
 
