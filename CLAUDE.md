@@ -327,6 +327,18 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 
 ## Pomysły / dalsze etapy
 
+### Do zrobienia (zapisane na prośbę użytkownika, 2026-11-25)
+
+- **Pliki ściągane na Dysk Google** – sprawdzić, kiedy i u kogo pliki trafiają na Dysk Google (np. czy przy pobieraniu PDF/nut
+  przez chórzystów coś zapisuje się na ich Dysku, czy dzieje się to tylko u dyrygenta przy publikacji – kopie w „Dla chórzystów”).
+- **Strzałki między nutami w spisie** – sprawdzić, czy da się przechodzić do poprzedniej/następnej pieśni strzałkami
+  (klawiatura ← →, ewentualnie przesunięcie palcem) w podglądzie nut chórzysty (`#g-viewer`; dziś są przyciski ⏮ ⏭).
+  Uwaga: nuty są w `<iframe>` z Dysku – klawisze wciśnięte, gdy ramka ma fokus, nie docierają do strony.
+- **Zmiana PIN-u na 19** – PIN ustawia administrator w „Dla chórzystów” (`publish.pin`; domyślny `'2018'` w publish.js).
+  Zmiana = ponowny zapis katalogu; chórzyści muszą wpisać nowy PIN.
+- **Ukrywanie archiwalnych uroczystości (albo nie)** – przełącznik „pokaż/ukryj archiwum” (programy z datą w przeszłości)
+  u administratora i/lub chórzysty. Do ustalenia z użytkownikiem, gdzie i co ma być domyślnie.
+
 - **Wybieranie pieśni do przebudowy** (użytkownik: „wyszukiwarka na razie nie działa idealnie”) – dotyczy okna „Dodaj pieśń”
   w programach (`renderPicker` w programs.js: proste dopasowanie słów) i „Wybierz plik…” w spisach. Do omówienia z użytkownikiem.
 
