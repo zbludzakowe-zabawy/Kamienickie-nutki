@@ -260,6 +260,7 @@ window.Programs = (() => {
     const it = ii >= 0 && p.parts[pi].items[ii];
     $('sp-title').textContent = it ? `Nuty do: ${it.title}` : `Dodaj pieśń: ${p.parts[pi].name}`;
     $('sp-q').value = it ? it.title : '';
+    if (window.Works && Object.keys(A.data.nodes).length) Works.sync(); // katalog aktualny (połączone utwory)
     $('song-picker').showModal();
     renderPicker();
     setTimeout(() => $('sp-q').focus(), 30);
@@ -281,22 +282,36 @@ window.Programs = (() => {
           if (match(Catalog.norm(`${b.code || ''} ${it.no} ${it.title} ${(it.alt || []).join(' ')}`))) songs.push({ b, it, i });
         });
       }
-      const files = Object.values(A.data.nodes).filter((n) => !n.folder).filter((n) => {
+      // utwory z katalogu (np. połączone tam pliki) – bez tych, które są już na liście jako pozycja spisu z tymi samymi plikami
+      const key = (f) => [...f].sort().join('|');
+      const songKeys = new Set(songs.map(({ it }) => key(it.files)));
+      const works = window.Works ? Works.find(words).filter(({ w }) => !songKeys.has(key(w.files))) : [];
+      const inWork = new Set();
+      works.forEach(({ w }) => w.files.forEach((id) => inWork.add(id)));
+      const files = Object.values(A.data.nodes).filter((n) => !n.folder && !inWork.has(n.id)).filter((n) => {
         const m = A.data.meta[n.id];
         return match(Catalog.norm(`${A.stripExt(n.name)} ${(m && m.title) || ''}`)); // tylko nazwa – bez folderu i rozszerzenia
       });
       html += songs.slice(0, 60).map(({ b, it, i }) => `<li><button type="button" class="pick-item" data-kind="song" data-b="${esc(b.id)}" data-i="${i}">
         <span class="badge doc">SPIS</span><span><b>${esc(it.title)}</b><br><span class="muted small">${esc(b.name)}${b.code ? ' [' + esc(b.code) + ']' : ''}${it.no ? ' · nr ' + esc(it.no) : ''} · ${it.files.length} ${A.plural(it.files.length, 'plik', 'pliki', 'plików')}</span></span><span class="chev">${pickItem >= 0 ? 'Wybierz' : 'Dodaj'}</span></button></li>`).join('');
+      html += works.slice(0, 60).map(({ w, ign }) => {
+        const n = A.data.nodes[w.files[0]];
+        const where = n ? Catalog.pathOf(A.data.nodes, n.id) : '';
+        return `<li><button type="button" class="pick-item" data-kind="work" data-w="${esc(w.id)}">
+          <span class="badge doc">KAT</span><span><b>${esc(w.title)}</b><br><span class="muted small">Katalog · ${w.files.length} ${A.plural(w.files.length, 'plik', 'pliki', 'plików')}${where ? ' · ' + esc(where) : ''}${w.music ? ' · ' + esc(w.music) : ''}${ign ? ' · nieistotne' : ''}</span></span><span class="chev">${pickItem >= 0 ? 'Wybierz' : 'Dodaj'}</span></button></li>`;
+      }).join('');
       html += files.slice(0, 60).map((n) => {
         const m = A.data.meta[n.id];
         return `<li><button type="button" class="pick-item" data-kind="file" data-id="${esc(n.id)}">
           <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span><span><b>${esc((m && m.title) || n.name)}</b><br><span class="muted small">${esc(Catalog.pathOf(A.data.nodes, n.id))}${m && m.title ? ' / ' + esc(n.name) : ''}</span></span><span class="chev">${pickItem >= 0 ? 'Wybierz' : 'Dodaj'}</span></button></li>`;
       }).join('');
-      if (!songs.length && !files.length) html += `<li class="muted">Nic nie znaleziono w spisach ani w plikach.${pickItem >= 0 ? ' Spróbuj krótszej nazwy, np. jednego słowa z tytułu.' : ''}</li>`;
+      if (!songs.length && !works.length && !files.length) html += `<li class="muted">Nic nie znaleziono w spisach ani w plikach.${pickItem >= 0 ? ' Spróbuj krótszej nazwy, np. jednego słowa z tytułu.' : ''}</li>`;
       if (pickItem < 0) html += `<li><button type="button" class="pick-item" data-kind="text"><span class="badge doc">TXT</span><span>Dodaj „<b>${esc(q)}</b>” bez nut<br><span class="muted small">np. psalm śpiewany przez kantora – nuty możesz dodać później</span></span><span class="chev">Dodaj</span></button></li>`;
     }
     $('sp-list').innerHTML = html;
   }
+
+  const workOf = (btn) => { const c = A.data.catalog; return c && c.works && c.works[btn.dataset.w]; };
 
   function addFromPicker(btn) {
     const p = prog();
@@ -312,6 +327,11 @@ window.Programs = (() => {
         cur.src = { book: b.id, bookName: b.name, no: it.no, i: Number(btn.dataset.i) };
       } else if (btn.dataset.kind === 'file') {
         cur.files = [btn.dataset.id];
+        delete cur.src;
+      } else if (btn.dataset.kind === 'work') {
+        const w = workOf(btn);
+        if (!w) return;
+        cur.files = [...w.files];
         delete cur.src;
       } else return;
       $('song-picker').close();
@@ -330,6 +350,10 @@ window.Programs = (() => {
       const n = A.data.nodes[btn.dataset.id];
       const m = A.data.meta[n.id];
       item = { title: (m && m.title) || A.stripExt(n.name), files: [n.id], note: '' };
+    } else if (btn.dataset.kind === 'work') {
+      const w = workOf(btn);
+      if (!w) return;
+      item = { title: w.title, files: [...w.files], note: '' };
     } else {
       item = { title: $('sp-q').value.trim(), files: [], note: '' };
     }

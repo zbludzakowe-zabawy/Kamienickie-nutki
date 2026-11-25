@@ -574,5 +574,15 @@ window.Works = (() => {
     paintTags();
   });
 
-  return { render, sync: syncSave, open: openWork };
+  // Utwory z katalogu pasujące do słów (okno „Dodaj pieśń” w uroczystościach) – nieistotne na końcu.
+  function find(words) {
+    const map = bookRefs();
+    return Object.values(C().works).filter((w) => w.files.length)
+      .map((w) => ({ w, ign: isIgnored(w), hay: haystack(w, refsOf(w, map)) }))
+      .filter((x) => words.every((q) => x.hay.includes(q)))
+      .sort((a, b) => (a.ign - b.ign) || a.w.title.localeCompare(b.w.title, 'pl'))
+      .map(({ w, ign }) => ({ w, ign }));
+  }
+
+  return { render, sync: syncSave, open: openWork, find };
 })();

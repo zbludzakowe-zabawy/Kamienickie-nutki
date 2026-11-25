@@ -151,7 +151,7 @@ przesuwa `src.i` w programach uroczystości (usunięta pozycja → program zacho
 **Programy uroczystości**: domyślny szkielet części (Wejście, Kyrie, Gloria, Psalm, Alleluja lub Chwała, Ofiarowanie, Sanctus,
 Agnus Dei, Komunia, Uwielbienie, Wyjście) – części można dodawać/usuwać/przestawiać/zmieniać nazwę, w części kilka pieśni.
 Pieśń ze spisu ma `src` → przy publikacji bierzemy **aktualne** dopasowanie z tego spisu (`Programs.resolve`); można też dodać plik
-albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty” przy pieśni (`openPicker(pi, ii)`) podmienia tylko
+albo sam tytuł „bez nut”. Okno „Dodaj pieśń” (`renderPicker`) szuka w spisach (SPIS), w **utworach Katalogu** (KAT, `Works.find` – połączone tam pliki = jedna pieśń; ich pliki nie są pokazywane osobno, utwór o plikach identycznych z pozycją spisu pominięty) i w plikach. Przycisk „♪ Dołącz nuty” / „Zmień nuty” przy pieśni (`openPicker(pi, ii)`) podmienia tylko
 `files`/`src` – tytuł i uwaga zostają. `src.i` = indeks pozycji w spisie (pewniejsze niż sam numer, zwłaszcza w spisach bez numerów). Program z datą w przeszłości = archiwum (u administratora i chórzysty), nadal widoczny, dopóki nie usunięty.
 „Kopiuj” tworzy kopię bez daty. Puste części są ukryte u chórzystów i w PDF. PDF programu = pseudo-śpiewnik z wierszami `section`.
 **Wczytaj z pliku…** (`#ev-import`, `js/progimport.js` = czysty parser `ProgImport.parse(lines)`, testowalny w Node; linie z `SongList.linesOf(name, buf, true)`
