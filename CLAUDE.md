@@ -80,7 +80,9 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 - `js/programs.js` – zakładka „Uroczystości” (`window.Programs`): programy mszy, części, wybór pieśni (`#song-picker`), `forPublish()`
 - `js/publish.js` – zakładka „Dla chórzystów” (`window.Publish`)
 - `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu: `#/` = ekran startowy z trzema kafelkami (decyzja użytkownika 2026-11-22),
-  `#/spiewniki`, `#/uroczystosci` (nadchodzące + archiwum), `#/katalog[/<i>]` (katalog nut), `#/s/<bookId>[/<i>]` (śpiewnik), `#/p/<programId>[/<i>]` (program; `i` = indeks w spłaszczonej liście pieśni)
+  `#/spiewniki`, `#/uroczystosci` (nadchodzące + archiwum), `#/katalog[/<i>]` (katalog nut),
+  ikonki kafelków (wybór użytkownika): Uroczystości = „sztandar i świece” (`PROG_ICO`), Katalog = „lupa i nuta” (`CAT_ICO`) – SVG w guest.js,
+  jasny rysunek na `--accent` jak ikona „Śpiewniki” (klasa `.g-cat-ico`; ciemny rysunek na jasnym tle był „za ciemny”); `#/s/<bookId>[/<i>]` (śpiewnik), `#/p/<programId>[/<i>]` (program; `i` = indeks w spłaszczonej liście pieśni)
 - `js/pwa.js`, `sw.js`, `manifest.webmanifest`, `icons/` – PWA; `tools/build-sw.mjs` wpisuje wersję i listę plików przy publikacji
 - `design/ikona.svg` – źródło ikony (otwarty śpiewnik); PNG generuje `make-icons.js` ze skilla pwa-na-telefon
   **Po zmianie ikony podbij `?v=N`** we wszystkich odwołaniach (`index.html`, `manifest.webmanifest`, `guest.js`, `style.css`) –
@@ -96,14 +98,17 @@ synchronizacja – patrz „Synchronizacja z Dyskiem” niżej):
   roots: [{id, name}],                      // wybrane foldery
   nodes: {id: {id, name, parent, folder?, kind:'pdf'|'img', size, modified, md5, added}},  // klucz = id pliku (dla skrótów – id celu)
   meta:  {fileId: {title, rot, page, notNotes, ignore}},  // własne nazwy; rot = obrót 90/180/270°; page = kolejność strony (⇅); notNotes = „to nie nuty”; ignore = „nieistotne” (też dla folderów) – tylko w aplikacji
-  songbooks: [{id, name, code, source, importedAt,   // code = identyfikator do 3 znaków (Z, N…), nowe: A01, A02… (App.nextCode)
+  songbooks: [{id, name, code, source, importedAt, restoredAt?,   // code = identyfikator do 3 znaków (Z, N…), nowe: A01, A02… (App.nextCode)
                items: [{no, title, alt?:[tytuły alternatywne], state:'ok'|'auto'|'check'|'none'|'missing', files:[fileId], score, sugg:[{files,score}], rejected:[...]}]}],
-  programs: [{id, name, date:'YYYY-MM-DD', createdAt,
+  programs: [{id, name, date:'YYYY-MM-DD', createdAt, restoredAt?,
               parts: [{id, name, items: [{title, note, files:[fileId], src?:{book, bookName, no}}]}]}],
-  publish: {pin, pdf, hold:{id:true}, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt},
+  publish: {pin, pdf, hold:{id:true}, folderId, folderPublic, catalogId, copies:{origId:{id, modified}}, pdfs:{bookId|programId:{id, sig, size, pages, at}}, at, dataAt,
+            sigs:{id|'__works': podpis}, published:[id], others:{enabled, snapshot, at, pdf}, works:{enabled}},
   dups: {at, hasMd5, groups: {gid: {type:'same'|'name'|'book', title, files:[id], entries?:[{book,i}], status:'open'|'kept'|'resolved', keep:[id], note, decidedAt, gone?}},
          cleanup: {fileId: {gid, manual?, title, name, own, path, parent, keep:[{id,name,path}], decidedAt, done, doneBy:'auto'|'manual', doneAt}}},
   catalog: {tags: [{id, name}], works: {id: {id, title, ownTitle?, lyrics, music, tags:[tagId], files:[fileId], manual?, at}}},
+  reports: {form:{url, entry, sheetId, formLink, sheetLink}, list, done},
+  deleted: {songbookId|programId: ISO},   // usunięte – żeby nie wróciły przy łączeniu danych z innego urządzenia
   owner }
 ```
 
@@ -247,7 +252,7 @@ Oznaczanie **na tej samej stronie co wyszukiwanie**: zaznaczanie wielu pozycji �
 **Zgłoszenia od chórzystów** (`js/reports.js`, `window.Reports`; decyzja użytkownika: Formularz Google): chórzysta nie ma zapisu na Dysku,
    więc ⚠ w podglądzie nut (`#g-report` → `#g-report-dlg`: powody `REASONS` jako przełączniki, komentarz, imię w `kn-guest-name`)
    wysyła `fetch(no-cors, POST)` na `formResponse` Formularza Google dyrygenta – jedno pole „Długa odpowiedź” (dawniej „Akapit”) z JSON-em
-   `{v, at, kind:'s'|'p', book, bookName, i, no, part, title, files:[id kopii], page, reasons, note, name}`. Adres i pole (`report:{url, entry}`)
+   `{v, at, kind:'s'|'p'|'c' (c = katalog nut), book, bookName, i, no, part, title, files:[id kopii], page, reasons, note, name}`. Adres i pole (`report:{url, entry}`)
    są w zaszyfrowanym katalogu (tylko gdy ustawione). Odpowiedzi idą do arkusza dyrygenta → `Drive.exportCsv(sheetId)` → `data.reports.list`.
    Ustawienia: `data.reports.form` z linku „wstępnie wypełnionego” (`parseForm`) i linku arkusza; zapis = od razu `Publish.saveCatalog()`.
    Karta `#rep-card` na górze „Dla chórzystów”, licznik `#rep-badge` na zakładce; `autoFetch` przy wejściu w zakładkę (co ≥2 min).
@@ -289,6 +294,8 @@ python3 -m http.server 8000
 
 ## Decyzje użytkownika (do pamiętania)
 
+- **Każda przeglądarka = osobne urządzenie** (osobna kopia danych w IndexedDB). Dyrygent bywa w Operze i w Chrome na jednym komputerze –
+  stąd potrzeba bezpiecznego łączenia (`data.deleted`, `baseAt`).
 - **Na razie aplikacja jest tylko dla jednego dyrygenta, jego Dysku i jego chóru** (Kamienickie Nutki). Nie komplikujemy pod wielu użytkowników,
   ale też nie zamykamy tej drogi.
 - Administrator pracuje głównie na **komputerze**, chórzyści na **telefonie**.
