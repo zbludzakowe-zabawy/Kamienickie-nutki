@@ -14,7 +14,7 @@ window.Works = (() => {
   const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const cmp = (a, b) => a.localeCompare(b, 'pl', { numeric: true, sensitivity: 'base' });
 
-  const ui = { q: '', filter: 'all', showIgn: false, tags: new Set(), sel: new Set(), limit: PAGE, editId: null, editTags: new Set(), editFiles: [], detached: [] };
+  const ui = { q: '', filter: 'all', showIgn: false, tags: new Set(), sel: new Set(), limit: PAGE, editId: null, editTags: new Set(), editFiles: [], detached: [], merged: new Map(), renaming: null };
   try {
     const s = JSON.parse(localStorage.getItem('kn-cat-ui') || 'null');
     if (s) { ui.filter = s.filter || 'all'; ui.showIgn = !!s.showIgn; ui.tags = new Set(s.tags || []); }
@@ -102,7 +102,9 @@ window.Works = (() => {
     const map = bookRefs();
     for (const w of Object.values(c.works)) {
       if (w.ownTitle || !w.files.length) continue;
-      const r = refsOf(w, map).find((x) => sameSet(x.it.files.filter(ok), w.files)) || refsOf(w, map)[0];
+      const refs = refsOf(w, map);
+      if (refs.some((x) => x.it.title === w.title)) continue; // np. po dołączeniu innej pieśni zostaje tytuł edytowanej pozycji
+      const r = refs.find((x) => sameSet(x.it.files.filter(ok), w.files)) || refs[0];
       if (r && r.it.title && r.it.title !== w.title) w.title = r.it.title;
     }
     const diff = JSON.stringify(c.works) !== before;
@@ -164,7 +166,8 @@ window.Works = (() => {
           <span class="muted small">${nf ? `${nf} ${A.plural(nf, 'plik', 'pliki', 'plików')}` : '<span class="warn-text">bez plików</span>'}</span>
           ${x.ign ? `<span class="flag-tag">${A.GHOST(true)} nieistotne</span>` : ''}</span>
       </div>
-      ${nf ? Preview.noteBtn(w.files, 0, w.title) + Preview.driveLink(w.files[0]) : ''}
+      ${nf ? Preview.noteBtn(w.files, 0, w.title) : ''}
+      <button type="button" class="act" data-w="edit" title="Edytuj pozycję" aria-label="Edytuj pozycję">✎</button>
     </div>`;
   }
 
@@ -283,10 +286,16 @@ window.Works = (() => {
     $('wk-files').innerHTML = ids.length ? ids.map((id) => {
       const n = A.data.nodes[id];
       const fl = flag(id);
+      const m = A.data.meta[id];
+      const rot = (m && m.rot) || 0;
+      const from = [...ui.merged.values()].find((x) => x.files.includes(id));
+      const name = ui.renaming === id
+        ? `<input class="name-input wk-rename" type="text" value="${esc((m && m.title) || '')}" placeholder="${esc(A.stripExt(n ? n.name : id))}" maxlength="200" aria-label="Nazwa pliku w aplikacji" enterkeyhint="done">`
+        : `<b>${esc(titleOf(id))}</b><button type="button" class="wk-ren" data-f="rename" title="Zmień nazwę w aplikacji (plik na Dysku zostaje bez zmian)" aria-label="Zmień nazwę w aplikacji">✎</button>`;
       return `<li data-id="${esc(id)}"><span class="badge ${n ? n.kind : ''}">${n && n.kind === 'pdf' ? 'PDF' : 'IMG'}</span>
-        <span class="order-names"><b>${esc(titleOf(id))}</b><span class="muted small">${esc(Catalog.pathOf(A.data.nodes, id))} / ${esc(n ? n.name : id)}</span>${fl ? A.flagTag(fl) : ''}</span>
-        ${Preview.noteBtn(id)}
-        <button type="button" class="act" data-f="edit" title="Nazwa pliku, obrót, oznaczenia">✎</button>
+        <span class="order-names"><span class="wk-name">${name}</span><span class="muted small">${esc(Catalog.pathOf(A.data.nodes, id))} / ${esc(n ? n.name : id)}</span>${fl ? A.flagTag(fl) : ''}${rot ? `<span class="rot-tag">obrócony o ${rot}°</span>` : ''}${from ? `<span class="dup-tag">dołączony z „${esc(from.title)}”</span>` : ''}</span>
+        ${Preview.noteBtn(id)}${n ? Preview.driveLink(id) : ''}
+        <button type="button" class="act" data-f="rot" title="Obróć nuty${rot ? ` (teraz o ${rot}°)` : ''}" aria-label="Obróć nuty">⟳</button>
         ${ids.length > 1 ? '<button type="button" class="btn small" data-f="detach" title="To osobny utwór – wydziel jako nową pozycję">Osobno</button>' : ''}</li>`;
     }).join('') : '<li class="muted small">Pliki zniknęły z Dysku albo zostały oznaczone. Połącz tę pozycję z inną (zaznacz obie → ⧉ Połącz) albo ją usuń.</li>';
     const w = C().works[ui.editId];
@@ -305,6 +314,8 @@ window.Works = (() => {
     ui.editTags = new Set(w.tags);
     ui.editFiles = [...w.files];
     ui.detached = [];
+    ui.merged = new Map();
+    ui.renaming = null;
     const refs = refsOf(w, bookRefs());
     $('wk-head').textContent = 'Pozycja w katalogu';
     $('wk-title').value = w.title;
@@ -374,6 +385,20 @@ window.Works = (() => {
         } else { w.ownTitle = true; msg = 'Zmieniono nazwę tylko w katalogu.'; }
       } else w.ownTitle = refsOf(w, bookRefs()).some((r) => r.it.title !== title);
       w.title = title;
+    }
+    // „+ Dodaj plik”: dołączone pliki; plik z innej pozycji = połączenie z nią (pliki, cechy, autorzy) – jak ⧉ Połącz
+    const merged = [...ui.merged.values()].filter((x) => c.works[x.id] && x.id !== w.id);
+    const added = ui.editFiles.filter((id) => !w.files.includes(id));
+    if (added.length) {
+      merged.forEach((x) => {
+        x.tags.forEach((t) => ui.editTags.add(t));
+        if (!$('wk-lyrics').value.trim() && x.lyrics) $('wk-lyrics').value = x.lyrics;
+        if (!$('wk-music').value.trim() && x.music) $('wk-music').value = x.music;
+        delete c.works[x.id];
+      });
+      w.files = A.orderFiles([...new Set([...w.files, ...added])]);
+      w.manual = true;
+      msg += ` Dołączono ${added.length} ${A.plural(added.length, 'plik', 'pliki', 'plików')}${merged.length ? ` (połączono z: ${merged.map((x) => '„' + x.title + '”').join(', ')})` : ''}.`;
     }
     w.lyrics = $('wk-lyrics').value.trim().replace(/\s+/g, ' ');
     w.music = $('wk-music').value.trim().replace(/\s+/g, ' ');
@@ -485,7 +510,14 @@ window.Works = (() => {
     const li = e.target.closest('li[data-id]');
     if (!b || !li) return;
     const id = li.dataset.id;
-    if (b.dataset.f === 'edit') return A.openEdit(id);
+    if (b.dataset.f === 'rot') return A.openRotate(id);
+    if (b.dataset.f === 'rename') {
+      ui.renaming = id;
+      paintEditFiles();
+      const inp = $('wk-files').querySelector('.wk-rename');
+      if (inp) { inp.focus(); inp.select(); }
+      return;
+    }
     if (b.dataset.f === 'detach') {
       ui.detached.push(id);
       ui.editFiles = ui.editFiles.filter((x) => x !== id);
@@ -494,6 +526,55 @@ window.Works = (() => {
     }
   });
   $('edit-dlg').addEventListener('close', () => { if ($('work-dlg').open) paintEditFiles(); });
+  $('rot-dlg').addEventListener('close', () => { if ($('work-dlg').open) paintEditFiles(); });
+  // zmiana nazwy pliku w aplikacji (meta.title) – od razu, jak w „Nutach na Dysku”
+  function commitRename(save) {
+    const id = ui.renaming;
+    const inp = $('wk-files').querySelector('.wk-rename');
+    if (!id || !inp) return;
+    ui.renaming = null;
+    if (save) {
+      const v = inp.value.trim().replace(/\s+/g, ' ');
+      const old = (A.data.meta[id] && A.data.meta[id].title) || '';
+      if (v !== old) {
+        A.setMeta(id, 'title', v);
+        A.changed();
+        A.toast(v ? 'Zapisano nazwę pliku.' : 'Usunięto własną nazwę pliku.');
+      }
+    }
+    paintEditFiles();
+  }
+  $('wk-files').addEventListener('keydown', (e) => {
+    if (!e.target.matches('.wk-rename')) return;
+    if (e.key === 'Enter') { e.preventDefault(); commitRename(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); commitRename(false); }
+  });
+  $('wk-files').addEventListener('focusout', (e) => { if (e.target.matches('.wk-rename')) commitRename(true); });
+  // „+ Dodaj plik” – to samo okno co „Wybierz plik…” w spisach
+  const workOf = (id) => Object.values(C().works).find((x) => x.files.includes(id));
+  $('wk-add').addEventListener('click', () => {
+    const cur = C().works[ui.editId];
+    if (!cur || !window.Songs) return;
+    Songs.chooseFiles($('wk-title').value || cur.title, {
+      exclude: ui.editFiles,
+      note: (id) => {
+        const x = workOf(id);
+        return x && x.id !== cur.id ? `<span class="small warn-text">w katalogu: „${esc(x.title)}” – zostanie połączona</span>` : '';
+      },
+      onSave: (ids) => {
+        ids.forEach((id) => {
+          const x = workOf(id);
+          if (x && x.id !== cur.id) {
+            ui.merged.set(x.id, x);
+            x.files.forEach((f) => { if (!ui.editFiles.includes(f)) ui.editFiles.push(f); });
+          } else if (!ui.editFiles.includes(id)) ui.editFiles.push(id);
+        });
+        ui.detached = ui.detached.filter((id) => !ui.editFiles.includes(id));
+        paintEditFiles();
+        if (ids.length) A.toast('Dołączone pliki zostaną zapisane po kliknięciu „Zapisz”.');
+      },
+    });
+  });
   $('wk-order').addEventListener('click', () => {
     const w = C().works[ui.editId];
     A.openOrder(ui.editFiles, $('wk-title').value || (w && w.title), (ids) => {
@@ -584,5 +665,18 @@ window.Works = (() => {
       .map(({ w, ign }) => ({ w, ign }));
   }
 
-  return { render, sync: syncSave, open: openWork, find };
+  // „Edytuj w Katalogu” z okna pliku: pozycja, w której jest ten plik
+  function workOfFile(id) {
+    if (!A.data.catalog) return null;
+    sync();
+    const w = Object.values(C().works).find((x) => x.files.includes(id));
+    return w ? w.id : null;
+  }
+  function openFile(id) {
+    const wid = workOfFile(id);
+    if (!wid) return false;
+    openWork(wid);
+    return true;
+  }
+  return { render, sync: syncSave, open: openWork, find, workOfFile, openFile };
 })();
