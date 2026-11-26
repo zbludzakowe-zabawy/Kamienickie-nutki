@@ -164,7 +164,7 @@ window.Works = (() => {
           <span class="muted small">${nf ? `${nf} ${A.plural(nf, 'plik', 'pliki', 'plików')}` : '<span class="warn-text">bez plików</span>'}</span>
           ${x.ign ? `<span class="flag-tag">${A.GHOST(true)} nieistotne</span>` : ''}</span>
       </div>
-      ${nf ? Preview.noteBtn(w.files, 0, w.title) : ''}
+      ${nf ? Preview.noteBtn(w.files, 0, w.title) + Preview.driveLink(w.files[0]) : ''}
     </div>`;
   }
 

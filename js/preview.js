@@ -48,7 +48,7 @@ window.Preview = (() => {
     return (m && m.title) || (n && n.name) || '';
   }
   // Co pokazać (decyzja użytkownika 2026-11-26: podgląd = to, co widzi chórzysta; oryginał „jak leży” – znaczkiem Dysku):
-  // aktualna kopia dla chórzystów → ta kopia (kluczem API, bez połączenia z Dyskiem), „Widok chórzysty”;
+  // aktualna kopia dla chórzystów → ta kopia (kluczem API, bez połączenia z Dyskiem), „Tak widzą chórzyści”;
   // kopia nieaktualna albo brak → oryginał z obrotem ustawionym w aplikacji (wymaga połączenia).
   function sourceOf(id) {
     const d = App.data;
@@ -56,7 +56,7 @@ window.Preview = (() => {
     const rot = (d.meta[id] && d.meta[id].rot) || 0;
     const c = d.publish && d.publish.copies && d.publish.copies[id];
     if (c && c.id && (!n || c.modified === n.modified) && (c.rot || 0) === rot) {
-      return { state: 'pub', label: 'Widok chórzysty', spec: { id: c.id, load: NoteView.publicLoad } };
+      return { state: 'pub', label: 'Tak widzą chórzyści', spec: { id: c.id, load: NoteView.publicLoad } };
     }
     return {
       state: c ? 'stale' : 'none',
