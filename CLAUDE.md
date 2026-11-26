@@ -12,6 +12,10 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
   3. **Po każdej zmianie przypominam użytkownikowi**: „Zmiana jest na wersji testowej (link). Jeśli ma trafić na produkcję – daj znać.”
   4. Na produkcję **tylko na wyraźną prośbę użytkownika**: PR tej samej gałęzi roboczej do `main` (bez innych, niezatwierdzonych zmian z `test`)
      → **scala wyłącznie użytkownik**. Nigdy nie pushuj do `main` ani nie scalaj PR-ów do `main`.
+     **Po każdym scaleniu do `main` sprawdzam**, że workflow „Publikacja na GitHub Pages” (`pages.yml`) skończył się sukcesem
+     (`mcp__github__actions_list`, przy błędzie `get_job_logs`) i mówię o tym użytkownikowi (decyzja użytkownika 2026-11-26).
+     Powód: #58 i #59 były scalone, ale publikacja padła (`deploy-pages@v4`: „No artifacts named github-pages”) i produkcja stała
+     na starej wersji – użytkownik widział „niespójne wersje”. Naprawione w #64 (configure-pages@v6, upload-pages-artifact@v5, deploy-pages@v5).
   5. „Uaktualnij testy” = PR `main` → `test` i scalenie (gdy na produkcję weszło coś spoza testów, np. z innego wątku).
   Zmiany w samym CLAUDE.md (notatki) działają w nowych sesjach dopiero po wejściu do `main` – przy takich zmianach od razu proponuj PR do `main`.
 - **Wersja testowa**: gałąź `test` → https://zbludzakowe-zabawy.github.io/Kamienickie-nutki-test/ (pasek „WERSJA TESTOWA”, ikona TEST).
