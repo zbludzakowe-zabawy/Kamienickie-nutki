@@ -28,10 +28,10 @@ window.NoteView = (() => {
     try { return await caches.open(CACHE); } catch (e) { return null; }
   }
   const pending = new Map();
-  function fetchFile(id, ver) {
+  function fetchFile(id, ver, load) {
     const k = id + '|' + (ver || '');
     if (!pending.has(k)) {
-      const p = fetchFileNow(id, ver).finally(() => pending.delete(k));
+      const p = fetchFileNow(id, ver, load).finally(() => pending.delete(k));
       pending.set(k, p);
     }
     return pending.get(k);
@@ -48,13 +48,14 @@ window.NoteView = (() => {
     if (!r.ok) throw new Error(r.status === 404 ? 'Tych nut nie ma już na Dysku – dyrygent musi zaktualizować listy.' : `Nie udało się pobrać nut (błąd ${r.status}).`);
     return r.blob();
   }
-  async function fetchFileNow(id, ver) {
+  // load = własny sposób pobrania tego pliku (administrator: kopia dla chórzystów kluczem API zamiast oryginału)
+  async function fetchFileNow(id, ver, load) {
     const cache = await openCache();
     if (cache) {
       const hit = await cache.match(keyOf(id, ver)).catch(() => null);
       if (hit) return hit.blob();
     }
-    const blob = await loader(id);
+    const blob = await (load || loader)(id);
     if (cache) {
       cache.put(keyOf(id, ver), new Response(blob, { headers: { 'Content-Type': blob.type || 'application/octet-stream' } }))
         .then(() => prune(cache)).catch(() => undefined);
@@ -66,8 +67,12 @@ window.NoteView = (() => {
     for (const k of keys.slice(0, Math.max(0, keys.length - MAX_CACHED))) await cache.delete(k);
   }
   // pobranie w tle (następna strona / pieśń), żeby otwierały się od razu
-  function prefetch(ids, verOf) {
-    (ids || []).filter(Boolean).forEach((id) => { fetchFile(id, verOf ? verOf(id) : '').catch(() => undefined); });
+  // ids: same identyfikatory albo {id, ver, load} (jak w show)
+  function prefetch(ids) {
+    (ids || []).filter(Boolean).forEach((x) => {
+      const o = typeof x === 'string' ? { id: x } : x;
+      fetchFile(o.id, o.ver, o.load).catch(() => undefined);
+    });
   }
   // „Wyloguj” administratora: nuty z jego Dysku nie zostają w urządzeniu
   async function clearAdmin() { try { await caches.delete(ADMIN_CACHE); } catch (e) { /* trudno */ } }
@@ -150,10 +155,11 @@ window.NoteView = (() => {
     const token = view.token;
     message('<span class="nv-spin" aria-hidden="true"></span> Wczytywanie nut…');
     try {
-      const blob = await fetchFile(id, opts && opts.ver);
+      const blob = await fetchFile(id, opts && opts.ver, opts && opts.load);
+      const rot = ((opts && opts.rot) || 0) % 360;
       if (token !== view.token) return false;
-      if (await isPdf(blob)) await showPdf(blob, token);
-      else await showImage(blob, token);
+      if (await isPdf(blob)) await showPdf(blob, token, rot);
+      else await showImage(blob, token, rot);
       if (token !== view.token) return false;
       view.msg.hidden = true;
       return true;
@@ -167,19 +173,39 @@ window.NoteView = (() => {
     }
   }
 
-  function showImage(blob, token) {
+  // rot = obrót ustawiony w aplikacji (podgląd administratora: oryginał tak, jak zobaczą go chórzyści po publikacji)
+  function showImage(blob, token, rot) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.alt = 'Nuty';
       img.className = 'nv-img';
-      img.onload = () => { if (token === view.token) view.doc.appendChild(img); resolve(); };
+      img.onload = () => {
+        if (token === view.token) view.doc.appendChild(rot ? rotated(img, rot) : img);
+        resolve();
+      };
       img.onerror = () => reject(new Error('Ta przeglądarka nie umie pokazać tego pliku (np. zdjęcie HEIC).'));
       view.url = URL.createObjectURL(blob);
       img.src = view.url;
     });
   }
 
-  async function showPdf(blob, token) {
+  function rotated(img, rot) {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    const k = Math.min(1, Math.sqrt(MAX_PX / (w * h)));
+    const side = rot === 90 || rot === 270;
+    const c = document.createElement('canvas');
+    c.className = 'nv-img';
+    c.width = Math.round((side ? h : w) * k);
+    c.height = Math.round((side ? w : h) * k);
+    const ctx = c.getContext('2d');
+    ctx.translate(c.width / 2, c.height / 2);
+    ctx.rotate((rot * Math.PI) / 180);
+    ctx.drawImage(img, (-w * k) / 2, (-h * k) / 2, w * k, h * k);
+    return c;
+  }
+
+  async function showPdf(blob, token, rot) {
     const lib = await loadPdfjs();
     const data = new Uint8Array(await blob.arrayBuffer());
     // isEvalSupported: false – bez wykonywania kodu z czcionek PDF (zalecenie bezpieczeństwa dla pdf.js 3.x)
@@ -191,12 +217,13 @@ window.NoteView = (() => {
     for (let n = 1; n <= pdf.numPages; n++) {
       const page = await pdf.getPage(n);
       if (token !== view.token) return;
-      const vp = page.getViewport({ scale: 1 });
+      const rotation = (page.rotate + (rot || 0)) % 360;
+      const vp = page.getViewport({ scale: 1, rotation });
       const canvas = document.createElement('canvas');
       canvas.className = 'nv-page';
       canvas.style.aspectRatio = `${vp.width} / ${vp.height}`;
       view.doc.appendChild(canvas);
-      const p = { canvas, page, w: vp.width, h: vp.height, scale: 0 };
+      const p = { canvas, page, rotation, w: vp.width, h: vp.height, scale: 0 };
       view.pages.push(p);
       await renderPage(p, token);
       if (n === 1) view.msg.hidden = true; // pierwsza strona widoczna – dalsze dorysowują się poniżej
@@ -209,7 +236,7 @@ window.NoteView = (() => {
     let scale = (cssW * (window.devicePixelRatio || 1)) / p.w;
     if (p.w * p.h * scale * scale > MAX_PX) scale = Math.sqrt(MAX_PX / (p.w * p.h));
     if (Math.abs(scale - p.scale) / scale < 0.1) return; // już wystarczająco ostro
-    const vp = p.page.getViewport({ scale });
+    const vp = p.page.getViewport({ scale, rotation: p.rotation });
     const c = document.createElement('canvas');
     c.width = Math.floor(vp.width);
     c.height = Math.floor(vp.height);
@@ -305,5 +332,5 @@ window.NoteView = (() => {
   function focus() { if (view) view.box.focus({ preventScroll: true }); }
   function reset() { if (view) clear(); }
 
-  return { attach, show, prefetch, reset, focus, clearAdmin, zoomBy: (f) => view && zoomBy(f), isZoomed: () => !!view && view.zoom > 1.01 };
+  return { attach, show, prefetch, reset, focus, clearAdmin, publicLoad, zoomBy: (f) => view && zoomBy(f), isZoomed: () => !!view && view.zoom > 1.01 };
 })();

@@ -275,8 +275,12 @@ Powiększanie: dwa palce, podwójne stuknięcie, Ctrl+kółko, przyciski +/− (
 i strzałki ← → = strona / pieśń (`step` w guest.js), Esc = zamknij. Znaczek Dysku w pasku nadal otwiera plik w Dysku Google (świadomie).
 **Ikonki (decyzja użytkownika 2026-11-26)**: ♪ w kółku (`.nv-note-ico`) = podgląd w aplikacji – wszędzie tak samo; znaczek Dysku ze strzałką
 (`#i-drive` w index.html: mały kolorowy trójkąt + strzałka, „małe i lekkie”) = otwórz na Dysku Google. ↗ nie używamy (zostało tylko w pobieranej stronie HTML sprzątania).
-**Podgląd u administratora** (`js/preview.js`, `window.Preview`): to samo okienko (`NoteView`) w `<dialog id="a-viewer">` (nad innymi oknami), oryginały przez
-`Drive.download` (trzeba być połączonym; pamięć `kn-nuty-admin-v1`, klucz z `modified`, czyszczona przy „Wyloguj”). `Preview.noteBtn(ids, i, title)` = przycisk ♪,
+**Podgląd u administratora** (`js/preview.js`, `window.Preview`): to samo okienko (`NoteView`) w `<dialog id="a-viewer">` (nad innymi oknami).
+**Podgląd = to, co widzi chórzysta** (decyzja użytkownika 2026-11-26; oryginał „jak leży” = znaczek Dysku). `sourceOf(id)`: aktualna kopia
+(`publish.copies[id]` z tym samym `modified` i `rot`) → kopia kluczem API (bez połączenia), etykieta „Widok chórzysty”; kopia nieaktualna →
+„Chórzyści zobaczą to po „Aktualizuj””; brak kopii → „Nie opublikowane u chórzystów” – w obu oryginał przez `Drive.download` (trzeba być połączonym)
+z obrotem `meta.rot` nałożonym w podglądzie (`NoteView.show(…, {rot})`: obrazek przez canvas, PDF `rotation` w pdf.js – ten sam kierunek co `PdfBuild.rotate`).
+Pamięć `kn-nuty-admin-v1` (oryginały: klucz z `modified`), czyszczona przy „Wyloguj”. `Preview.noteBtn(ids, i, title)` = przycisk ♪,
 `Preview.driveLink(id)`, `Preview.attrs(ids, i, title)` = atrybuty `data-nv` – każde kliknięcie elementu z `data-nv` otwiera podgląd (chipy plików w spisach,
 programach, zgłoszeniach: zwykłe kliknięcie = podgląd, Ctrl/środkowy = Dysk). ♪ w drzewie (cała pieśń z folderu), oknie kolejności, „Wybierz plik…”, katalogu,
 duplikatach (tam też znaczek Dysku – do usuwania), w oknie ✎ przyciski „♪ Podgląd” i „Otwórz na Dysku”.

@@ -47,7 +47,23 @@ window.Preview = (() => {
     const m = d && d.meta[id];
     return (m && m.title) || (n && n.name) || '';
   }
-  const verOf = (id) => { const n = App.data && App.data.nodes[id]; return (n && n.modified) || ''; };
+  // Co pokazać (decyzja użytkownika 2026-11-26: podgląd = to, co widzi chórzysta; oryginał „jak leży” – znaczkiem Dysku):
+  // aktualna kopia dla chórzystów → ta kopia (kluczem API, bez połączenia z Dyskiem), „Widok chórzysty”;
+  // kopia nieaktualna albo brak → oryginał z obrotem ustawionym w aplikacji (wymaga połączenia).
+  function sourceOf(id) {
+    const d = App.data;
+    const n = d.nodes[id];
+    const rot = (d.meta[id] && d.meta[id].rot) || 0;
+    const c = d.publish && d.publish.copies && d.publish.copies[id];
+    if (c && c.id && (!n || c.modified === n.modified) && (c.rot || 0) === rot) {
+      return { state: 'pub', label: 'Widok chórzysty', spec: { id: c.id, load: NoteView.publicLoad } };
+    }
+    return {
+      state: c ? 'stale' : 'none',
+      label: c ? 'Chórzyści zobaczą to po „Aktualizuj”' : 'Nie opublikowane u chórzystów',
+      spec: { id, ver: (n && n.modified) || '', rot },
+    };
+  }
   function showFile() {
     const id = cur.ids[cur.f];
     $('a-vname').textContent = cur.title || nameOf(id);
@@ -57,11 +73,12 @@ window.Preview = (() => {
     $('a-prev').disabled = cur.f === 0;
     $('a-next').disabled = cur.f === cur.ids.length - 1;
     $('a-open').href = driveUrl(id);
-    const rot = App.data && App.data.meta[id] && App.data.meta[id].rot;
-    $('a-rot').hidden = !rot;
-    $('a-rot').textContent = rot ? `u chórzystów obrócone o ${rot}°` : '';
-    NoteView.show(id, { openUrl: driveUrl(id), ver: verOf(id) }).then((ok) => {
-      if (ok && cur) NoteView.prefetch(cur.ids.filter((x) => x !== id).slice(0, 3), verOf);
+    const src = sourceOf(id);
+    $('a-state').textContent = src.label;
+    $('a-state').className = 'a-state ' + src.state;
+    const { spec } = src;
+    NoteView.show(spec.id, { openUrl: driveUrl(id), ver: spec.ver, load: spec.load, rot: spec.rot }).then((ok) => {
+      if (ok && cur) NoteView.prefetch(cur.ids.filter((x) => x !== id).slice(0, 3).map((x) => sourceOf(x).spec));
     });
     NoteView.focus();
   }
