@@ -378,7 +378,8 @@ window.Guest = (() => {
     const it = b.items[i];
     if (!hasNotes(it)) return;
     const key = `${b.id}:${i}`;
-    viewer = { b, i, key, f: viewer && viewer.key === key ? viewer.f : 0 };
+    const same = viewer && viewer.key === key;
+    viewer = { b, i, key, f: same ? viewer.f : 0, shown: same ? viewer.shown : null, failed: same && viewer.failed };
     $('g-viewer').hidden = false;
     document.body.classList.add('g-viewing');
     $('g-vno').textContent = it.part ? it.part + ' ·' : it.no ? it.no + '.' : '';
@@ -404,6 +405,8 @@ window.Guest = (() => {
     for (let k = i + dir; k >= 0 && k < b.items.length; k += dir) if (hasNotes(b.items[k])) return k;
     return -1;
   }
+  // Nuty pokazuje własny podgląd (js/noteview.js), nie ramka Dysku Google – otwarcie nie trafia do „Ostatnich”
+  // na Dysku osoby zalogowanej w przeglądarce. „↗” nadal otwiera plik w Dysku Google (świadomy wybór).
   function showFile() {
     const it = viewer.b.items[viewer.i];
     const id = it.files[viewer.f];
@@ -412,28 +415,34 @@ window.Guest = (() => {
     $('g-vpos').textContent = `${viewer.f + 1} / ${it.files.length}`;
     $('g-prev').disabled = viewer.f === 0;
     $('g-next').disabled = viewer.f === it.files.length - 1;
-    $('g-offline').hidden = navigator.onLine;
-    const src = `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
-    // nowa ramka dla każdego pliku – zmiana adresu istniejącej dopisywałaby się do historii („wstecz” nie zamykałoby nut)
-    const old = $('g-frame');
-    if (old.getAttribute('src') !== src) {
-      const f = document.createElement('iframe');
-      f.id = 'g-frame';
-      f.title = 'Nuty';
-      f.allow = 'fullscreen';
-      f.src = src;
-      old.replaceWith(f);
-    }
-    $('g-open').href = `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+    const openUrl = `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+    $('g-open').href = openUrl;
+    if (viewer.shown === id && !viewer.failed) return;
+    viewer.shown = id;
+    viewer.failed = false;
+    const v = viewer;
+    NoteView.show(id, { openUrl }).then((ok) => {
+      if (viewer !== v) return;
+      viewer.failed = !ok;
+      // w tle: pozostałe strony tej pieśni i pierwsza strona następnej
+      const next = findSong(v.b, v.i, 1);
+      NoteView.prefetch([...it.files.filter((f) => f !== id), next >= 0 ? v.b.items[next].files[0] : null]);
+    });
+    NoteView.focus();
+  }
+  // strzałki / przesunięcie palcem: najpierw strony tej pieśni, potem następna / poprzednia pieśń
+  function step(dir) {
+    if (!viewer) return;
+    const n = viewer.b.items[viewer.i].files.length;
+    if (viewer.f + dir >= 0 && viewer.f + dir < n) { viewer.f += dir; showFile(); return; }
+    const btn = $(dir > 0 ? 'g-snext' : 'g-sprev');
+    if (!btn.hidden) btn.click();
   }
   function closeViewer() {
     if ($('g-viewer').hidden) return;
     $('g-viewer').hidden = true;
     document.body.classList.remove('g-viewing');
-    const f = document.createElement('iframe');
-    f.id = 'g-frame';
-    f.title = 'Nuty';
-    $('g-frame').replaceWith(f);
+    NoteView.reset();
     viewer = null;
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
   }
@@ -504,8 +513,17 @@ window.Guest = (() => {
     });
     $('g-admin').addEventListener('click', leave);
     window.addEventListener('hashchange', route);
-    window.addEventListener('online', () => { if (viewer) showFile(); });
-    window.addEventListener('offline', () => { if (viewer) showFile(); });
+    NoteView.attach($('g-page'), { onSwipe: step });
+    window.addEventListener('online', () => { if (viewer && viewer.failed) showFile(); }); // nuty, które nie doszły bez internetu
+    document.addEventListener('keydown', (e) => {
+      if (!viewer || $('g-viewer').hidden || e.altKey || e.metaKey || document.querySelector('dialog[open]')) return;
+      if (e.target.closest && e.target.closest('input, textarea, select')) return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+      else if (e.key === 'Escape' && !document.fullscreenElement) $('g-close').click();
+      else if (!e.ctrlKey && (e.key === '+' || e.key === '=')) NoteView.zoomBy(1.4);
+      else if (!e.ctrlKey && e.key === '-') NoteView.zoomBy(1 / 1.4);
+    });
     $('guest').hidden = false;
     load();
   }

@@ -449,8 +449,29 @@ body.g-viewing { overflow: hidden; }
 .g-vtitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .98rem; padding: 0 4px; }
 .g-vtitle span { opacity: .7; }
 .g-vnav { display: flex; align-items: center; gap: 2px; font-size: .85rem; white-space: nowrap; }
-.g-offline { margin: 0; padding: 8px; text-align: center; background: #a35f00; color: #fff; font-size: .9rem; }
-#g-frame { flex: 1; width: 100%; border: none; background: #fff; }
+/* własny podgląd nut (js/noteview.js) */
+.g-page { flex: 1; min-height: 0; position: relative; }
+.nv-box { position: absolute; inset: 0; overflow: auto; background: #525659; touch-action: pan-x pan-y; outline: none; }
+.nv-doc { margin: 0 auto; display: flex; flex-direction: column; gap: 8px; padding: 0 0 8px; }
+.nv-img, .nv-page { display: block; width: 100%; height: auto; background: #fff; }
+.nv-msg {
+  position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); width: min(88%, 420px);
+  padding: 14px 16px; border-radius: 12px; background: #2a2523ee; color: #fff; text-align: center; line-height: 1.45;
+}
+.nv-msg a { color: #ffd7a8; }
+.nv-error .nv-msg { background: #6b2a2aee; }
+.nv-spin {
+  display: inline-block; width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; border-radius: 50%;
+  border: 2px solid #ffffff55; border-top-color: #fff; animation: nv-spin .8s linear infinite;
+}
+@keyframes nv-spin { to { transform: rotate(360deg); } }
+.nv-zoom { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 6px; }
+.nv-zoom button {
+  width: 40px; height: 40px; flex: none; border-radius: 50%; border: none; background: #2a2523cc; color: #fff;
+  font-size: 1.4rem; line-height: 1; cursor: pointer; box-shadow: 0 1px 4px #0006;
+}
+.nv-zoom button:hover { background: #2a2523; }
+@media (hover: none) { .nv-zoom { display: none; } } /* na telefonie: dwa palce albo podwójne stuknięcie */
 @media (max-width: 420px) { .g-icon { width: 38px; } }
 
 /* ---------- blokada trybu administratora ---------- */

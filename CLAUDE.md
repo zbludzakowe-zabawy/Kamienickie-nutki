@@ -266,7 +266,13 @@ Oznaczanie **na tej samej stronie co wyszukiwanie**: zaznaczanie wielu pozycji �
    „✓ Załatwione” = `data.reports.done[key]`. „Wyślij zgłoszenie testowe” sprawdza konfigurację.
 
 Chórzysta: `Drive.publicText(catalogId)` (klucz API) → PIN → katalog; kopia koperty w localStorage (`kn-guest-env`), PIN w `kn-guest-pin`.
-Nuty: `<iframe src="https://drive.google.com/file/d/<id>/preview">` (nowa ramka na każdy plik, żeby nie psuć historii „wstecz”).
+Nuty: **własny podgląd** `js/noteview.js` (`window.NoteView`, 2026-11-26) – plik pobierany kluczem API (`files/<id>?alt=media&key=`), bez ciasteczek Google,
+więc otwarcie nie trafia do „Ostatnich”/strony głównej Dysku zalogowanej osoby (zgłoszenie użytkownika: ramka `drive.google.com/…/preview` to robiła).
+Obrazki = `<img>`, PDF = pdf.js 3.11.174 legacy (`js/vendor/pdfjs.min.js` + worker, wczytywany przy pierwszym PDF-ie, `isEvalSupported:false`, jeden `PDFWorker`),
+strony jedna pod drugą, ostre po powiększeniu (canvas ≤ 12 mln px). Pamięć: Cache API `kn-nuty-v1` (test: `test~kn-nuty-v1`; nie z przedrostkiem schowków SW,
+bo SW je kasuje), max 200 plików, najpierw pamięć (kopie mają stałą treść) → otwarte nuty działają offline; w tle pobierane pozostałe strony i następna pieśń.
+Powiększanie: dwa palce, podwójne stuknięcie, Ctrl+kółko, przyciski +/− (tylko z myszą), klawisze +/−. Przesunięcie palcem w bok (bez powiększenia)
+i strzałki ← → = strona / pieśń (`step` w guest.js), Esc = zamknij. „↗” nadal otwiera plik w Dysku Google (świadomie).
 PDF: `https://drive.google.com/uc?export=download&id=<pdfId>`.
 
 **iPhone**: aplikacja z ekranu początkowego ma osobną pamięć od Safari i startuje z `start_url` bez `?chor=`.
@@ -329,11 +335,9 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 
 ### Do zrobienia (zapisane na prośbę użytkownika, 2026-11-25)
 
-- **Pliki ściągane na Dysk Google** – sprawdzić, kiedy i u kogo pliki trafiają na Dysk Google (np. czy przy pobieraniu PDF/nut
-  przez chórzystów coś zapisuje się na ich Dysku, czy dzieje się to tylko u dyrygenta przy publikacji – kopie w „Dla chórzystów”).
-- **Strzałki między nutami w spisie** – sprawdzić, czy da się przechodzić do poprzedniej/następnej pieśni strzałkami
-  (klawiatura ← →, ewentualnie przesunięcie palcem) w podglądzie nut chórzysty (`#g-viewer`; dziś są przyciski ⏮ ⏭).
-  Uwaga: nuty są w `<iframe>` z Dysku – klawisze wciśnięte, gdy ramka ma fokus, nie docierają do strony.
+- ~~Pliki ściągane na Dysk Google~~ – wyjaśnione: to nie nowe pliki, tylko kopie z „Dla chórzystów” pokazywane w „Ostatnich”, bo podgląd był ramką Dysku
+  (u zalogowanych). Zrobiony własny podgląd (`js/noteview.js`). Do ewentualnego sprzątania: osierocone kopie w „Dla chórzystów”, folder wersji testowej.
+- ~~Strzałki między nutami w spisie~~ – zrobione razem z własnym podglądem (← →, przesunięcie palcem).
 - **Zmiana PIN-u na 19** – PIN ustawia administrator w „Dla chórzystów” (`publish.pin`; domyślny `'2018'` w publish.js).
   Zmiana = ponowny zapis katalogu; chórzyści muszą wpisać nowy PIN.
 - **Ukrywanie archiwalnych uroczystości (albo nie)** – przełącznik „pokaż/ukryj archiwum” (programy z datą w przeszłości)
