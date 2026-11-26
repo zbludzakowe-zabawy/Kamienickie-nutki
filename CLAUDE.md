@@ -338,6 +338,9 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
   Zmiana = ponowny zapis katalogu; chórzyści muszą wpisać nowy PIN.
 - **Ukrywanie archiwalnych uroczystości (albo nie)** – przełącznik „pokaż/ukryj archiwum” (programy z datą w przeszłości)
   u administratora i/lub chórzysty. Do ustalenia z użytkownikiem, gdzie i co ma być domyślnie.
+- **Nuty dla dyrygenta – notatki do utworów** (2026-11-26) – dyrygent może zapisywać własne notatki przy utworze
+  (np. przy pozycji Katalogu `catalog.works[id]` albo pieśni w spisie). Do ustalenia: gdzie je widać (tylko administrator?
+  w podglądzie nut?), czy notatka do utworu czy do konkretnej uroczystości (w programach jest już pole `note`).
 
 - **Wybieranie pieśni do przebudowy** (użytkownik: „wyszukiwarka na razie nie działa idealnie”) – dotyczy okna „Dodaj pieśń”
   w programach (`renderPicker` w programs.js: proste dopasowanie słów) i „Wybierz plik…” w spisach. Do omówienia z użytkownikiem.
