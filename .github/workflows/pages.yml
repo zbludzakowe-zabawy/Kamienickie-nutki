@@ -38,9 +38,9 @@ jobs:
           printf '%s\n' '<!doctype html><meta charset="utf-8"><title>Wersja testowa</title>' \
             '<meta http-equiv="refresh" content="0; url=/Kamienickie-nutki-test/">' \
             '<p>Wersja testowa jest teraz pod adresem <a href="/Kamienickie-nutki-test/">/Kamienickie-nutki-test/</a>.</p>' > _site/test/index.html
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

@@ -12,6 +12,10 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
   3. **Po każdej zmianie przypominam użytkownikowi**: „Zmiana jest na wersji testowej (link). Jeśli ma trafić na produkcję – daj znać.”
   4. Na produkcję **tylko na wyraźną prośbę użytkownika**: PR tej samej gałęzi roboczej do `main` (bez innych, niezatwierdzonych zmian z `test`)
      → **scala wyłącznie użytkownik**. Nigdy nie pushuj do `main` ani nie scalaj PR-ów do `main`.
+     **Po każdym scaleniu do `main` sprawdzam**, że workflow „Publikacja na GitHub Pages” (`pages.yml`) skończył się sukcesem
+     (`mcp__github__actions_list`, przy błędzie `get_job_logs`) i mówię o tym użytkownikowi (decyzja użytkownika 2026-11-26).
+     Powód: #58 i #59 były scalone, ale publikacja padła (`deploy-pages@v4`: „No artifacts named github-pages”) i produkcja stała
+     na starej wersji – użytkownik widział „niespójne wersje”. Naprawione w #64 (configure-pages@v6, upload-pages-artifact@v5, deploy-pages@v5).
   5. „Uaktualnij testy” = PR `main` → `test` i scalenie (gdy na produkcję weszło coś spoza testów, np. z innego wątku).
   Zmiany w samym CLAUDE.md (notatki) działają w nowych sesjach dopiero po wejściu do `main` – przy takich zmianach od razu proponuj PR do `main`.
 - **Wersja testowa**: gałąź `test` → https://zbludzakowe-zabawy.github.io/Kamienickie-nutki-test/ (pasek „WERSJA TESTOWA”, ikona TEST).
@@ -175,7 +179,9 @@ Testy parsera: `node tests/progimport.test.cjs` (folder `tests/` nie trafia na s
   Pomijane: `Matcher.candidates` (automatyczne dopasowanie; ręczny wybór `candidates(…, true)` pomija tylko „to nie nuty”), `Dups.files()`
   (duplikaty i „Pozostałe nuty”), filtr „nieprzypisane”. Pliki zostają w drzewie (wyszarzone, tag) – filtr „Oznaczone”, żeby odznaczyć.
   „To nie nuty” niedostępne dla pliku używanego w śpiewniku (`ok`/`auto`) albo programie (`usedIn`). Po zmianie: `afterFlags()` = rematch + `Dups.detect(true)`.
-  UI: przy pliku ✎ → okno `#edit-dlg` (`App.openEdit`: nazwa, „⟳ Obróć…” → `#rot-dlg`, oba oznaczenia; wykluczają się) – w drzewie i w duplikatach.
+  UI: przy pliku ✎ → okno `#edit-dlg` (`App.openEdit`: nazwa, oba oznaczenia – wykluczają się; „♪ Podgląd”, „Otwórz na Dysku”, **„Edytuj w Katalogu”**) – w drzewie i w duplikatach.
+  **Obrotu w tym oknie nie ma** (decyzja użytkownika 2026-11-26) – „Edytuj w Katalogu” zapisuje okno (`requestSubmit`), przechodzi do Katalogu
+  i otwiera pozycję z tym plikiem (`Works.openFile(id)` / `Works.workOfFile`); nieaktywne, gdy pliku nie ma w Katalogu („to nie nuty”, do sprzątnięcia).
   **Duszek** (ikonka SVG `#i-ghost` w index.html, `App.GHOST(on)`; wybrany przez użytkownika „klasyczny”: okrągła głowa, falisty dół, buzia „o”):
   nieoznaczone = same kontury, przygaszony; oznaczone = biały na ciemnym kółku (`--ghost-bg`). Przycisk `data-ghost` przy **każdym folderze**
   (zawsze widoczny) i **każdym pliku** w drzewie (`toggleIgnore`); w nieistotnym folderze – wyszarzony, bez klikania; przy „to nie nuty” – brak.
@@ -213,7 +219,12 @@ Decyzje użytkownika: katalog **wszystkich** nut z Dysku; pozycja = utwór (tytu
 adwentowe, uwielbienie, alleluja; okno „🏷 Cechy…”: dodaj / zmień nazwę / kolejność / usuń – cechy mają stałe `id`, nazwa to etykieta).
 Oznaczanie **na tej samej stronie co wyszukiwanie**: zaznaczanie wielu pozycji → „+ Dodaj cechę / − Usuń cechę / ⧉ Połącz / 👻 Nieistotne / Przywróć / ⬇ CSV”
 (akcje dotyczą tylko zaznaczonych **widocznych** – ukryte filtrem nie biorą udziału); kliknięcie tytułu → okno `#work-dlg`
-(tytuł, autorzy z podpowiedziami `datalist`, cechy, nowa cecha, nieistotne, pliki: ↗, ✎ = `App.openEdit`, „Osobno” = wydziel plik jako nową pozycję, ⇅).
+(tytuł, autorzy z podpowiedziami `datalist`, cechy, nowa cecha, nieistotne, ⇅). Na liście pozycji: ♪ (podgląd) i ✎ (= kliknięcie tytułu), bez znaczka Dysku.
+**Pliki w oknie pozycji** (decyzja użytkownika 2026-11-26): ✎ przy nazwie = zmiana nazwy w aplikacji w miejscu (`meta.title`, zapis od razu, Enter/Esc),
+♪ podgląd, znaczek Dysku, ⟳ obrót (`App.openRotate` – jedyne miejsce obracania), „Osobno” = wydziel plik jako nową pozycję;
+**„+ Dodaj plik”** = okno „Wybierz plik…” (`Songs.chooseFiles(title, {exclude, note, onSave})`); plik z innej pozycji katalogu = **połączenie z nią jak ⧉ Połącz**
+(wszystkie jej pliki, cechy, puste autorzy uzupełnione; dopisek „dołączony z „…””), zapis dopiero po „Zapisz” (`ui.merged`). `sync()` nie zmienia tytułu,
+gdy pasuje on do którejkolwiek pozycji spisu z tymi plikami (po dołączeniu innej pieśni zostaje tytuł edytowanej).
 - **Budowa** (`sync()`, przy każdym `render` widocznej zakładki; zapis tylko gdy coś się zmieniło): pieśni ze spisów (`ok`/`auto`) → utwór z tymi plikami
   i tytułem ze spisu; reszta plików → grupy jak „Pozostałe nuty” (`Dups.nameKey`, ten sam folder). Plik należy do jednego utworu. Nowe strony pieśni ze spisu
   dopisywane do utworu, który ma już jej pozostałe pliki. Utwór bez plików znika, chyba że ma dane użytkownika (wtedy „bez plików” + „Usuń pozycję”).
@@ -282,7 +293,7 @@ i strzałki ← → = strona / pieśń (`step` w guest.js), Esc = zamknij. Znacz
 z obrotem `meta.rot` nałożonym w podglądzie (`NoteView.show(…, {rot})`: obrazek przez canvas, PDF `rotation` w pdf.js – ten sam kierunek co `PdfBuild.rotate`).
 Pamięć `kn-nuty-admin-v1` (oryginały: klucz z `modified`), czyszczona przy „Wyloguj”. `Preview.noteBtn(ids, i, title)` = przycisk ♪,
 `Preview.driveLink(id)`, `Preview.attrs(ids, i, title)` = atrybuty `data-nv` – każde kliknięcie elementu z `data-nv` otwiera podgląd (chipy plików w spisach,
-programach, zgłoszeniach: zwykłe kliknięcie = podgląd, Ctrl/środkowy = Dysk). ♪ w drzewie (cała pieśń z folderu), oknie kolejności, „Wybierz plik…”, katalogu (na liście pozycji też znaczek Dysku – pierwszy plik),
+programach, zgłoszeniach: zwykłe kliknięcie = podgląd, Ctrl/środkowy = Dysk). ♪ w drzewie (cała pieśń z folderu), oknie kolejności, „Wybierz plik…”, katalogu,
 duplikatach (tam też znaczek Dysku – do usuwania), w oknie ✎ przyciski „♪ Podgląd” i „Otwórz na Dysku”.
 PDF: `https://drive.google.com/uc?export=download&id=<pdfId>`.
 

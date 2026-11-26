@@ -181,7 +181,7 @@
       </div>
       <p class="hint muted unassigned-hint" id="unassigned-hint" hidden>Pliki, których nie ma w żadnym spisie pieśni jako „Są nuty”.
         Pliki tylko zaproponowane („Do sprawdzenia”) też tu są – po zatwierdzeniu w „Spisach pieśni” znikną z tej listy. Programy uroczystości nie są brane pod uwagę.</p>
-      <p class="hint muted">✎ przy pliku (albo stuknięcie nazwy): własna nazwa, obrót, „to nie nuty”, „nieistotne”. <span class="nv-note-ico" aria-hidden="true">♪</span> = podgląd nut (w oknie ✎ jest też <svg class="ico-drive" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-drive"/></svg> – otwórz na Dysku Google). Duszek przy pliku albo folderze: <svg class="ico-ghost" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg> (same kontury) – kliknij, żeby oznaczyć jako nieistotne (cały folder razem z zawartością); <svg class="ico-ghost on" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg> = oznaczone, ↻ odświeża tylko ten folder.</p>
+      <p class="hint muted">✎ przy pliku (albo stuknięcie nazwy): własna nazwa, „to nie nuty”, „nieistotne”, „Edytuj w Katalogu” (obrót, pozostałe strony). <span class="nv-note-ico" aria-hidden="true">♪</span> = podgląd nut (w oknie ✎ jest też <svg class="ico-drive" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-drive"/></svg> – otwórz na Dysku Google). Duszek przy pliku albo folderze: <svg class="ico-ghost" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg> (same kontury) – kliknij, żeby oznaczyć jako nieistotne (cały folder razem z zawartością); <svg class="ico-ghost on" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg> = oznaczone, ↻ odświeża tylko ten folder.</p>
       <div class="tree" id="tree"></div>
     </section>
    </div>
@@ -406,7 +406,8 @@
         <span><b><svg class="ico-ghost" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg> Nieistotne</b> <span class="muted small">Oznacza wszystkie pliki tej pozycji (jak „nieistotne” w „Nutach na Dysku”). Domyślnie ukryte w katalogu.</span>
           <span class="small muted" id="wk-ign-why" hidden></span></span></label>
       <div class="ed-field"><span>Pliki <span class="muted small" id="wk-fcount"></span></span>
-        <ul class="wk-files" id="wk-files"></ul></div>
+        <ul class="wk-files" id="wk-files"></ul>
+        <div><button type="button" class="btn small" id="wk-add" title="Dołącz kolejny plik (strona, inna wersja). Plik z innej pozycji katalogu = połączenie z tą pozycją, jak ⧉ Połącz">+ Dodaj plik</button></div></div>
       <div class="dialog-actions">
         <button class="btn" type="button" id="wk-order" hidden>⇅ Kolejność stron</button>
         <button class="btn" type="button" id="wk-del" hidden>Usuń pozycję</button>
@@ -480,7 +481,6 @@
       <label class="ed-field"><span>Nazwa w aplikacji</span>
         <input id="ed-name" type="text" maxlength="200" autocomplete="off" enterkeyhint="done"></label>
       <p class="muted small" style="margin:0">Nazwa i pozostałe ustawienia są tylko w aplikacji – plik na Dysku zostaje bez zmian.</p>
-      <div class="ed-rot"><span>Obrót: <b id="ed-rot"></b></span><button type="button" class="btn small" id="ed-rotate">⟳ Obróć…</button></div>
       <label class="ed-flag"><input type="checkbox" id="ed-notes">
         <span><b><svg class="ico-nonote" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-nonote"/></svg> To nie nuty</b>
           <span class="muted small">Plik pomijany przy dopasowaniu do śpiewników, w duplikatach i w „Pozostałych nutach”. Zostaje na liście plików – możesz odznaczyć.</span>
@@ -493,6 +493,7 @@
       <div class="dialog-actions">
         <button type="button" class="btn" id="ed-view"><span class="nv-note-ico" aria-hidden="true">♪</span> Podgląd</button>
         <a class="btn" id="ed-open" target="_blank" rel="noopener"><svg class="ico-drive" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-drive"/></svg> Otwórz na Dysku</a>
+        <button type="button" class="btn" id="ed-cat" title="Tytuł, autorzy, cechy, obrót i pozostałe strony tego utworu">Edytuj w Katalogu</button>
         <span style="flex:1"></span>
         <button class="btn" type="button" id="ed-cancel">Anuluj</button>
         <button class="btn primary" type="submit" id="ed-save">Zapisz</button>

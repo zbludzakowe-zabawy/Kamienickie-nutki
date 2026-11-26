@@ -370,10 +370,6 @@
       : (folder ? 'Oznacz folder jako nieistotny (nuty niepotrzebne chórzystom)' : 'Oznacz jako nieistotne (nuty niepotrzebne chórzystom)')}">${GHOST(on)}</button>`;
 
   let edId = null;
-  function paintEdRot() {
-    const r = (data.meta[edId] && data.meta[edId].rot) || 0;
-    $('ed-rot').textContent = r ? `o ${r}°` : 'bez obrotu';
-  }
   function openEdit(id) {
     const n = data.nodes[id];
     if (!n) return;
@@ -385,7 +381,11 @@
     $('ed-name').placeholder = stripExt(n.name);
     $('ed-open').href = Preview.driveUrl(id);
     $('ed-view').onclick = () => Preview.open([id]);
-    paintEdRot();
+    // „Edytuj w Katalogu” – nie wtedy, gdy okno otwarto z samego katalogu albo pliku w katalogu nie ma (np. „to nie nuty”)
+    const inCat = !$('work-dlg').open && window.Works && Works.workOfFile(id);
+    $('ed-cat').hidden = $('work-dlg').open;
+    $('ed-cat').disabled = !inCat;
+    $('ed-cat').title = inCat ? 'Tytuł, autorzy, cechy, obrót i pozostałe strony tego utworu' : 'Tego pliku nie ma w Katalogu (np. „to nie nuty” albo na liście do sprzątnięcia)';
     const used = usedIn(id);
     $('ed-notes').checked = !!m.notNotes;
     $('ed-notes').disabled = !m.notNotes && used.length > 0;
@@ -402,8 +402,14 @@
   // „to nie nuty” i „nieistotne” wykluczają się
   $('ed-notes').addEventListener('change', (e) => { if (e.target.checked && !$('ed-ignore').disabled) $('ed-ignore').checked = false; });
   $('ed-ignore').addEventListener('change', (e) => { if (e.target.checked) $('ed-notes').checked = false; });
-  $('ed-rotate').addEventListener('click', () => openRotate(edId));
-  $('rot-dlg').addEventListener('close', () => { if ($('edit-dlg').open) paintEdRot(); });
+  // zapisuje zmiany z okna i przechodzi do pozycji tego pliku w Katalogu
+  $('ed-cat').addEventListener('click', () => {
+    const id = edId;
+    $('ed-form').requestSubmit(); // zapis jak „Zapisz” (okno zamyka się samo)
+    if ($('edit-dlg').open) $('edit-dlg').close();
+    showTab('catalog');
+    if (window.Works && !Works.openFile(id)) toast('Tego pliku nie ma w Katalogu (np. „to nie nuty”).', true);
+  });
   $('ed-cancel').addEventListener('click', () => $('edit-dlg').close());
   $('ed-form').addEventListener('submit', () => {
     const id = edId;
