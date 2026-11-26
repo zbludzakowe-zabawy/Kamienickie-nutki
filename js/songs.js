@@ -309,10 +309,11 @@ window.Songs = (() => {
   }
 
   // ---------- ręczny wybór plików ----------
-  let chooser = null; // { it, selected: [], cands }
-  function openChooser(it) {
+  // opts (wybór z innych miejsc, np. „+ Dodaj plik” w Katalogu): {onSave(ids), exclude:[ids], note(id) → dopisek przy pliku}
+  let chooser = null; // { it, selected: [], cands, opts }
+  function openChooser(it, opts) {
     if (!Object.keys(A.data.nodes).length) return A.toast('Najpierw przeskanuj Dysk w zakładce „Nuty na Dysku”.', true);
-    chooser = { it, selected: [...it.files], cands: Matcher.candidates(A.data.nodes, A.data.meta, A.idx, true).filter((c) => !c.folder) };
+    chooser = { it, opts: opts || null, selected: opts ? [] : [...it.files], cands: Matcher.candidates(A.data.nodes, A.data.meta, A.idx, true).filter((c) => !c.folder) };
     $('chooser-title').textContent = `${it.no ? it.no + '. ' : ''}${it.title}`;
     $('chooser-q').value = '';
     $('chooser').showModal();
@@ -320,8 +321,9 @@ window.Songs = (() => {
   }
 
   function renderChooser() {
-    const { it, selected, cands } = chooser;
+    const { it, selected, cands, opts } = chooser;
     const q = $('chooser-q').value.trim();
+    const ex = new Set((opts && opts.exclude) || []);
     let ids;
     if (!q) {
       ids = Matcher.rank(it.title, cands, 40, 0.15).map((r) => ({ id: r.files[0], score: r.score }));
@@ -334,7 +336,7 @@ window.Songs = (() => {
       }).slice(0, 150).map((n) => ({ id: n.id }));
     }
     // zaznaczone zawsze na górze
-    const shown = [...selected.map((id) => ({ id })), ...ids.filter((x) => !selected.includes(x.id))];
+    const shown = [...selected.map((id) => ({ id })), ...ids.filter((x) => !selected.includes(x.id) && !ex.has(x.id))];
     $('chooser-list').innerHTML = shown.length ? shown.map(({ id, score }) => {
       const n = A.data.nodes[id];
       if (!n) return '';
@@ -342,7 +344,7 @@ window.Songs = (() => {
       const on = selected.includes(id);
       return `<li><label class="choose-item${on ? ' on' : ''}"><input type="checkbox" data-id="${esc(id)}"${on ? ' checked' : ''}>
         <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span>
-        <span class="choose-names"><span>${esc((m && m.title) || n.name)}</span><span class="orig">${esc(Catalog.pathOf(A.data.nodes, id))}${m && m.title ? ' / ' + esc(n.name) : ''}</span></span>
+        <span class="choose-names"><span>${esc((m && m.title) || n.name)}</span><span class="orig">${esc(Catalog.pathOf(A.data.nodes, id))}${m && m.title ? ' / ' + esc(n.name) : ''}</span>${opts && opts.note ? opts.note(id) : ''}</span>
         ${score ? pct(score) : ''}
         ${Preview.noteBtn(id)}</label></li>`;
     }).join('') : `<li class="muted">${q ? 'Nic nie pasuje.' : 'Brak podobnych nazw – wpisz coś w wyszukiwarkę.'}</li>`;
@@ -537,8 +539,9 @@ window.Songs = (() => {
   });
   $('chooser-cancel').addEventListener('click', () => $('chooser').close());
   $('chooser-save').addEventListener('click', () => {
-    const { it, selected } = chooser;
+    const { it, selected, opts } = chooser;
     $('chooser').close();
+    if (opts) return opts.onSave([...selected]);
     update(it, (x) => {
       x.files = A.orderFiles([...selected]);
       x.state = selected.length ? 'ok' : 'none';
@@ -558,5 +561,7 @@ window.Songs = (() => {
     return true;
   }
 
-  return { render, rematchAll, reveal };
+  // wybór plików z innego miejsca aplikacji (to samo okno co „Wybierz plik…”)
+  const chooseFiles = (title, opts) => openChooser({ title, no: '', files: [] }, opts);
+  return { chooseFiles, render, rematchAll, reveal };
 })();
