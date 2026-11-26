@@ -454,7 +454,10 @@ dialog.a-viewer { width: 100vw; height: 100dvh; max-width: none; max-height: non
 dialog.a-viewer:not([open]) { display: none; }
 dialog.a-viewer::backdrop { background: #000a; }
 .a-viewer .g-vtitle span { font-size: .85rem; }
-.a-rot { font-size: .8rem; font-style: normal; color: #ffd7a8; margin-left: 6px; }
+.a-state { flex: none; font-size: .78rem; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: #ffffff1f; color: #fff; }
+.a-state.pub { background: #2e6b3a; }
+.a-state.stale, .a-state.none { background: #8a5a12; }
+@media (max-width: 640px) { .a-state { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; } }
 /* ikonki: ♪ = podgląd w aplikacji, znaczek Dysku = otwórz na Dysku Google */
 .ico-drive { width: 1.15em; height: 1.15em; flex: none; vertical-align: -.22em; }
 .g-icon .ico-drive { width: 22px; height: 22px; }
