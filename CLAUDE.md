@@ -151,7 +151,7 @@ przesuwa `src.i` w programach uroczystości (usunięta pozycja → program zacho
 **Programy uroczystości**: domyślny szkielet części (Wejście, Kyrie, Gloria, Psalm, Alleluja lub Chwała, Ofiarowanie, Sanctus,
 Agnus Dei, Komunia, Uwielbienie, Wyjście) – części można dodawać/usuwać/przestawiać/zmieniać nazwę, w części kilka pieśni.
 Pieśń ze spisu ma `src` → przy publikacji bierzemy **aktualne** dopasowanie z tego spisu (`Programs.resolve`); można też dodać plik
-albo sam tytuł „bez nut”. Przycisk „♪ Dołącz nuty” / „Zmień nuty” przy pieśni (`openPicker(pi, ii)`) podmienia tylko
+albo sam tytuł „bez nut”. Okno „Dodaj pieśń” (`renderPicker`) szuka w spisach (SPIS), w **utworach Katalogu** (KAT, `Works.find` – połączone tam pliki = jedna pieśń; ich pliki nie są pokazywane osobno, utwór o plikach identycznych z pozycją spisu pominięty) i w plikach. Przycisk „♪ Dołącz nuty” / „Zmień nuty” przy pieśni (`openPicker(pi, ii)`) podmienia tylko
 `files`/`src` – tytuł i uwaga zostają. `src.i` = indeks pozycji w spisie (pewniejsze niż sam numer, zwłaszcza w spisach bez numerów). Program z datą w przeszłości = archiwum (u administratora i chórzysty), nadal widoczny, dopóki nie usunięty.
 „Kopiuj” tworzy kopię bez daty. Puste części są ukryte u chórzystów i w PDF. PDF programu = pseudo-śpiewnik z wierszami `section`.
 **Wczytaj z pliku…** (`#ev-import`, `js/progimport.js` = czysty parser `ProgImport.parse(lines)`, testowalny w Node; linie z `SongList.linesOf(name, buf, true)`
@@ -266,7 +266,13 @@ Oznaczanie **na tej samej stronie co wyszukiwanie**: zaznaczanie wielu pozycji �
    „✓ Załatwione” = `data.reports.done[key]`. „Wyślij zgłoszenie testowe” sprawdza konfigurację.
 
 Chórzysta: `Drive.publicText(catalogId)` (klucz API) → PIN → katalog; kopia koperty w localStorage (`kn-guest-env`), PIN w `kn-guest-pin`.
-Nuty: `<iframe src="https://drive.google.com/file/d/<id>/preview">` (nowa ramka na każdy plik, żeby nie psuć historii „wstecz”).
+Nuty: **własny podgląd** `js/noteview.js` (`window.NoteView`, 2026-11-26) – plik pobierany kluczem API (`files/<id>?alt=media&key=`), bez ciasteczek Google,
+więc otwarcie nie trafia do „Ostatnich”/strony głównej Dysku zalogowanej osoby (zgłoszenie użytkownika: ramka `drive.google.com/…/preview` to robiła).
+Obrazki = `<img>`, PDF = pdf.js 3.11.174 legacy (`js/vendor/pdfjs.min.js` + worker, wczytywany przy pierwszym PDF-ie, `isEvalSupported:false`, jeden `PDFWorker`),
+strony jedna pod drugą, ostre po powiększeniu (canvas ≤ 12 mln px). Pamięć: Cache API `kn-nuty-v1` (test: `test~kn-nuty-v1`; nie z przedrostkiem schowków SW,
+bo SW je kasuje), max 200 plików, najpierw pamięć (kopie mają stałą treść) → otwarte nuty działają offline; w tle pobierane pozostałe strony i następna pieśń.
+Powiększanie: dwa palce, podwójne stuknięcie, Ctrl+kółko, przyciski +/− (tylko z myszą), klawisze +/−. Przesunięcie palcem w bok (bez powiększenia)
+i strzałki ← → = strona / pieśń (`step` w guest.js), Esc = zamknij. „↗” nadal otwiera plik w Dysku Google (świadomie).
 PDF: `https://drive.google.com/uc?export=download&id=<pdfId>`.
 
 **iPhone**: aplikacja z ekranu początkowego ma osobną pamięć od Safari i startuje z `start_url` bez `?chor=`.
@@ -326,6 +332,19 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 - ❌ Klucz API i klient OAuth są projektu użytkownika – przy wielu chórach to nadal może zostać jeden projekt, ale wtedy limity/koszty są po stronie właściciela.
 
 ## Pomysły / dalsze etapy
+
+### Do zrobienia (zapisane na prośbę użytkownika, 2026-11-25)
+
+- ~~Pliki ściągane na Dysk Google~~ – wyjaśnione: to nie nowe pliki, tylko kopie z „Dla chórzystów” pokazywane w „Ostatnich”, bo podgląd był ramką Dysku
+  (u zalogowanych). Zrobiony własny podgląd (`js/noteview.js`). Do ewentualnego sprzątania: osierocone kopie w „Dla chórzystów”, folder wersji testowej.
+- ~~Strzałki między nutami w spisie~~ – zrobione razem z własnym podglądem (← →, przesunięcie palcem).
+- **Zmiana PIN-u na 19** – PIN ustawia administrator w „Dla chórzystów” (`publish.pin`; domyślny `'2018'` w publish.js).
+  Zmiana = ponowny zapis katalogu; chórzyści muszą wpisać nowy PIN.
+- **Ukrywanie archiwalnych uroczystości (albo nie)** – przełącznik „pokaż/ukryj archiwum” (programy z datą w przeszłości)
+  u administratora i/lub chórzysty. Do ustalenia z użytkownikiem, gdzie i co ma być domyślnie.
+- **Nuty dla dyrygenta – notatki do utworów** (2026-11-26) – dyrygent może zapisywać własne notatki przy utworze
+  (np. przy pozycji Katalogu `catalog.works[id]` albo pieśni w spisie). Do ustalenia: gdzie je widać (tylko administrator?
+  w podglądzie nut?), czy notatka do utworu czy do konkretnej uroczystości (w programach jest już pole `note`).
 
 - **Wybieranie pieśni do przebudowy** (użytkownik: „wyszukiwarka na razie nie działa idealnie”) – dotyczy okna „Dodaj pieśń”
   w programach (`renderPicker` w programs.js: proste dopasowanie słów) i „Wybierz plik…” w spisach. Do omówienia z użytkownikiem.
