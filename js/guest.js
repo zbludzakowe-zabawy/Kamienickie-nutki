@@ -406,7 +406,7 @@ window.Guest = (() => {
     return -1;
   }
   // Nuty pokazuje własny podgląd (js/noteview.js), nie ramka Dysku Google – otwarcie nie trafia do „Ostatnich”
-  // na Dysku osoby zalogowanej w przeglądarce. „↗” nadal otwiera plik w Dysku Google (świadomy wybór).
+  // na Dysku osoby zalogowanej w przeglądarce. Znaczek Dysku w pasku nadal otwiera plik w Dysku Google (świadomy wybór).
   function showFile() {
     const it = viewer.b.items[viewer.i];
     const id = it.files[viewer.f];

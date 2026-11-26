@@ -265,7 +265,7 @@ window.Dups = (() => {
         <span class="muted small"><a href="${folderUrl(n.parent)}" target="_blank" rel="noopener" title="${n.viaShortcut ? 'Folder ze skrótem do tego pliku (prawdziwy plik leży poza wybranymi folderami)' : 'Otwórz folder na Dysku'}">📁 ${esc(Catalog.pathOf(A.data.nodes, id) || 'Mój dysk')}${n.viaShortcut ? ' (przez skrót)' : ''}</a>${n.viaShortcut && n.real ? ` <span class="muted small">· oryginał: ${esc(n.real)}</span>` : ''}
         · ${fmtSize(n.size)}${n.modified ? ' · ' + new Date(n.modified).toLocaleDateString('pl-PL') : ''}${use[id] ? ' · używany: ' + esc(use[id].join(', ')) : ' · nieużywany'}</span></span>
       <button class="act" data-a="edit" data-id="${esc(id)}" title="Edytuj: nazwa, obrót, „to nie nuty”, „nieistotne”" aria-label="Edytuj plik">✎</button>
-      <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="Otwórz plik na Dysku">↗</a></label>`;
+      ${Preview.noteBtn(id)}${Preview.driveLink(id)}</label>`;
   }
 
   // „Nadaj nazwę zaznaczonym (n)” – nazwa trafia tylko do zaznaczonych plików (jednego albo kilku)
@@ -388,8 +388,8 @@ window.Dups = (() => {
     $('cleanup-list').innerHTML = folders.length ? folders.map((f) => `<div class="cl-folder">
         <a class="cl-folder-name" href="${folderUrl(f.parent)}" target="_blank" rel="noopener" title="Otwórz folder na Dysku">📁 ${esc(f.path)}</a>
         ${f.items.map(({ id, c, done }) => `<div class="cl-item${done ? ' done' : ''}" data-id="${esc(id)}">
-          <span class="cl-main"><a href="${fileUrl(id)}" target="_blank" rel="noopener"${done && !A.data.nodes[id] ? ' class="gone"' : ''}>${esc(c.name)}</a>${c.own && c.own !== A.stripExt(c.name) ? ` <span class="muted small">(${esc(c.own)})</span>` : ''}
-            <span class="muted small">${esc(reason(c))}${c.keep[0] ? ` · <a href="${fileUrl(c.keep[0].id)}" target="_blank" rel="noopener">zobacz zachowany ↗</a>` : ''}</span></span>
+          <span class="cl-main"><a href="${fileUrl(id)}" target="_blank" rel="noopener" title="Otwórz na Dysku Google"${done && !A.data.nodes[id] ? ' class="gone"' : ''}>${Preview.DRIVE_ICO} ${esc(c.name)}</a>${c.own && c.own !== A.stripExt(c.name) ? ` <span class="muted small">(${esc(c.own)})</span>` : ''}
+            <span class="muted small">${esc(reason(c))}${c.keep[0] ? ` · <a href="${fileUrl(c.keep[0].id)}" target="_blank" rel="noopener" ${Preview.attrs([c.keep[0].id], 0, c.keep[0].name)}><span class="nv-note-ico" aria-hidden="true">♪</span> zobacz zachowany</a>` : ''}</span></span>
           ${done
     ? `<span class="dup-tag keep">${!A.data.nodes[id] ? '✓ usunięty z Dysku' : '✓ zrobione'}</span>${A.data.nodes[id] ? '<button class="btn small" data-c="undo" title="Cofnij odhaczenie">↺</button>' : ''}`
     : '<button class="btn small" data-c="done" title="Odhacz ręcznie (np. plik przeniesiony albo już usunięty)">✓ Zrobione</button>'}
