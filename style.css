@@ -449,6 +449,24 @@ body.g-viewing { overflow: hidden; }
 .g-vtitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .98rem; padding: 0 4px; }
 .g-vtitle span { opacity: .7; }
 .g-vnav { display: flex; align-items: center; gap: 2px; font-size: .85rem; white-space: nowrap; }
+/* podgląd administratora = to samo okienko co u chórzysty, jako <dialog> (nad innymi oknami) */
+dialog.a-viewer { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: none; border-radius: 0; color: #fff; }
+dialog.a-viewer:not([open]) { display: none; }
+dialog.a-viewer::backdrop { background: #000a; }
+.a-viewer .g-vtitle span { font-size: .85rem; }
+.a-rot { font-size: .8rem; font-style: normal; color: #ffd7a8; margin-left: 6px; }
+/* ikonki: ♪ = podgląd w aplikacji, znaczek Dysku = otwórz na Dysku Google */
+.ico-drive { width: 1.15em; height: 1.15em; flex: none; vertical-align: -.22em; }
+.g-icon .ico-drive { width: 22px; height: 22px; }
+.act.drv { display: inline-grid; place-items: center; }
+.nv-note-ico {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: .82rem; line-height: 1; flex: none;
+}
+.act.nv-note:hover .nv-note-ico { filter: brightness(1.2); }
+.btn .nv-note-ico { width: 18px; height: 18px; font-size: .72rem; vertical-align: -.2em; }
+.chip[data-nv] { cursor: zoom-in; }
+
 /* własny podgląd nut (js/noteview.js) */
 .g-page { flex: 1; min-height: 0; position: relative; }
 .nv-box { position: absolute; inset: 0; overflow: auto; background: #525659; touch-action: pan-x pan-y; outline: none; }

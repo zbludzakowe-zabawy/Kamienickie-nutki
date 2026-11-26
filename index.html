@@ -137,7 +137,7 @@
       <div class="card-head"><h2>Porządkowanie: duplikaty</h2>
         <span class="ev-tools"><button class="btn small" id="dups-again" title="Szukaj ponownie – Twoje decyzje zostaną zachowane">↻ Szukaj ponownie</button><button class="btn small" id="dups-hide">Zwiń</button></span></div>
       <p class="muted small">Najpierw podejmij decyzje tutaj – niepotrzebne pliki trafią na listę „Do sprzątnięcia na Dysku”. Aplikacja nie usuwa plików:
-        usuwasz je sam (linki 📁 do folderu i ↗ do pliku), a po „Skanuj Dysk” usunięte pliki odhaczą się same. Decyzje i lista są zapamiętane.</p>
+        usuwasz je sam (linki 📁 do folderu i <svg class="ico-drive" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-drive"/></svg> do pliku), a po „Skanuj Dysk” usunięte pliki odhaczą się same. Decyzje i lista są zapamiętane.</p>
       <p class="muted small" id="dups-info"></p>
       <div class="cleanup" id="cleanup">
         <div class="cleanup-head">
@@ -181,7 +181,7 @@
       </div>
       <p class="hint muted unassigned-hint" id="unassigned-hint" hidden>Pliki, których nie ma w żadnym spisie pieśni jako „Są nuty”.
         Pliki tylko zaproponowane („Do sprawdzenia”) też tu są – po zatwierdzeniu w „Spisach pieśni” znikną z tej listy. Programy uroczystości nie są brane pod uwagę.</p>
-      <p class="hint muted">✎ przy pliku (albo stuknięcie nazwy): własna nazwa, obrót, „to nie nuty”, „nieistotne”. ↗ otwiera plik na Dysku. Duszek przy pliku albo folderze: <svg class="ico-ghost" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg> (same kontury) – kliknij, żeby oznaczyć jako nieistotne (cały folder razem z zawartością); <svg class="ico-ghost on" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg> = oznaczone, ↻ odświeża tylko ten folder.</p>
+      <p class="hint muted">✎ przy pliku (albo stuknięcie nazwy): własna nazwa, obrót, „to nie nuty”, „nieistotne”. <span class="nv-note-ico" aria-hidden="true">♪</span> = podgląd nut (w oknie ✎ jest też <svg class="ico-drive" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-drive"/></svg> – otwórz na Dysku Google). Duszek przy pliku albo folderze: <svg class="ico-ghost" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg> (same kontury) – kliknij, żeby oznaczyć jako nieistotne (cały folder razem z zawartością); <svg class="ico-ghost on" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ghost"/></svg> = oznaczone, ↻ odświeża tylko ten folder.</p>
       <div class="tree" id="tree"></div>
     </section>
    </div>
@@ -491,7 +491,8 @@
             Ręcznie nadal możesz je wybrać do pieśni.</span>
           <span class="small muted" id="ed-ignore-why" hidden></span></span></label>
       <div class="dialog-actions">
-        <a class="btn" id="ed-open" target="_blank" rel="noopener">Pokaż na Dysku ↗</a>
+        <button type="button" class="btn" id="ed-view"><span class="nv-note-ico" aria-hidden="true">♪</span> Podgląd</button>
+        <a class="btn" id="ed-open" target="_blank" rel="noopener"><svg class="ico-drive" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-drive"/></svg> Otwórz na Dysku</a>
         <span style="flex:1"></span>
         <button class="btn" type="button" id="ed-cancel">Anuluj</button>
         <button class="btn primary" type="submit" id="ed-save">Zapisz</button>
@@ -503,6 +504,10 @@
       <path d="M3.5 3.5l17 17" stroke="var(--panel)" stroke-width="5" stroke-linecap="round"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-ghost" viewBox="0 0 24 24"><path d="M4.8 20.6V11a7.2 7.2 0 0 1 14.4 0v9.6q-1.8-2.1-3.6 0t-3.6 0t-3.6 0t-3.6 0z" style="fill:var(--gfill,none);stroke:currentColor;stroke-width:1.7;stroke-linejoin:round"/>
       <circle cx="9.6" cy="10.4" r="1.25" style="fill:currentColor"/><circle cx="14.4" cy="10.4" r="1.25" style="fill:currentColor"/><ellipse cx="12" cy="14.4" rx="1.05" ry="1.35" style="fill:currentColor"/></symbol>
+    <!-- „otwórz na Dysku Google”: mały znaczek Dysku + strzałka (decyzja użytkownika 2026-11-26) -->
+    <symbol id="i-drive" viewBox="0 0 24 24"><g transform="translate(0 3.4) scale(.78)"><path d="M7.6 3.5h6.8l6.4 11.1h-6.8z" fill="#fbbc04"/>
+      <path d="M7.6 3.5 1.2 14.6l3.4 5.9L11 9.4z" fill="#1fa463"/><path d="M4.6 20.5h12.8l3.4-5.9H8z" fill="#4285f4"/></g>
+      <path d="M16 2.6h5.4V8M21.4 2.6l-6 6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </defs></svg>
 
   <dialog id="rot-dlg" aria-labelledby="rot-title">
@@ -516,7 +521,7 @@
         <button type="button" class="btn" data-r="90">↻ W prawo</button>
       </div>
       <p class="muted small rot-info"><span id="rot-val"></span>. Oryginał na Dysku zostaje bez zmian – obrócone będą nuty u chórzystów i w PDF-ach
-        (po kliknięciu „Aktualizuj” w zakładce „Dla chórzystów”). <a id="rot-open" target="_blank" rel="noopener">Otwórz na Dysku ↗</a></p>
+        (po kliknięciu „Aktualizuj” w zakładce „Dla chórzystów”). <a id="rot-open" target="_blank" rel="noopener"><svg class="ico-drive" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-drive"/></svg> Otwórz na Dysku</a></p>
       <div class="dialog-actions">
         <button class="btn" type="button" id="rot-cancel">Anuluj</button>
         <button class="btn primary" type="button" id="rot-save">Zapisz</button>
@@ -550,11 +555,26 @@
         <button type="button" class="g-icon" id="g-next" aria-label="Następna strona">›</button>
       </div>
       <button type="button" class="g-icon g-report" id="g-report" aria-label="Zgłoś problem z nutami" title="Zgłoś problem z nutami" hidden>⚠</button>
-      <a class="g-icon" id="g-open" target="_blank" rel="noopener" aria-label="Otwórz w Dysku Google" title="Otwórz w Dysku Google">↗</a>
+      <a class="g-icon" id="g-open" target="_blank" rel="noopener" aria-label="Otwórz na Dysku Google" title="Otwórz na Dysku Google"><svg class="ico-drive" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-drive"/></svg></a>
       <button type="button" class="g-icon" id="g-full" aria-label="Pełny ekran" title="Pełny ekran">⛶</button>
     </div>
     <div id="g-page" class="g-page" role="region" aria-label="Nuty"></div>
   </div>
+
+  <!-- podgląd nut administratora (js/preview.js); <dialog>, żeby był nad innymi otwartymi oknami -->
+  <dialog id="a-viewer" class="g-viewer a-viewer" aria-label="Podgląd nut">
+    <div class="g-vbar">
+      <button type="button" class="g-icon" id="a-close" aria-label="Zamknij podgląd" title="Zamknij (Esc)">✕</button>
+      <div class="g-vtitle"><strong id="a-vname"></strong> <span id="a-vsub"></span> <em class="a-rot" id="a-rot" hidden></em></div>
+      <div class="g-vnav" id="a-vnav" hidden>
+        <button type="button" class="g-icon" id="a-prev" aria-label="Poprzednia strona" title="Poprzednia strona (←)">‹</button>
+        <span id="a-vpos"></span>
+        <button type="button" class="g-icon" id="a-next" aria-label="Następna strona" title="Następna strona (→)">›</button>
+      </div>
+      <a class="g-icon" id="a-open" target="_blank" rel="noopener" aria-label="Otwórz na Dysku Google" title="Otwórz na Dysku Google"><svg class="ico-drive" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-drive"/></svg></a>
+    </div>
+    <div id="a-page" class="g-page"></div>
+  </dialog>
 
   <dialog id="g-report-dlg" aria-labelledby="gr-title">
     <form class="picker" method="dialog" id="gr-form">
@@ -628,6 +648,8 @@
   <script src="js/songlist.js"></script>
   <script src="js/matcher.js"></script>
   <script src="js/datamerge.js"></script>
+  <script src="js/noteview.js"></script>
+  <script src="js/preview.js"></script>
   <script src="js/app.js"></script>
   <script src="js/songs.js"></script>
   <script src="js/dups.js"></script>
@@ -638,7 +660,6 @@
   <script src="js/programs.js"></script>
   <script src="js/publish.js"></script>
   <script src="js/reports.js"></script>
-  <script src="js/noteview.js"></script>
   <script src="js/guest.js"></script>
   <script src="js/pwa.js"></script>
 </body>

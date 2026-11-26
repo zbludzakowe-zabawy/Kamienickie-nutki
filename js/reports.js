@@ -174,11 +174,11 @@ window.Reports = (() => {
   const openCount = () => { const r = R(); return r.list.filter((p) => !r.done[p.key]).length; };
 
   // ---------- wyświetlanie ----------
-  function fileChip(id) {
+  function fileChip(id, i, all) {
     const n = A.data.nodes[id];
     if (!n) return '<span class="chip gone">plik zniknął z Dysku</span>';
     const m = A.data.meta[id];
-    return `<span class="rep-file"><a class="chip" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="${esc(Catalog.pathOf(A.data.nodes, id))}">
+    return `<span class="rep-file"><a class="chip" href="${Preview.driveUrl(id)}" target="_blank" rel="noopener" ${Preview.attrs(Array.isArray(all) ? all : [id], Array.isArray(all) ? i : 0)} title="${esc(Catalog.pathOf(A.data.nodes, id))} · kliknij: podgląd nut">
       <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span><span class="chip-name">${esc((m && m.title) || n.name)}</span>${m && m.rot ? `<span class="rot-tag">obrócony o ${m.rot}°</span>` : ''}</a>
       <button class="act" data-r="edit" data-id="${esc(id)}" title="Edytuj: nazwa, obrót, „to nie nuty”, „nieistotne”" aria-label="Edytuj plik">✎</button></span>`;
   }

@@ -272,7 +272,14 @@ Obrazki = `<img>`, PDF = pdf.js 3.11.174 legacy (`js/vendor/pdfjs.min.js` + work
 strony jedna pod drugą, ostre po powiększeniu (canvas ≤ 12 mln px). Pamięć: Cache API `kn-nuty-v1` (test: `test~kn-nuty-v1`; nie z przedrostkiem schowków SW,
 bo SW je kasuje), max 200 plików, najpierw pamięć (kopie mają stałą treść) → otwarte nuty działają offline; w tle pobierane pozostałe strony i następna pieśń.
 Powiększanie: dwa palce, podwójne stuknięcie, Ctrl+kółko, przyciski +/− (tylko z myszą), klawisze +/−. Przesunięcie palcem w bok (bez powiększenia)
-i strzałki ← → = strona / pieśń (`step` w guest.js), Esc = zamknij. „↗” nadal otwiera plik w Dysku Google (świadomie).
+i strzałki ← → = strona / pieśń (`step` w guest.js), Esc = zamknij. Znaczek Dysku w pasku nadal otwiera plik w Dysku Google (świadomie).
+**Ikonki (decyzja użytkownika 2026-11-26)**: ♪ w kółku (`.nv-note-ico`) = podgląd w aplikacji – wszędzie tak samo; znaczek Dysku ze strzałką
+(`#i-drive` w index.html: mały kolorowy trójkąt + strzałka, „małe i lekkie”) = otwórz na Dysku Google. ↗ nie używamy (zostało tylko w pobieranej stronie HTML sprzątania).
+**Podgląd u administratora** (`js/preview.js`, `window.Preview`): to samo okienko (`NoteView`) w `<dialog id="a-viewer">` (nad innymi oknami), oryginały przez
+`Drive.download` (trzeba być połączonym; pamięć `kn-nuty-admin-v1`, klucz z `modified`, czyszczona przy „Wyloguj”). `Preview.noteBtn(ids, i, title)` = przycisk ♪,
+`Preview.driveLink(id)`, `Preview.attrs(ids, i, title)` = atrybuty `data-nv` – każde kliknięcie elementu z `data-nv` otwiera podgląd (chipy plików w spisach,
+programach, zgłoszeniach: zwykłe kliknięcie = podgląd, Ctrl/środkowy = Dysk). ♪ w drzewie (cała pieśń z folderu), oknie kolejności, „Wybierz plik…”, katalogu,
+duplikatach (tam też znaczek Dysku – do usuwania), w oknie ✎ przyciski „♪ Podgląd” i „Otwórz na Dysku”.
 PDF: `https://drive.google.com/uc?export=download&id=<pdfId>`.
 
 **iPhone**: aplikacja z ekranu początkowego ma osobną pamięć od Safari i startuje z `start_url` bez `?chor=`.

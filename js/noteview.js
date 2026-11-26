@@ -9,31 +9,34 @@ window.NoteView = (() => {
   const API = 'https://www.googleapis.com/drive/v3';
   // osobno dla wersji testowej (ta sama domena = wspólna pamięć przeglądarki); nazwa bez przedrostka schowków SW,
   // bo service worker przy aktywacji kasuje swoje stare schowki
-  const CACHE = (cfg.env === 'test' ? 'test~' : '') + 'kn-nuty-v1';
+  // Źródło plików: chórzysta – kopie publiczne kluczem API; administrator – oryginały przez jego połączenie z Dyskiem
+  // (attach(…, {load, cache})). Osobne schowki dla wersji testowej i dla administratora (czyszczony przy „Wyloguj”).
+  const PRE = cfg.env === 'test' ? 'test~' : '';
+  const GUEST_CACHE = PRE + 'kn-nuty-v1';
+  const ADMIN_CACHE = PRE + 'kn-nuty-admin-v1';
+  let CACHE = GUEST_CACHE;
+  let loader = publicLoad;
   const MAX_CACHED = 200;
   const MIN_Z = 1;
   const MAX_Z = 5;
   const MAX_PX = 12e6; // największy canvas (iPhone nie narysuje więcej niż ok. 16 mln pikseli)
 
   // ---------- pobieranie z pamięcią ----------
-  const keyOf = (id) => new URL(`__nuty/${encodeURIComponent(id)}`, location.href).href;
+  // ver = wersja pliku (data zmiany) – oryginał administratora może się zmienić pod tym samym id
+  const keyOf = (id, ver) => new URL(`__nuty/${encodeURIComponent(id)}${ver ? '?v=' + encodeURIComponent(ver) : ''}`, location.href).href;
   async function openCache() {
     try { return await caches.open(CACHE); } catch (e) { return null; }
   }
   const pending = new Map();
-  function fetchFile(id) {
-    if (!pending.has(id)) {
-      const p = fetchFileNow(id).finally(() => pending.delete(id));
-      pending.set(id, p);
+  function fetchFile(id, ver) {
+    const k = id + '|' + (ver || '');
+    if (!pending.has(k)) {
+      const p = fetchFileNow(id, ver).finally(() => pending.delete(k));
+      pending.set(k, p);
     }
-    return pending.get(id);
+    return pending.get(k);
   }
-  async function fetchFileNow(id) {
-    const cache = await openCache();
-    if (cache) {
-      const hit = await cache.match(keyOf(id)).catch(() => null);
-      if (hit) return hit.blob();
-    }
+  async function publicLoad(id) {
     let r;
     try {
       r = await fetch(`${API}/files/${encodeURIComponent(id)}?alt=media&key=${encodeURIComponent(cfg.apiKey)}`);
@@ -43,9 +46,17 @@ window.NoteView = (() => {
       throw err;
     }
     if (!r.ok) throw new Error(r.status === 404 ? 'Tych nut nie ma już na Dysku – dyrygent musi zaktualizować listy.' : `Nie udało się pobrać nut (błąd ${r.status}).`);
-    const blob = await r.blob();
+    return r.blob();
+  }
+  async function fetchFileNow(id, ver) {
+    const cache = await openCache();
     if (cache) {
-      cache.put(keyOf(id), new Response(blob, { headers: { 'Content-Type': blob.type || 'application/octet-stream' } }))
+      const hit = await cache.match(keyOf(id, ver)).catch(() => null);
+      if (hit) return hit.blob();
+    }
+    const blob = await loader(id);
+    if (cache) {
+      cache.put(keyOf(id, ver), new Response(blob, { headers: { 'Content-Type': blob.type || 'application/octet-stream' } }))
         .then(() => prune(cache)).catch(() => undefined);
     }
     return blob;
@@ -55,9 +66,11 @@ window.NoteView = (() => {
     for (const k of keys.slice(0, Math.max(0, keys.length - MAX_CACHED))) await cache.delete(k);
   }
   // pobranie w tle (następna strona / pieśń), żeby otwierały się od razu
-  function prefetch(ids) {
-    (ids || []).filter(Boolean).forEach((id) => { fetchFile(id).catch(() => undefined); });
+  function prefetch(ids, verOf) {
+    (ids || []).filter(Boolean).forEach((id) => { fetchFile(id, verOf ? verOf(id) : '').catch(() => undefined); });
   }
+  // „Wyloguj” administratora: nuty z jego Dysku nie zostają w urządzeniu
+  async function clearAdmin() { try { await caches.delete(ADMIN_CACHE); } catch (e) { /* trudno */ } }
 
   // ---------- pdf.js ----------
   let pdfjsP = null;
@@ -94,6 +107,7 @@ window.NoteView = (() => {
       '<div class="nv-zoom"><button type="button" data-z="1" aria-label="Powiększ" title="Powiększ (Ctrl + kółko myszy)">+</button>' +
       '<button type="button" data-z="-1" aria-label="Pomniejsz" title="Pomniejsz">−</button></div>';
     const box = wrap.querySelector('.nv-box');
+    if (opts && opts.load) { loader = opts.load; CACHE = ADMIN_CACHE; }
     view = { wrap, box, doc: box.querySelector('.nv-doc'), msg: wrap.querySelector('.nv-msg'), zoom: 1, token: 0, pages: [], url: null, onSwipe: opts && opts.onSwipe };
     wrap.querySelector('.nv-zoom').addEventListener('click', (e) => {
       const b = e.target.closest('[data-z]');
@@ -136,7 +150,7 @@ window.NoteView = (() => {
     const token = view.token;
     message('<span class="nv-spin" aria-hidden="true"></span> Wczytywanie nut…');
     try {
-      const blob = await fetchFile(id);
+      const blob = await fetchFile(id, opts && opts.ver);
       if (token !== view.token) return false;
       if (await isPdf(blob)) await showPdf(blob, token);
       else await showImage(blob, token);
@@ -145,8 +159,8 @@ window.NoteView = (() => {
       return true;
     } catch (e) {
       if (token !== view.token) return false;
-      const open = opts && opts.openUrl ? ` <a href="${opts.openUrl}" target="_blank" rel="noopener">Otwórz w Dysku Google ↗</a>` : '';
-      message(e.offline
+      const open = opts && opts.openUrl ? ` <a href="${opts.openUrl}" target="_blank" rel="noopener">Otwórz na Dysku Google</a>` : '';
+      message(e.name === 'AuthError' ? 'Połącz się z Dyskiem Google (przycisk na górze), żeby zobaczyć te nuty.' : e.offline
         ? 'Brak internetu – tych nut nie otwierano jeszcze na tym urządzeniu. Otworzą się po połączeniu z siecią.'
         : `${e.message || 'Nie udało się pokazać nut.'}${open}`, true);
       return false;
@@ -291,5 +305,5 @@ window.NoteView = (() => {
   function focus() { if (view) view.box.focus({ preventScroll: true }); }
   function reset() { if (view) clear(); }
 
-  return { attach, show, prefetch, reset, focus, zoomBy: (f) => view && zoomBy(f), isZoomed: () => !!view && view.zoom > 1.01 };
+  return { attach, show, prefetch, reset, focus, clearAdmin, zoomBy: (f) => view && zoomBy(f), isZoomed: () => !!view && view.zoom > 1.01 };
 })();

@@ -383,7 +383,8 @@
     $('ed-path').textContent = '📁 ' + (Catalog.pathOf(data.nodes, id) || 'Mój dysk') + (n.viaShortcut ? ` (skrót; oryginał: ${n.real || 'poza wybranymi folderami'})` : '');
     $('ed-name').value = m.title || '';
     $('ed-name').placeholder = stripExt(n.name);
-    $('ed-open').href = `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+    $('ed-open').href = Preview.driveUrl(id);
+    $('ed-view').onclick = () => Preview.open([id]);
     paintEdRot();
     const used = usedIn(id);
     $('ed-notes').checked = !!m.notNotes;
@@ -655,7 +656,7 @@
         ${(sib[n.id] || []).length > 1 ? `<button class="act" data-act="order" title="Kolejność stron tej pieśni (${sib[n.id].length} pliki w tym folderze)" aria-label="Kolejność stron">⇅</button>` : ''}
         ${fl === 'notes' ? '<span class="act ghost-gap"></span>' : ghostBtn(n.id, fl === 'ignore', fl === 'ignoreDir', false)}
         <button class="act" data-act="edit" title="Edytuj: nazwa, obrót, „to nie nuty”, „nieistotne”" aria-label="Edytuj plik">✎</button>
-        <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(n.id)}/view" target="_blank" rel="noopener" title="Otwórz na Dysku" aria-label="Otwórz na Dysku">↗</a></div>`;
+        ${(sib[n.id] || []).length > 1 ? Preview.noteBtn(sib[n.id], sib[n.id].indexOf(n.id), title || '') : Preview.noteBtn(n.id)}</div>`;
     };
 
     const node = (n, d) => {
@@ -745,7 +746,7 @@
       return `<li class="order-item" data-i="${i}"><span class="order-no">${i + 1}.</span>
         <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span>
         <span class="order-names"><b>${esc((m && m.title) || n.name)}</b><span class="muted small">${esc(Catalog.pathOf(data.nodes, id))} / ${esc(n.name)}</span></span>
-        <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="Podejrzyj na Dysku">↗</a>
+        ${Preview.noteBtn(id)}
         <button class="icon-btn" data-o="up" title="Wyżej"${i === 0 ? ' disabled' : ''}>↑</button>
         <button class="icon-btn" data-o="down" title="Niżej"${i === orderIds.length - 1 ? ' disabled' : ''}>↓</button></li>`;
     }).join('');
@@ -798,7 +799,7 @@
     rotVal = (data.meta[id] && data.meta[id].rot) || 0;
     const m = data.meta[id];
     $('rot-title').textContent = (m && m.title) || n.name;
-    $('rot-open').href = `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+    $('rot-open').href = Preview.driveUrl(id);
     $('rot-img').hidden = true;
     $('rot-msg').hidden = false;
     $('rot-msg').textContent = 'Wczytywanie podglądu…';
@@ -1195,6 +1196,7 @@
       (sync.dirty ? '\n\nUWAGA: część zmian nie jest zapisana na Dysku i zostanie utracona. Żeby je zachować, kliknij Anuluj i połącz się z Dyskiem.' : '');
     if (!confirm(msg)) return;
     Drive.disconnect();
+    await NoteView.clearAdmin(); // nuty z Dysku otwierane w podglądzie
     await Store.set('data', null);
     await Store.set('sync', null);
     ['kn-admin', 'kn-email', 'kn-expanded', 'kn-tab', 'kn-songbook'].forEach((k) => { try { localStorage.removeItem(k); } catch (e) { /* trudno */ } });
