@@ -164,7 +164,7 @@ window.Works = (() => {
           <span class="muted small">${nf ? `${nf} ${A.plural(nf, 'plik', 'pliki', 'plików')}` : '<span class="warn-text">bez plików</span>'}</span>
           ${x.ign ? `<span class="flag-tag">${A.GHOST(true)} nieistotne</span>` : ''}</span>
       </div>
-      ${nf ? `<a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(w.files[0])}/view" target="_blank" rel="noopener" title="Otwórz na Dysku">↗</a>` : ''}
+      ${nf ? Preview.noteBtn(w.files, 0, w.title) + Preview.driveLink(w.files[0]) : ''}
     </div>`;
   }
 
@@ -285,7 +285,7 @@ window.Works = (() => {
       const fl = flag(id);
       return `<li data-id="${esc(id)}"><span class="badge ${n ? n.kind : ''}">${n && n.kind === 'pdf' ? 'PDF' : 'IMG'}</span>
         <span class="order-names"><b>${esc(titleOf(id))}</b><span class="muted small">${esc(Catalog.pathOf(A.data.nodes, id))} / ${esc(n ? n.name : id)}</span>${fl ? A.flagTag(fl) : ''}</span>
-        <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="Podejrzyj na Dysku">↗</a>
+        ${Preview.noteBtn(id)}
         <button type="button" class="act" data-f="edit" title="Nazwa pliku, obrót, oznaczenia">✎</button>
         ${ids.length > 1 ? '<button type="button" class="btn small" data-f="detach" title="To osobny utwór – wydziel jako nową pozycję">Osobno</button>' : ''}</li>`;
     }).join('') : '<li class="muted small">Pliki zniknęły z Dysku albo zostały oznaczone. Połącz tę pozycję z inną (zaznacz obie → ⧉ Połącz) albo ją usuń.</li>';

@@ -208,13 +208,14 @@ window.Songs = (() => {
   }
 
   // ---------- wyświetlanie ----------
-  function chip(id) {
+  // kliknięcie = podgląd w aplikacji (wszystkie pliki pieśni, od tego); Ctrl/środkowy przycisk = Dysk Google
+  function chip(id, i, all) {
     const n = A.data.nodes[id];
     if (!n) return '<span class="chip gone" title="Pliku nie ma w ostatnim skanowaniu">plik zniknął z Dysku</span>';
     const m = A.data.meta[id];
     const label = (m && m.title) || n.name;
     const path = Catalog.pathOf(A.data.nodes, id);
-    return `<a class="chip" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="${esc(n.viaShortcut ? `skrót w: ${path} · oryginał: ${n.real || 'poza wybranymi folderami'}` : path + ' / ' + n.name)}">
+    return `<a class="chip" href="${Preview.driveUrl(id)}" target="_blank" rel="noopener" ${Preview.attrs(Array.isArray(all) ? all : [id], Array.isArray(all) ? i : 0)} title="${esc((n.viaShortcut ? `skrót w: ${path} · oryginał: ${n.real || 'poza wybranymi folderami'}` : path + ' / ' + n.name) + ' · kliknij: podgląd nut')}">
       <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span><span class="chip-name">${esc(label)}</span>${m && m.title ? `<span class="chip-orig">${esc(n.name)}</span>` : ''}</a>`;
   }
   const chips = (files) => files.map(chip).join('');
@@ -343,7 +344,7 @@ window.Songs = (() => {
         <span class="badge ${n.kind}">${n.kind === 'pdf' ? 'PDF' : 'IMG'}</span>
         <span class="choose-names"><span>${esc((m && m.title) || n.name)}</span><span class="orig">${esc(Catalog.pathOf(A.data.nodes, id))}${m && m.title ? ' / ' + esc(n.name) : ''}</span></span>
         ${score ? pct(score) : ''}
-        <a class="act" href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" title="Podejrzyj na Dysku">↗</a></label></li>`;
+        ${Preview.noteBtn(id)}</label></li>`;
     }).join('') : `<li class="muted">${q ? 'Nic nie pasuje.' : 'Brak podobnych nazw – wpisz coś w wyszukiwarkę.'}</li>`;
     $('chooser-count').textContent = selected.length ? `Zaznaczono: ${selected.length}` : '';
   }

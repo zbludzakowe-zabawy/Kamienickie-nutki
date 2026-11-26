@@ -266,7 +266,24 @@ Oznaczanie **na tej samej stronie co wyszukiwanie**: zaznaczanie wielu pozycji �
    „✓ Załatwione” = `data.reports.done[key]`. „Wyślij zgłoszenie testowe” sprawdza konfigurację.
 
 Chórzysta: `Drive.publicText(catalogId)` (klucz API) → PIN → katalog; kopia koperty w localStorage (`kn-guest-env`), PIN w `kn-guest-pin`.
-Nuty: `<iframe src="https://drive.google.com/file/d/<id>/preview">` (nowa ramka na każdy plik, żeby nie psuć historii „wstecz”).
+Nuty: **własny podgląd** `js/noteview.js` (`window.NoteView`, 2026-11-26) – plik pobierany kluczem API (`files/<id>?alt=media&key=`), bez ciasteczek Google,
+więc otwarcie nie trafia do „Ostatnich”/strony głównej Dysku zalogowanej osoby (zgłoszenie użytkownika: ramka `drive.google.com/…/preview` to robiła).
+Obrazki = `<img>`, PDF = pdf.js 3.11.174 legacy (`js/vendor/pdfjs.min.js` + worker, wczytywany przy pierwszym PDF-ie, `isEvalSupported:false`, jeden `PDFWorker`),
+strony jedna pod drugą, ostre po powiększeniu (canvas ≤ 12 mln px). Pamięć: Cache API `kn-nuty-v1` (test: `test~kn-nuty-v1`; nie z przedrostkiem schowków SW,
+bo SW je kasuje), max 200 plików, najpierw pamięć (kopie mają stałą treść) → otwarte nuty działają offline; w tle pobierane pozostałe strony i następna pieśń.
+Powiększanie: dwa palce, podwójne stuknięcie, Ctrl+kółko, przyciski +/− (tylko z myszą), klawisze +/−. Przesunięcie palcem w bok (bez powiększenia)
+i strzałki ← → = strona / pieśń (`step` w guest.js), Esc = zamknij. Znaczek Dysku w pasku nadal otwiera plik w Dysku Google (świadomie).
+**Ikonki (decyzja użytkownika 2026-11-26)**: ♪ w kółku (`.nv-note-ico`) = podgląd w aplikacji – wszędzie tak samo; znaczek Dysku ze strzałką
+(`#i-drive` w index.html: mały kolorowy trójkąt + strzałka, „małe i lekkie”) = otwórz na Dysku Google. ↗ nie używamy (zostało tylko w pobieranej stronie HTML sprzątania).
+**Podgląd u administratora** (`js/preview.js`, `window.Preview`): to samo okienko (`NoteView`) w `<dialog id="a-viewer">` (nad innymi oknami).
+**Podgląd = to, co widzi chórzysta** (decyzja użytkownika 2026-11-26; oryginał „jak leży” = znaczek Dysku). `sourceOf(id)`: aktualna kopia
+(`publish.copies[id]` z tym samym `modified` i `rot`) → kopia kluczem API (bez połączenia), etykieta „Tak widzą chórzyści”; kopia nieaktualna →
+„Chórzyści zobaczą to po „Aktualizuj””; brak kopii → „Nie opublikowane u chórzystów” – w obu oryginał przez `Drive.download` (trzeba być połączonym)
+z obrotem `meta.rot` nałożonym w podglądzie (`NoteView.show(…, {rot})`: obrazek przez canvas, PDF `rotation` w pdf.js – ten sam kierunek co `PdfBuild.rotate`).
+Pamięć `kn-nuty-admin-v1` (oryginały: klucz z `modified`), czyszczona przy „Wyloguj”. `Preview.noteBtn(ids, i, title)` = przycisk ♪,
+`Preview.driveLink(id)`, `Preview.attrs(ids, i, title)` = atrybuty `data-nv` – każde kliknięcie elementu z `data-nv` otwiera podgląd (chipy plików w spisach,
+programach, zgłoszeniach: zwykłe kliknięcie = podgląd, Ctrl/środkowy = Dysk). ♪ w drzewie (cała pieśń z folderu), oknie kolejności, „Wybierz plik…”, katalogu (na liście pozycji też znaczek Dysku – pierwszy plik),
+duplikatach (tam też znaczek Dysku – do usuwania), w oknie ✎ przyciski „♪ Podgląd” i „Otwórz na Dysku”.
 PDF: `https://drive.google.com/uc?export=download&id=<pdfId>`.
 
 **iPhone**: aplikacja z ekranu początkowego ma osobną pamięć od Safari i startuje z `start_url` bez `?chor=`.
@@ -326,6 +343,19 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 - ❌ Klucz API i klient OAuth są projektu użytkownika – przy wielu chórach to nadal może zostać jeden projekt, ale wtedy limity/koszty są po stronie właściciela.
 
 ## Pomysły / dalsze etapy
+
+### Do zrobienia (zapisane na prośbę użytkownika, 2026-11-25)
+
+- ~~Pliki ściągane na Dysk Google~~ – wyjaśnione: to nie nowe pliki, tylko kopie z „Dla chórzystów” pokazywane w „Ostatnich”, bo podgląd był ramką Dysku
+  (u zalogowanych). Zrobiony własny podgląd (`js/noteview.js`). Do ewentualnego sprzątania: osierocone kopie w „Dla chórzystów”, folder wersji testowej.
+- ~~Strzałki między nutami w spisie~~ – zrobione razem z własnym podglądem (← →, przesunięcie palcem).
+- **Zmiana PIN-u na 19** – PIN ustawia administrator w „Dla chórzystów” (`publish.pin`; domyślny `'2018'` w publish.js).
+  Zmiana = ponowny zapis katalogu; chórzyści muszą wpisać nowy PIN.
+- **Ukrywanie archiwalnych uroczystości (albo nie)** – przełącznik „pokaż/ukryj archiwum” (programy z datą w przeszłości)
+  u administratora i/lub chórzysty. Do ustalenia z użytkownikiem, gdzie i co ma być domyślnie.
+- **Nuty dla dyrygenta – notatki do utworów** (2026-11-26) – dyrygent może zapisywać własne notatki przy utworze
+  (np. przy pozycji Katalogu `catalog.works[id]` albo pieśni w spisie). Do ustalenia: gdzie je widać (tylko administrator?
+  w podglądzie nut?), czy notatka do utworu czy do konkretnej uroczystości (w programach jest już pole `note`).
 
 - **Wybieranie pieśni do przebudowy** (użytkownik: „wyszukiwarka na razie nie działa idealnie”) – dotyczy okna „Dodaj pieśń”
   w programach (`renderPicker` w programs.js: proste dopasowanie słów) i „Wybierz plik…” w spisach. Do omówienia z użytkownikiem.
