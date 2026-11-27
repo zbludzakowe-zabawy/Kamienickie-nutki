@@ -38,7 +38,6 @@ window.Preview = (() => {
     cur = { ids, f: Math.min(Math.max(0, i || 0), ids.length - 1), title: title || '' };
     const dlg = $('a-viewer');
     if (!dlg.open) dlg.showModal();
-    document.body.classList.add('g-viewing');
     showFile();
   }
   function nameOf(id) {
@@ -93,7 +92,9 @@ window.Preview = (() => {
     if (!cur) return;
     cur = null;
     if ($('a-viewer').open) $('a-viewer').close();
-    if (!document.querySelector('dialog[open]')) document.body.classList.remove('g-viewing');
+    // bez blokowania przewijania strony (body.g-viewing): okno jest modalne na cały ekran, a blokada zostawała po otwarciu
+    // podglądu z innego okienka (✎, pozycja Katalogu) – potem lista nie przewijała się kółkiem myszy (zgłoszenie 2026-11-27)
+    document.body.classList.remove('g-viewing');
     NoteView.reset();
     if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
   }
