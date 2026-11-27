@@ -42,6 +42,22 @@ window.Songs = (() => {
     if (!Object.keys(A.data.nodes).length) A.toast('Spis wczytany, ale nie ma jeszcze plików – przeskanuj Dysk w zakładce „Nuty na Dysku”.', true);
   }
 
+  // „+ Nowy spis” – pusty spis bez pliku, pozycje dopisywane ręcznie („+ Dodaj pozycję”)
+  function newBook() {
+    const name = (prompt('Nazwa nowego spisu (np. „Kolędy 2026”):', '') || '').trim().replace(/\s+/g, ' ');
+    if (!name) return;
+    const b = { id: 'sb' + Date.now().toString(36), name, code: A.nextCode(books()), source: { kind: 'manual' }, importedAt: new Date().toISOString(), items: [] };
+    books().push(b);
+    setCurrent(b.id);
+    A.changed();
+    filter = 'all';
+    query = '';
+    render();
+    $('sb-add').hidden = false;
+    $('sb-add-no').focus();
+    A.toast(`Utworzono spis „${name}”. Dopisz pozycje: numer i tytuł, Enter.`);
+  }
+
   // ---------- ponowne wczytanie spisu (np. poprawiony plik) z zachowaniem Twoich dopasowań ----------
   let reloadId = null; // id spisu, który wczytujemy ponownie (zamiast tworzyć nowy)
   const titlesOf = (it) => [it.title, ...(it.alt || [])].map((t) => Catalog.norm(t));
@@ -286,7 +302,8 @@ window.Songs = (() => {
     const autos = b.items.filter((it) => it.state === 'auto').length;
     $('sb-confirm-all').hidden = !autos;
     $('sb-confirm-all').textContent = `✓ Zatwierdź pewne (${autos})`;
-    $('sb-source').textContent = `${b.source && b.source.name ? 'Plik: ' + b.source.name + ' · ' : ''}wczytano ${new Date(b.importedAt).toLocaleDateString('pl-PL')}` +
+    $('sb-source').textContent = (b.source && b.source.kind === 'manual' ? `utworzony ręcznie ${new Date(b.importedAt).toLocaleDateString('pl-PL')}`
+      : `${b.source && b.source.name ? 'Plik: ' + b.source.name + ' · ' : ''}wczytano ${new Date(b.importedAt).toLocaleDateString('pl-PL')}`) +
       (b.restoredAt ? ` · przywrócony z historii ${new Date(b.restoredAt).toLocaleDateString('pl-PL')}` : '');
 
     const n = { all: b.items.length, have: 0, check: 0, missing: 0 };
@@ -444,6 +461,7 @@ window.Songs = (() => {
   });
 
   $('sb-add-btn').addEventListener('click', addItem);
+  $('sb-new').addEventListener('click', newBook);
   // „+ Dodaj pozycję” w pasku spisu – pokazuje pole do wpisania (po dodaniu zostaje otwarte, żeby dopisać kolejne)
   $('sb-add-open').addEventListener('click', () => {
     $('sb-add').hidden = false;
