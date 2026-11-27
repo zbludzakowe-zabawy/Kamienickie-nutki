@@ -149,7 +149,10 @@ a gdy tytuł poprawiony – ten sam numer + `sameSong`. Nazwa, `code` i id spisu
 (pozycja bez pary → `src` znika, program zachowuje nuty). Komunikat: zachowane / nowe / połączone jako drugi tytuł / usunięte.
 `reloadId` pobierany od razu po wyborze pliku (`takeReload`), zamknięcie okna bez wyboru go kasuje.
 **Ręczna edycja spisu** (songs.js): ✎ przy pozycji = numer i tytuł (nowy tytuł → ponowne dopasowanie, chyba że `ok`/`missing`),
-✕ = usunięcie, pasek „+ Dodaj pozycję” (miejsce wg numeru `parseInt`, inaczej na końcu). Po dodaniu/usunięciu `shiftProgramRefs()`
+✕ = usunięcie, przycisk **„+ Dodaj pozycję”** w pasku narzędzi spisu (obok „Wczytaj ponownie”, 2026-11-27) pokazuje pole Nr + Tytuł (`#sb-add`,
+zostaje otwarte do dopisywania kolejnych, „Gotowe” chowa; miejsce wg numeru `parseInt`, inaczej na końcu).
+**„+ Nowy spis”** (obok „Wczytaj spis z Dysku / z komputera”, `newBook`, 2026-11-27): pusty spis bez pliku – `source: {kind:'manual'}`, nazwa z `prompt`,
+kod `A.nextCode`, od razu otwarte pole dopisywania; pod nazwą „utworzony ręcznie …”. „Wczytaj ponownie” działa (bez opcji „ten sam plik”). Po dodaniu/usunięciu `shiftProgramRefs()`
 przesuwa `src.i` w programach uroczystości (usunięta pozycja → program zachowuje zapamiętane pliki, `src` znika). Plik spisu na Dysku się nie zmienia.
 
 **Programy uroczystości**: domyślny szkielet części (Wejście, Kyrie, Gloria, Psalm, Alleluja lub Chwała, Ofiarowanie, Sanctus,
@@ -373,6 +376,8 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 
 - Nuty offline u chórzysty (kopie w pamięci telefonu) – teraz podgląd wymaga internetu.
 - Własne PDF-y z wybranych pozycji (np. „na niedzielę”) – pdfbuild.js już umie składać.
+- **Spis z pozycji Katalogu** (pomysł użytkownika 2026-11-27, „może w przyszłości”): w Katalogu zaznaczyć kilka utworów i wrzucić je do spisu
+  (nowego albo istniejącego) – pozycja = tytuł utworu + jego pliki (`state:'ok'`). Na razie jest tylko ręczne „+ Nowy spis” / „+ Dodaj pozycję”.
 - Ponowne wczytanie zmienionego spisu z zachowaniem dopasowań.
 
 ### Do przemyślenia (zapisane na prośbę użytkownika, 2026-11-19)

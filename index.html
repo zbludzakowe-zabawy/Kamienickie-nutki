@@ -184,13 +184,14 @@
         <select id="sb-select" aria-label="Wybierz spis" hidden></select>
       </div>
       <div id="sb-empty">
-        <p>Wczytaj spis pieśni (np. spis treści śpiewnika), a aplikacja sprawdzi, do których pozycji masz nuty na Dysku.</p>
+        <p>Wczytaj spis pieśni (np. spis treści śpiewnika), a aplikacja sprawdzi, do których pozycji masz nuty na Dysku. Możesz też założyć pusty spis i dopisać pozycje ręcznie („+ Nowy spis”).</p>
         <p class="muted small">Obsługiwane: <b>.odt</b>, <b>.docx</b>, <b>.txt</b> i Dokumenty Google. Każda pozycja w osobnej linijce, najlepiej z numerem, np. „12&lt;tab&gt;Tytuł”.
           Jeśli spis powtarza się w pliku (np. druga strona alfabetycznie), powtórzenia zostaną pominięte.</p>
       </div>
       <div class="actions">
         <button class="btn primary" data-import="drive">Wczytaj spis z Dysku</button>
         <button class="btn" data-import="local">Wczytaj z komputera</button>
+        <button class="btn" id="sb-new" title="Pusty spis – pozycje dopiszesz ręcznie („+ Dodaj pozycję”)">+ Nowy spis</button>
         <input type="file" id="sb-file" accept=".odt,.docx,.txt" hidden>
       </div>
     </section>
@@ -202,6 +203,7 @@
           <input id="sb-code" maxlength="3" autocomplete="off" spellcheck="false"></label>
         <div class="sb-tools">
           <button class="btn small primary" id="sb-confirm-all" title="Zatwierdź wszystkie dopasowania automatyczne">✓ Zatwierdź pewne</button>
+          <button class="btn small" id="sb-add-open" title="Dopisz pozycję do tego spisu (plik spisu na Dysku się nie zmienia)">+ Dodaj pozycję</button>
           <button class="btn small" id="sb-reload" title="Wczytaj poprawiony plik spisu – Twoje dopasowania zostaną zachowane">↻ Wczytaj ponownie…</button>
           <button class="btn small" id="sb-rematch" title="Dopasuj jeszcze raz pozycje niezatwierdzone">↻ Dopasuj ponownie</button>
           <button class="btn small" id="sb-delete">Usuń spis</button>
@@ -215,12 +217,13 @@
         <button class="fchip missing" data-f="missing">✕ Brak <b>0</b></button>
       </div>
       <input type="search" id="sb-q" class="sb-q" placeholder="Szukaj w spisie (tytuł lub numer)…" autocomplete="off" aria-label="Szukaj w spisie">
-      <div class="sb-add">
+      <div class="sb-add" id="sb-add" hidden>
         <input id="sb-add-no" class="sb-add-no" maxlength="6" placeholder="Nr" aria-label="Numer nowej pozycji">
         <input id="sb-add-title" maxlength="200" placeholder="Tytuł nowej pozycji" aria-label="Tytuł nowej pozycji">
-        <button class="btn small" id="sb-add-btn">+ Dodaj pozycję</button>
+        <button class="btn small primary" id="sb-add-btn">Dodaj</button>
+        <button class="btn small" id="sb-add-close" title="Schowaj">Gotowe</button>
       </div>
-      <p class="hint muted">„Zgadza się” zatwierdza propozycję. Przy pozycjach „do sprawdzenia” zaznacz jeden albo kilka plików (np. strony 1 i 2) i kliknij „Zatwierdź zaznaczone”. Plik bez własnej nazwy dostaje wtedy tytuł ze spisu. Kliknięcie w plik otwiera go na Dysku.</p>
+      <p class="hint muted">„Zgadza się” zatwierdza propozycję. Przy pozycjach „do sprawdzenia” zaznacz jeden albo kilka plików (np. strony 1 i 2) i kliknij „Zatwierdź zaznaczone”. Plik bez własnej nazwy dostaje wtedy tytuł ze spisu. Kliknięcie w plik otwiera podgląd nut.</p>
       <div class="songs" id="sb-list"></div>
     </section>
    </div>
