@@ -184,13 +184,14 @@
         <select id="sb-select" aria-label="Wybierz spis" hidden></select>
       </div>
       <div id="sb-empty">
-        <p>Wczytaj spis pieśni (np. spis treści śpiewnika), a aplikacja sprawdzi, do których pozycji masz nuty na Dysku.</p>
+        <p>Wczytaj spis pieśni (np. spis treści śpiewnika), a aplikacja sprawdzi, do których pozycji masz nuty na Dysku. Możesz też założyć pusty spis i dopisać pozycje ręcznie („+ Nowy spis”).</p>
         <p class="muted small">Obsługiwane: <b>.odt</b>, <b>.docx</b>, <b>.txt</b> i Dokumenty Google. Każda pozycja w osobnej linijce, najlepiej z numerem, np. „12&lt;tab&gt;Tytuł”.
           Jeśli spis powtarza się w pliku (np. druga strona alfabetycznie), powtórzenia zostaną pominięte.</p>
       </div>
       <div class="actions">
         <button class="btn primary" data-import="drive">Wczytaj spis z Dysku</button>
         <button class="btn" data-import="local">Wczytaj z komputera</button>
+        <button class="btn" id="sb-new" title="Pusty spis – pozycje dopiszesz ręcznie („+ Dodaj pozycję”)">+ Nowy spis</button>
         <input type="file" id="sb-file" accept=".odt,.docx,.txt" hidden>
       </div>
     </section>
