@@ -283,7 +283,7 @@ Obrazki = `<img>`, PDF = pdf.js 3.11.174 legacy (`js/vendor/pdfjs.min.js` + work
 strony jedna pod drugą, ostre po powiększeniu (canvas ≤ 12 mln px). Pamięć: Cache API `kn-nuty-v1` (test: `test~kn-nuty-v1`; nie z przedrostkiem schowków SW,
 bo SW je kasuje), max 200 plików, najpierw pamięć (kopie mają stałą treść) → otwarte nuty działają offline; w tle pobierane pozostałe strony i następna pieśń.
 Powiększanie: dwa palce, podwójne stuknięcie, Ctrl+kółko, przyciski +/− (tylko z myszą), klawisze +/−. Przesunięcie palcem w bok (bez powiększenia)
-i strzałki ← → = strona / pieśń (`step` w guest.js), Esc = zamknij. Znaczek Dysku w pasku nadal otwiera plik w Dysku Google (świadomie).
+i strzałki ← → = strona / pieśń (`step` w guest.js), Esc = zamknij. **U chórzysty znaczek Dysku w pasku (`#g-open`) jest ukryty** (`hidden`, decyzja użytkownika 2026-11-27: „na razie niepotrzebny, może wrócimy”) – w komunikacie błędu też bez linku do Dysku; u administratora zostaje.
 **Ikonki (decyzja użytkownika 2026-11-26)**: ♪ w kółku (`.nv-note-ico`) = podgląd w aplikacji – wszędzie tak samo; znaczek Dysku ze strzałką
 (`#i-drive` w index.html: mały kolorowy trójkąt + strzałka, „małe i lekkie”) = otwórz na Dysku Google. ↗ nie używamy (zostało tylko w pobieranej stronie HTML sprzątania).
 **Podgląd u administratora** (`js/preview.js`, `window.Preview`): to samo okienko (`NoteView`) w `<dialog id="a-viewer">` (nad innymi oknami).
