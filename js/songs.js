@@ -190,6 +190,7 @@ window.Songs = (() => {
     shiftProgramRefs(b.id, at, +1);
     $('sb-add-no').value = '';
     $('sb-add-title').value = '';
+    $('sb-add-no').focus();
     filter = 'all';
     query = '';
     $('sb-q').value = '';
@@ -443,6 +444,13 @@ window.Songs = (() => {
   });
 
   $('sb-add-btn').addEventListener('click', addItem);
+  // „+ Dodaj pozycję” w pasku spisu – pokazuje pole do wpisania (po dodaniu zostaje otwarte, żeby dopisać kolejne)
+  $('sb-add-open').addEventListener('click', () => {
+    $('sb-add').hidden = false;
+    $('sb-add-no').focus();
+  });
+  $('sb-add-close').addEventListener('click', () => { $('sb-add').hidden = true; });
+  $('sb-add-no').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('sb-add-title').focus(); } });
   $('sb-add-title').addEventListener('keydown', (e) => { if (e.key === 'Enter') addItem(); });
   $('sb-list').addEventListener('keydown', (e) => {
     if (!e.target.closest('.song-edit')) return;
