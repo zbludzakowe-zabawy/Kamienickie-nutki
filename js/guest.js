@@ -406,7 +406,7 @@ window.Guest = (() => {
     return -1;
   }
   // Nuty pokazuje własny podgląd (js/noteview.js), nie ramka Dysku Google – otwarcie nie trafia do „Ostatnich”
-  // na Dysku osoby zalogowanej w przeglądarce. Znaczek Dysku w pasku nadal otwiera plik w Dysku Google (świadomy wybór).
+  // na Dysku osoby zalogowanej w przeglądarce. Znaczek Dysku w pasku (#g-open) jest na razie ukryty (decyzja użytkownika 2026-11-27 – może wrócimy).
   function showFile() {
     const it = viewer.b.items[viewer.i];
     const id = it.files[viewer.f];
@@ -421,7 +421,7 @@ window.Guest = (() => {
     viewer.shown = id;
     viewer.failed = false;
     const v = viewer;
-    NoteView.show(id, { openUrl }).then((ok) => {
+    NoteView.show(id).then((ok) => {
       if (viewer !== v) return;
       viewer.failed = !ok;
       // w tle: pozostałe strony tej pieśni i pierwsza strona następnej
