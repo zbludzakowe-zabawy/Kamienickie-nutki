@@ -87,7 +87,8 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 - `js/programs.js` – zakładka „Uroczystości” (`window.Programs`): programy mszy, części, wybór pieśni (`#song-picker`), `forPublish()`
 - `js/publish.js` – zakładka „Dla chórzystów” (`window.Publish`)
 - `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu: `#/` = ekran startowy z trzema kafelkami (decyzja użytkownika 2026-11-22),
-  `#/spiewniki`, `#/uroczystosci` (nadchodzące + archiwum), `#/katalog[/<i>]` (katalog nut),
+  `#/spiewniki`, `#/uroczystosci` (nadchodzące + archiwum – **zwinięte** `<details id="g-arch">`, otwiera się kliknięciem w „Archiwum (n)”,
+  stan pamiętany w `archOpen` do zamknięcia aplikacji; decyzja użytkownika 2026-11-28: „żeby się nie mieszało”), `#/katalog[/<i>]` (katalog nut),
   ikonki kafelków (wybór użytkownika): Uroczystości = „sztandar i świece” (`PROG_ICO`), Katalog = „lupa i nuta” (`CAT_ICO`) – SVG w guest.js,
   jasny rysunek na `--accent` jak ikona „Śpiewniki” (klasa `.g-cat-ico`; ciemny rysunek na jasnym tle był „za ciemny”); `#/s/<bookId>[/<i>]` (śpiewnik), `#/p/<programId>[/<i>]` (program; `i` = indeks w spłaszczonej liście pieśni)
 - `js/pwa.js`, `sw.js`, `manifest.webmanifest`, `icons/` – PWA; `tools/build-sw.mjs` wpisuje wersję i listę plików przy publikacji
@@ -368,7 +369,8 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 - ~~Strzałki między nutami w spisie~~ – zrobione razem z własnym podglądem (← →, przesunięcie palcem).
 - **Zmiana PIN-u na 19** – PIN ustawia administrator w „Dla chórzystów” (`publish.pin`; domyślny `'2018'` w publish.js).
   Zmiana = ponowny zapis katalogu; chórzyści muszą wpisać nowy PIN.
-- **Ukrywanie archiwalnych uroczystości (albo nie)** – przełącznik „pokaż/ukryj archiwum” (programy z datą w przeszłości)
+- ~~Ukrywanie archiwalnych uroczystości u chórzysty~~ – zrobione 2026-11-28 (archiwum zwinięte). Ewentualnie jeszcze u administratora:
+  **Ukrywanie archiwalnych uroczystości (albo nie)** – przełącznik „pokaż/ukryj archiwum” (programy z datą w przeszłości)
   u administratora i/lub chórzysty. Do ustalenia z użytkownikiem, gdzie i co ma być domyślnie.
 - **Nuty dla dyrygenta – notatki do utworów** (2026-11-26) – dyrygent może zapisywać własne notatki przy utworze
   (np. przy pozycji Katalogu `catalog.works[id]` albo pieśni w spisie). Do ustalenia: gdzie je widać (tylko administrator?
