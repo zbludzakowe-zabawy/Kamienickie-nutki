@@ -16,6 +16,9 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
      (`mcp__github__actions_list`, przy błędzie `get_job_logs`) i mówię o tym użytkownikowi (decyzja użytkownika 2026-11-26).
      Powód: #58 i #59 były scalone, ale publikacja padła (`deploy-pages@v4`: „No artifacts named github-pages”) i produkcja stała
      na starej wersji – użytkownik widział „niespójne wersje”. Naprawione w #64 (configure-pages@v6, upload-pages-artifact@v5, deploy-pages@v5).
+     #75 padł tak samo mimo v5 (też po ponowieniu) – przyczyna: deploy-pages szukał paczki 0,5 s po wysłaniu (wyścig po stronie GitHuba).
+     Teraz `pages.yml` ma dwa zadania `build` → `deploy` (`needs`) i w `deploy` drugą próbę po 30 s (`continue-on-error` + `deployment2`).
+     Przy błędzie najpierw: `actions_run_trigger` → `rerun_workflow_run`, potem log.
   5. „Uaktualnij testy” = PR `main` → `test` i scalenie (gdy na produkcję weszło coś spoza testów, np. z innego wątku).
   Zmiany w samym CLAUDE.md (notatki) działają w nowych sesjach dopiero po wejściu do `main` – przy takich zmianach od razu proponuj PR do `main`.
 - **Wersja testowa**: gałąź `test` → https://zbludzakowe-zabawy.github.io/Kamienickie-nutki-test/ (pasek „WERSJA TESTOWA”, ikona TEST).
@@ -84,7 +87,8 @@ lokalne dane są odrzucane (pod przyszłe „wiele chórów”: każdy dyrygent 
 - `js/programs.js` – zakładka „Uroczystości” (`window.Programs`): programy mszy, części, wybór pieśni (`#song-picker`), `forPublish()`
 - `js/publish.js` – zakładka „Dla chórzystów” (`window.Publish`)
 - `js/guest.js` – tryb chórzysty (`window.Guest`), routing po hashu: `#/` = ekran startowy z trzema kafelkami (decyzja użytkownika 2026-11-22),
-  `#/spiewniki`, `#/uroczystosci` (nadchodzące + archiwum), `#/katalog[/<i>]` (katalog nut),
+  `#/spiewniki`, `#/uroczystosci` (nadchodzące + archiwum – **zwinięte** `<details id="g-arch">`, otwiera się kliknięciem w „Archiwum (n)”,
+  stan pamiętany w `archOpen` do zamknięcia aplikacji; decyzja użytkownika 2026-11-28: „żeby się nie mieszało”), `#/katalog[/<i>]` (katalog nut),
   ikonki kafelków (wybór użytkownika): Uroczystości = „sztandar i świece” (`PROG_ICO`), Katalog = „lupa i nuta” (`CAT_ICO`) – SVG w guest.js,
   jasny rysunek na `--accent` jak ikona „Śpiewniki” (klasa `.g-cat-ico`; ciemny rysunek na jasnym tle był „za ciemny”); `#/s/<bookId>[/<i>]` (śpiewnik), `#/p/<programId>[/<i>]` (program; `i` = indeks w spłaszczonej liście pieśni)
 - `js/pwa.js`, `sw.js`, `manifest.webmanifest`, `icons/` – PWA; `tools/build-sw.mjs` wpisuje wersję i listę plików przy publikacji
@@ -365,7 +369,8 @@ Użytkownik chce kiedyś udostępnić aplikację innym chórom („to daleka dro
 - ~~Strzałki między nutami w spisie~~ – zrobione razem z własnym podglądem (← →, przesunięcie palcem).
 - **Zmiana PIN-u na 19** – PIN ustawia administrator w „Dla chórzystów” (`publish.pin`; domyślny `'2018'` w publish.js).
   Zmiana = ponowny zapis katalogu; chórzyści muszą wpisać nowy PIN.
-- **Ukrywanie archiwalnych uroczystości (albo nie)** – przełącznik „pokaż/ukryj archiwum” (programy z datą w przeszłości)
+- ~~Ukrywanie archiwalnych uroczystości u chórzysty~~ – zrobione 2026-11-28 (archiwum zwinięte). Ewentualnie jeszcze u administratora:
+  **Ukrywanie archiwalnych uroczystości (albo nie)** – przełącznik „pokaż/ukryj archiwum” (programy z datą w przeszłości)
   u administratora i/lub chórzysty. Do ustalenia z użytkownikiem, gdzie i co ma być domyślnie.
 - **Nuty dla dyrygenta – notatki do utworów** (2026-11-26) – dyrygent może zapisywać własne notatki przy utworze
   (np. przy pozycji Katalogu `catalog.works[id]` albo pieśni w spisie). Do ustalenia: gdzie je widać (tylko administrator?
