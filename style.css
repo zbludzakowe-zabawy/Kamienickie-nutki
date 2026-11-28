@@ -816,6 +816,10 @@ html[data-env="test"] { --accent: #24476b; --accent-soft: #e1e9f2; }
 .g-cat-ico .c { fill: #ffffff2e; }
 .g-cat-ico .f { fill: currentColor; stroke: none; }
 .g-h2 { margin-top: 22px; }
+.g-arch > summary { list-style: none; cursor: pointer; }
+.g-arch > summary::-webkit-details-marker { display: none; }
+.g-arch > summary .g-h::before { content: '›'; display: inline-block; width: 1em; text-align: center; }
+.g-arch[open] > summary .g-h::before { transform: rotate(90deg); }
 .g-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
 .g-tags .fchip:not(.active) { color: var(--ink); }
 .g-wsum:empty { display: none; }

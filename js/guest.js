@@ -217,6 +217,7 @@ window.Guest = (() => {
       }).join('')}</div>` : '<p class="muted">Dyrygent nie udostępnił jeszcze żadnego śpiewnika.</p>'}`);
   }
 
+  let archOpen = false;
   function renderPrograms() {
     document.title = 'Uroczystości – Kamienickie Nutki';
     const next = upcoming();
@@ -229,7 +230,12 @@ window.Guest = (() => {
     };
     setView('', `${backBar('#/', 'Start')}<h2 class="g-h">Uroczystości</h2>
       ${next.length ? `<div class="g-books">${next.map((p, i) => progCard(p, i === 0)).join('')}</div>` : '<p class="muted">Nie ma zaplanowanych uroczystości.</p>'}
-      ${past.length ? `<h2 class="g-h g-h2">Archiwum</h2><div class="g-books">${past.map((p) => progCard(p, false)).join('')}</div>` : ''}`);
+      ${past.length ? `<details class="g-arch" id="g-arch"${archOpen ? ' open' : ''}><summary><h2 class="g-h g-h2">Archiwum <span class="muted">(${past.length})</span></h2></summary>
+        <div class="g-books">${past.map((p) => progCard(p, false)).join('')}</div></details>` : ''}`);
+    // Archiwum zwinięte na start (decyzja użytkownika 2026-11-28: chórzysta widzi najpierw tylko przyszłe uroczystości);
+    // rozwinięcie pamiętane do zamknięcia aplikacji – po powrocie z programu z archiwum lista zostaje otwarta
+    const d = $('g-arch');
+    if (d) d.addEventListener('toggle', () => { archOpen = d.open; });
   }
 
   // ---------- katalog nut: wyszukiwanie i filtr cech ----------
