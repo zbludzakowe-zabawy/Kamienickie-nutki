@@ -30,6 +30,9 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
   IndexedDB `kamienickie-nutki-test`, schowki SW `test-kamienickie-nutki-` (ta sama domena = wspólna pamięć). „Skopiuj dane z produkcji”
   (`copyFromProd` w app.js) tylko CZYTA plik produkcji i czyści `publish` (zostaje PIN) oraz `reports.form`.
   Przepis ogólny: `docs/srodowisko-testowe.md`. Nowe miejsca pamięci / zapisu na Dysku → pamiętaj o rozdzieleniu dla `cfg.env`.
+- **Google Analytics** (GTM `GTM-PKVQBH86`, skrypt w `<head>` index.html, z innego wątku; na produkcji od 2026-11-28 na prośbę użytkownika):
+  baner zgody na dole ekranu („Zgadzam się” / „Nie, dziękuję”), decyzja w `localStorage['zz-analytics-consent']` (`granted`/`denied`),
+  GTM ładowany **dopiero po zgodzie**; `window.zzConsent()` pokazuje baner ponownie. W wersji testowej osobna decyzja (przedrostek `test~`).
 - Skill `pwa-na-telefon` to przepis użytkownika na PWA (manifest, SW, banery) – projekt jest według niego zrobiony.
 
 ## Dwa tryby
