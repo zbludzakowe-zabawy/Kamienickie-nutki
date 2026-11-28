@@ -16,6 +16,9 @@ Użytkownik pisze po polsku – odpowiedzi, komunikaty w aplikacji, commity i PR
      (`mcp__github__actions_list`, przy błędzie `get_job_logs`) i mówię o tym użytkownikowi (decyzja użytkownika 2026-11-26).
      Powód: #58 i #59 były scalone, ale publikacja padła (`deploy-pages@v4`: „No artifacts named github-pages”) i produkcja stała
      na starej wersji – użytkownik widział „niespójne wersje”. Naprawione w #64 (configure-pages@v6, upload-pages-artifact@v5, deploy-pages@v5).
+     #75 padł tak samo mimo v5 (też po ponowieniu) – przyczyna: deploy-pages szukał paczki 0,5 s po wysłaniu (wyścig po stronie GitHuba).
+     Teraz `pages.yml` ma dwa zadania `build` → `deploy` (`needs`) i w `deploy` drugą próbę po 30 s (`continue-on-error` + `deployment2`).
+     Przy błędzie najpierw: `actions_run_trigger` → `rerun_workflow_run`, potem log.
   5. „Uaktualnij testy” = PR `main` → `test` i scalenie (gdy na produkcję weszło coś spoza testów, np. z innego wątku).
   Zmiany w samym CLAUDE.md (notatki) działają w nowych sesjach dopiero po wejściu do `main` – przy takich zmianach od razu proponuj PR do `main`.
 - **Wersja testowa**: gałąź `test` → https://zbludzakowe-zabawy.github.io/Kamienickie-nutki-test/ (pasek „WERSJA TESTOWA”, ikona TEST).
